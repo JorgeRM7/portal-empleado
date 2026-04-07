@@ -41,7 +41,7 @@ import "flag-icons/css/flag-icons.min.css";
 import ConfirmationService from "primevue/confirmationservice";
 import ConfirmDialog from "primevue/confirmdialog";
 
-const appName = import.meta.env.VITE_APP_NAME || "Nominas";
+const appName = import.meta.env.VITE_APP_NAME || "Mi portal RH";
 
 const spanishLocale = {
     startsWith: "Empieza con",

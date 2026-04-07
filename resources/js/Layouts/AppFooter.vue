@@ -3,11 +3,11 @@
 <template>
     <div class="layout-footer">
         <a
-            href="https://grupo-ortiz.com/es"
+            href=""
             target="_blank"
             rel="noopener noreferrer"
             class="text-primary font-bold hover:underline"
-            >&copy; Grupo Ortiz</a
+            >&copy; Portal de empleados</a
         >
     </div>
 </template>

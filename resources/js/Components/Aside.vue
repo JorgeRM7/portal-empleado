@@ -59,7 +59,7 @@ export default {
                     <!--begin::Username-->
                     <Link
                         href="/user/profile"
-                        class="hover:text-[#ed6d24] fs-4 fw-bolder"
+                        class="hover:text-[#0B4EA2] fs-4 fw-bolder"
                         >{{ $page.props.auth.user?.name }}</Link
                     >
 
@@ -182,7 +182,7 @@ export default {
                 <a
                     @click.prevent="logout"
                     href="#"
-                    class="btn btn-sm btn-icon hover:text-[#ed6d24] btn-icon-gray-600 btn-active-color-primary"
+                    class="btn btn-sm btn-icon hover:text-[#0B4EA2] btn-icon-gray-600 btn-active-color-primary"
                 >
                     <i class="ki-duotone ki-entrance-left fs-1 me-2">
                         <span class="path1"></span>

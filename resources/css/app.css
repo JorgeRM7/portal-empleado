@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 :root {
-    --btn-active-color-primary: #ed6d24;
+    --btn-active-color-primary: #0B4EA2;
 }
 
 @theme {

@@ -185,103 +185,11 @@ onMounted(async () => {
                     width="30"
                     height="30"
                 />
-                <span class="">NOMINAS</span>
+                <span class="">Mi Portal RH</span>
             </Link>
         </div>
 
         <div class="layout-topbar-actions">
-            <Button type="button" icon="pi pi-objects-column" @click="toggle" />
-
-            <Popover ref="op">
-                <div class="flex flex-col gap-4 w-96">
-                    <div class="h-64 overflow-y-auto">
-                        <div class="">
-                            <InputText
-                                type="text"
-                                v-model="value"
-                                class="w-full mb-5"
-                                size="normal"
-                                placeholder="Buscar planta..."
-                                @input="filterBranchOffices(value)"
-                            />
-                            <ul
-                                class="list-none p-0 m-0 grid grid-cols-3 gap-3 text-center items-center justify-center"
-                            >
-                                <!-- <li
-                                    v-for="branchOffice in branchOffices"
-                                    :key="branchOffice.id"
-                                    :class="
-                                        branchOfficeStore.selected?.id ===
-                                        branchOffice.id
-                                            ? 'bg-cyan-100 dark:bg-cyan-400/10'
-                                            : ''
-                                    "
-                                    class="p-2 hover:bg-cyan-100 dark:hover:bg-cyan-400/10 cursor-pointer flex flex-col items-center"
-                                    @click="
-                                        select(branchOffice);
-                                        reloadPage();
-                                    "
-                                >
-                                    <div
-                                        class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded"
-                                        style="width: 3.5rem; height: 3.5rem"
-                                    >
-                                        <i
-                                            class="pi pi-building text-cyan-500 !text-2xl"
-                                        ></i>
-                                    </div>
-                                    <span class="mt-2 text-sm">{{
-                                        branchOffice.code
-                                    }}</span>
-                                </li> -->
-                                <li
-                                    v-for="branchOffice in branchOffices"
-                                    :key="branchOffice.id"
-                                    :class="
-                                        branchOfficeStore.selected?.id ===
-                                        branchOffice.id
-                                            ? 'bg-orange-200 dark:bg-orange-500/20 border border-orange-400'
-                                            : 'dark:bg-gray-900'
-                                    "
-                                    class="group p-2 hover:bg-orange-200 dark:hover:bg-orange-500/10 cursor-pointer flex flex-col items-center rounded-lg transition-all duration-200"
-                                    @click="
-                                        select(branchOffice);
-                                        reloadPage();
-                                    "
-                                >
-                                    <div
-                                        class="flex items-center justify-center bg-orange-200 dark:bg-orange-500/20 rounded"
-                                        style="width: 3.5rem; height: 3.5rem"
-                                    >
-                                        <i
-                                            :class="
-                                                branchOfficeStore.selected
-                                                    ?.id === branchOffice.id
-                                                    ? 'text-orange-800 dark:text-orange-100'
-                                                    : 'text-orange-700 dark:text-orange-300 group-hover:text-orange-800 dark:group-hover:text-orange-100'
-                                            "
-                                            class="pi pi-building !text-2xl transition-colors duration-200"
-                                        ></i>
-                                    </div>
-
-                                    <span
-                                        :class="
-                                            branchOfficeStore.selected?.id ===
-                                            branchOffice.id
-                                                ? 'text-orange-950 dark:text-orange-50'
-                                                : 'text-slate-700 dark:text-gray-200 group-hover:text-orange-950 dark:group-hover:text-orange-50'
-                                        "
-                                        class="mt-2 text-sm font-bold transition-colors duration-200"
-                                    >
-                                        {{ branchOffice.code }}
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </Popover>
-
             <div class="layout-config-menu">
                 <button
                     type="button"
