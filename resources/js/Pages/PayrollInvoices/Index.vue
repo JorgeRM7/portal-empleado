@@ -9,12 +9,6 @@ import { useToast } from "primevue";
 import { useLayout } from "@/Layouts/composables/layout";
 import { useAuthz } from "@/composables/useAuthz";
 
-const props = defineProps({
-    branchOffices: Array,
-    employees: Array,
-    payrollTypes: Array,
-});
-
 const { can } = useAuthz();
 
 const toast = useToast();
@@ -47,36 +41,18 @@ const filters = ref();
 const op = ref(null);
 const opMostrarColumnas = ref(null);
 const opFijarColumnas = ref(null);
-const getSafeBranchId = () => {
-    try {
-        const item = localStorage.getItem("selectedBranchOffice");
-        if (!item) return null;
-        const parsed = JSON.parse(item);
-        return parsed || null;
-    } catch (e) {
-        console.warn("Error leyendo localStorage:", e);
-        return null;
-    }
-};
-
-const selectedBranchOffice = ref(getSafeBranchId());
 
 const weekNumber = ref(getISOWeek().week);
 const year = ref(getISOWeek().year);
 
-const branchOfficeFilter = ref(selectedBranchOffice.value?.id);
 const employeeFilter = ref();
 const payrollTypeFilter = ref();
 const statusFilter = ref();
 const weekFilter = ref(`${year.value}-W${weekNumber.value}`);
 const multipleDeleteDialog = ref(false);
-
-const employeesByBranchOffice = ref(
-    props.employees.filter(
-        (employee) =>
-            employee.branch_office_id === selectedBranchOffice.value?.id,
-    ),
-);
+const sendEmailDialog = ref(false);
+const email = ref();
+const idInvoice = ref(null);
 
 const loading = ref(false);
 
@@ -133,11 +109,7 @@ const frozenColumns = ref({
 
 const otherFilters = ref([
     {
-        branch_office_id: selectedBranchOffice.value?.code,
-        employee_id: null,
-        pay_roll_type: null,
-        week: `${year.value}-W${weekNumber.value}`,
-        status: null,
+        week: null,
     },
 ]);
 
@@ -208,29 +180,8 @@ const getLabel = (estatus_correo, send_correo) => {
 };
 
 const applyFilters = async () => {
-    if (!weekFilter.value && !employeeFilter.value) {
-        toast.add({
-            severity: "warn",
-            summary: "Filtro requerido",
-            detail: "Selecciona al menos un empleado o semana",
-            life: 5000,
-        });
-        return;
-    }
     loading.value = true;
     otherFilterDialog.value = false;
-
-    const selectedBranchOffice = props.branchOffices.find(
-        (branchOffice) => branchOffice.id === branchOfficeFilter.value,
-    );
-
-    const employeeName = props.employees.find(
-        (employee) => employee.id === employeeFilter.value,
-    );
-
-    const payrollType = props.payrollTypes.find(
-        (payroll) => payroll.id === payrollTypeFilter.value,
-    );
 
     let weekf = null;
     let yearf = null;
@@ -239,24 +190,14 @@ const applyFilters = async () => {
         [yearf, weekf] = weekFilter.value.split("-W");
     }
 
-    otherFilters.value[0].branch_office_id = selectedBranchOffice?.code;
-    otherFilters.value[0].employee_id = employeeName?.full_name;
     otherFilters.value[0].week = weekFilter.value;
-    otherFilters.value[0].pay_roll_type = payrollType?.name;
-    otherFilters.value[0].status = statusFilter.value;
 
-    const response = await axios.get("/api/payroll-invoice", {
+    const response = await axios.get("/payroll-invoice", {
         params: {
-            planta: branchOfficeFilter.value,
             semana: weekf,
             anio: yearf,
-            tipo_recibo: payrollTypeFilter.value,
-            correo: statusFilter.value,
-            empleado: employeeFilter.value,
         },
     });
-
-    console.log(response.data);
 
     payrolls.value = response.data;
     loading.value = false;
@@ -264,15 +205,7 @@ const applyFilters = async () => {
 
 const getData = async () => {
     loading.value = true;
-    const response = await axios.get("/api/payroll-invoice", {
-        params: {
-            planta: branchOfficeFilter.value,
-            semana: weekNumber.value,
-            anio: year.value,
-        },
-    });
-
-    console.log(response);
+    const response = await axios.get("/payroll-invoice");
 
     payrolls.value = response.data;
     loading.value = false;
@@ -521,6 +454,43 @@ const downloadSelected = async () => {
     }
 };
 
+const sendInvoiceEmail = async () => {
+    try {
+        console.log(idInvoice.value, email.value);
+        await axios.post(route("payroll-invoices.send-mail"), {
+            id_recibo: idInvoice.value,
+            correo: email.value,
+        });
+        toast.add({
+            severity: "success",
+            summary: "✅ Correo enviado",
+            detail: "Correo enviado correctamente",
+            life: 5000,
+        });
+    } catch (error) {
+        console.error("Error al enviar el correo:", error);
+
+        let errorMessage = "Error al conectar con el servidor";
+
+        if (error.code === "ECONNABORTED") {
+            errorMessage =
+                "El envío del correo tardó demasiado. Intente nuevamente.";
+        } else if (error.code === "ERR_NETWORK") {
+            errorMessage = "Error de red. Verifique su conexión a internet.";
+        } else if (error.response) {
+            errorMessage =
+                error.response.data?.message || "Error en el servidor";
+        }
+
+        toast.add({
+            severity: "error",
+            summary: "❌ Error al enviar el correo",
+            detail: errorMessage,
+            life: 8000,
+        });
+    }
+};
+
 onMounted(() => {
     getData();
 });
@@ -582,25 +552,6 @@ initFilters();
                         :loading="loading"
                         @click="downloadSelected"
                     />
-                    <Button
-                        type="button"
-                        icon="pi pi-send"
-                        label="Enviar"
-                        severity="info"
-                        class="ml-2"
-                        :disabled="selected.length == 0 || loading"
-                        :loading="loading"
-                        @click="sendMail"
-                    />
-                    <Link :href="route('payroll-invoices.create')">
-                        <Button
-                            label="Crear"
-                            icon="pi pi-plus-circle"
-                            severity="success"
-                            class="ml-2"
-                            v-if="can('payroll-invoices.create')"
-                        />
-                    </Link>
                 </template>
             </Toolbar>
             <DataTable
@@ -764,54 +715,10 @@ initFilters();
                     <div class="flex gap-1">
                         <div class="mb-2">
                             <Chip
-                                :label="
-                                    'Planta: ' +
-                                    otherFilters[0].branch_office_id
-                                "
-                                v-if="otherFilters[0].branch_office_id != null"
-                            />
-                        </div>
-                        <div class="mb-2">
-                            <Chip
-                                :label="
-                                    'Empleado: ' + otherFilters[0].employee_id
-                                "
-                                v-if="otherFilters[0].employee_id != null"
-                                removable
-                                @remove="removeFilter('employee_id')"
-                                :removable="!loading"
-                            />
-                        </div>
-                        <div class="mb-2">
-                            <Chip
                                 :label="'Semana: ' + otherFilters[0].week"
-                                v-if="otherFilters[0].week != null"
+                                v-if="otherFilters[0].week !== null"
                                 removable
                                 @remove="removeFilter('week')"
-                                :removable="!loading"
-                            />
-                        </div>
-                        <div class="mb-2">
-                            <Chip
-                                :label="
-                                    'Tipo de recibo: ' +
-                                    otherFilters[0].pay_roll_type
-                                "
-                                v-if="otherFilters[0].pay_roll_type != null"
-                                removable
-                                @remove="removeFilter('pay_roll_type')"
-                                :removable="!loading"
-                            />
-                        </div>
-                        <div class="mb-2">
-                            <Chip
-                                :label="
-                                    'Estatus de envio: ' +
-                                    otherFilters[0].status
-                                "
-                                v-if="otherFilters[0].status != null"
-                                removable
-                                @remove="removeFilter('status')"
                                 :removable="!loading"
                             />
                         </div>
@@ -827,9 +734,9 @@ initFilters();
                     :exportable="false"
                     columnKey="acciones"
                     :style="{
-                        width: '2rem',
+                        width: '10rem',
                         display: showColumns.acciones ? '' : 'none',
-                        minWidth: '2rem',
+                        minWidth: '10rem',
                     }"
                     header="Acciones"
                 >
@@ -837,13 +744,23 @@ initFilters();
                         <Skeleton v-if="loading"></Skeleton>
                         <div v-else>
                             <Button
-                                v-if="data.planta != 'BLANC'"
                                 icon="pi pi-eye"
                                 class="mr-2"
                                 rounded
                                 v-tooltip.top="'Ver'"
                                 severity="help"
                                 @click="getDocument(data.pdf_path, data.id)"
+                            />
+                            <Button
+                                icon="pi pi-envelope"
+                                class="mr-2"
+                                rounded
+                                v-tooltip.top="'Enviar correo'"
+                                severity="info"
+                                @click="
+                                    sendEmailDialog = true;
+                                    idInvoice = data.id;
+                                "
                             />
                         </div>
                     </template>
@@ -1063,83 +980,14 @@ initFilters();
                 :modal="true"
             >
                 <div class="flex flex-wrap -mx-2">
-                    <!-- Planta -->
-                    <div class="w-full md:w-1/2 px-2 mb-4">
-                        <label class="block mb-2 font-medium">Planta</label>
-                        <Select
-                            v-model="branchOfficeFilter"
-                            :options="props.branchOffices"
-                            optionLabel="code"
-                            optionValue="id"
-                            placeholder="Selecciona una planta"
-                            class="w-full"
-                            filter
-                            filterBy="code"
-                        />
-                    </div>
-
                     <!-- Semana (type=week => AAAA-WSS) -->
-                    <div class="w-full md:w-1/2 px-2 mb-4">
+                    <div class="w-full md:w-full px-2 mb-4">
                         <label class="block mb-2 font-medium">Semana</label>
                         <InputText
                             v-model="weekFilter"
                             type="week"
                             class="w-full"
                         />
-                    </div>
-
-                    <!-- Empleado (buscable)-->
-                    <div class="w-full md:w-1/2 px-2 mb-4">
-                        <label class="block mb-2 font-medium">Empleado</label>
-                        <Select
-                            v-model="employeeFilter"
-                            :options="employeesByBranchOffice"
-                            optionValue="id"
-                            optionLabel="full_name"
-                            filter
-                            :filterFields="['id', 'full_name']"
-                            showClear
-                            placeholder="Selecciona un empleado"
-                            class="w-full"
-                        >
-                            <template #option="{ option }">
-                                ({{ option.id }}) {{ option.full_name }}
-                            </template>
-                        </Select>
-                    </div>
-                    <div class="w-full md:w-1/2 px-2 mb-4">
-                        <label class="block mb-2 font-medium"
-                            >Tipo de Recibo</label
-                        >
-                        <Select
-                            v-model="payrollTypeFilter"
-                            :options="props.payrollTypes"
-                            optionValue="id"
-                            optionLabel="name"
-                            filter
-                            showClear
-                            placeholder="Selecciona un Tipo de Recibo"
-                            class="w-full"
-                        >
-                        </Select>
-                    </div>
-                    <div class="w-full md:w-1/2 px-2 mb-4">
-                        <label class="block mb-2 font-medium"
-                            >Estatus de Envio</label
-                        >
-                        <Select
-                            v-model="statusFilter"
-                            :options="[
-                                { label: 'Sin Enviar', value: 'sin_enviar' },
-                                { label: 'Enviado', value: 'enviado' },
-                            ]"
-                            optionValue="value"
-                            optionLabel="label"
-                            showClear
-                            placeholder="Selecciona un Estatus de Envio"
-                            class="w-full"
-                        >
-                        </Select>
                     </div>
                 </div>
 
@@ -1213,6 +1061,39 @@ initFilters();
                         @click="multipleDelete()"
                         severity="danger"
                         :loading="loading"
+                    />
+                </template>
+            </Dialog>
+            <Dialog
+                v-model:visible="sendEmailDialog"
+                :style="{ width: '450px' }"
+                header="Correo para enviar"
+                :modal="true"
+            >
+                <div class="flex flex-wrap -mx-2">
+                    <!-- Semana (type=week => AAAA-WSS) -->
+                    <div class="w-full md:w-full px-2 mb-4">
+                        <label class="block mb-2 font-medium">Correo</label>
+                        <InputText
+                            v-model="email"
+                            type="email"
+                            class="w-full"
+                        />
+                    </div>
+                </div>
+
+                <template #footer>
+                    <Button
+                        label="Cancelar"
+                        icon="pi pi-times"
+                        severity="danger"
+                        @click="sendEmailDialog = false"
+                    />
+                    <Button
+                        label="Enviar"
+                        icon="pi pi-envelope"
+                        severity="info"
+                        @click="sendInvoiceEmail"
                     />
                 </template>
             </Dialog>

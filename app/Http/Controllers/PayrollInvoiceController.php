@@ -7,7 +7,9 @@ use App\Models\Employee;
 use App\Models\PayrollInvoice;
 use App\Models\PayrollInvoiceType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use RecursiveDirectoryIterator;
@@ -21,23 +23,12 @@ class PayrollInvoiceController
      */
     public function index()
     {
-        $user = auth()
-            ->user();
-        $branchOffices = $user->branchOffices()
-            ->where('active', true)
-            ->orderBy('name')
-            ->get();
-        $employees = Employee::select('id', 'full_name', 'branch_office_id')->where('status', '!=', 'termination')->get();
-        $payrollTypes = PayrollInvoiceType::select('id', 'name')->get();
-        return Inertia::render('PayrollInvoices/Index', [
-            'branchOffices' => $branchOffices,
-            'employees' => $employees,
-            'payrollTypes' => $payrollTypes
-        ]);
+        return Inertia::render('PayrollInvoices/Index');
     }
 
     public function getData(Request $request){
-        $data = PayrollInvoice::index($request->planta, $request->empleado, $request->semana,  $request->tipo_recibo, $request->anio, $request->correo);
+        $employee = Auth::id();
+        $data = PayrollInvoice::index($employee, $request->semana, $request->anio);
         return $data;
     }
 
@@ -442,13 +433,19 @@ class PayrollInvoiceController
         $invoice = PayrollInvoice::findOrFail($id);
 
         if (!$invoice->pdf_path) {
-            abort(404, 'Este registro no tiene un documento adjunto.');
+            //abort(404, 'Este registro no tiene un documento adjunto.');
+            return "Este registro no tiene un documento adjunto.";
         }
 
         $disk = Storage::disk('remote_sftp');
 
         if (!$disk->exists($invoice->pdf_path)) {
-            abort(404, 'El archivo no se encontró en el servidor remoto.');
+            $disk_inv = Storage::disk('remote_sftp_inv');
+            if (!$disk_inv->exists($invoice->pdf_path)) {
+                //abort(404, 'El archivo no se encontró en el servidor remoto.');
+                return "El archivo no se encontró en el servidor remoto.";
+            }
+            return $disk_inv->response($invoice->pdf_path);
         }
         return $disk->response($invoice->pdf_path);
     }
@@ -458,13 +455,19 @@ class PayrollInvoiceController
         $invoice = PayrollInvoice::findOrFail($id);
 
         if (!$invoice->pdf_path) {
-            abort(404, 'Este registro no tiene un documento adjunto.');
+            //abort(404, 'Este registro no tiene un documento adjunto.');
+            return "Este registro no tiene un documento adjunto.";
         }
 
         $disk = Storage::disk('spaces');
 
         if (!$disk->exists($invoice->pdf_path)) {
-            abort(404, 'El archivo no se encontró en el servidor remoto.');
+            $disk_inv = Storage::disk('remote_sftp_inv');
+            if (!$disk_inv->exists($invoice->pdf_path)) {
+                //abort(404, 'El archivo no se encontró en el servidor remoto.');
+                return "El archivo no se encontró en el servidor remoto.";
+            }
+            return $disk_inv->response($invoice->pdf_path);
         }
         return $disk->response($invoice->pdf_path);
     }
@@ -614,5 +617,113 @@ class PayrollInvoiceController
         PayrollInvoice::whereIn('id', $ids)->delete();
 
         return redirect()->back();
+    }
+
+    private function resolveInvoicePdf(PayrollInvoice $invoice): string
+    {
+        if (!$invoice->pdf_path) {
+            throw new \RuntimeException("Este registro no tiene un documento adjunto.");
+        }
+
+        $disks = ['spaces', 'remote_sftp', 'remote_sftp_inv'];
+
+        foreach ($disks as $diskName) {
+            $disk = Storage::disk($diskName);
+            if ($disk->exists($invoice->pdf_path)) {
+                return $disk->get($invoice->pdf_path);
+            }
+        }
+
+        throw new \RuntimeException("El archivo no se encontró en ningún servidor remoto.");
+    }
+
+    public function sendInvoiceEmail(Request $request)
+    {
+        $request->validate([
+            'correo'    => 'required|email',
+            'id_recibo' => 'required|integer',
+        ]);
+
+        $correo    = $request->input('correo');
+        $id_recibo = $request->input('id_recibo');
+
+        $invoice = PayrollInvoice::findOrFail($id_recibo);
+        $employee = Employee::findOrFail($invoice->employee_id);
+
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => "Empleado con ID {$invoice->employee_id} no encontrado.",
+            ], 404);
+        }
+
+        try {
+            $pdfContent  = $this->resolveInvoicePdf($invoice);
+            $nombreArchivo = "RECIBO_NOMINA_SEMANA_{$invoice->week}_{$invoice->year}.pdf";
+
+            Mail::send([], [], function ($mail) use ($correo, $employee, $invoice, $pdfContent, $nombreArchivo) {
+                $nombreEmpleado = htmlspecialchars($employee->full_name, ENT_QUOTES, 'UTF-8');
+
+                $html = "
+                    <div style='max-width:600px;margin:0 auto;font-family:Arial,sans-serif;color:#333;border:1px solid #ddd;border-radius:10px;overflow:hidden;'>
+                        <div style='background:#4287f5;color:white;padding:20px;text-align:center;'>
+                            <img src='https://reports.grupo-ortiz.site/Librerias/img/LogoEmpleados.png' width='120' height='120' style='padding:2px;'>
+                        </div>
+                        <div style='background:#4287f5;color:white;padding:15px;text-align:center;font-size:18px;font-weight:bold;'>
+                            Recibo de Nómina
+                        </div>
+                        <div style='padding:20px;'>
+                            <p style='font-size:16px;color:#4287f5;font-weight:bold;'>Hola, {$nombreEmpleado}:</p>
+                            <p>Te informamos que se ha generado tu recibo de nómina correspondiente a la semana {$invoice->week} del año {$invoice->year}.</p>
+                            <p>Tu recibo está adjunto en este correo.</p>
+                            <p style='margin-top:20px;color:#4287f5;font-weight:bold;'>Saludos cordiales,</p>
+                            <p>Mi Portal RH</p>
+                        </div>
+                        <div style='background:#f5f5f5;padding:20px;text-align:center;font-size:14px;color:#333;'>
+                            <p><a href='#' style='color:#4287f5;text-decoration:none;'>Mi Portal RH</a></p>
+                            <p style='margin-top:10px;color:#666;'>&copy; Mi Portal RH 2025</p>
+                        </div>
+                    </div>
+                ";
+
+                $mail->to($correo)
+                     ->from(config('mail.from.address'), config('mail.from.name'))
+                     ->replyTo(config('mail.from.address'), config('mail.from.name'))
+                     ->subject("RECIBO_NOMINA_SEMANA_{$invoice->week}_{$invoice->year}")
+                     ->html($html)
+                     ->attachData($pdfContent, $nombreArchivo, ['mime' => 'application/pdf']);
+            });
+
+            $invoice->update(['estatus_correo' => '1', 'error_correo' => null]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Correo enviado correctamente a {$correo}.",
+            ]);
+
+        } catch (\RuntimeException $e) {
+            $invoice->update(['estatus_correo' => '0', 'error_correo' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            $errorMsg = $e->getMessage();
+            $errorDesc = match (true) {
+                str_contains($errorMsg, '550') => "Dirección de correo no encontrada para {$correo}.",
+                str_contains($errorMsg, '552') => "Bandeja de entrada llena para {$correo}.",
+                str_contains($errorMsg, '451') => "Error temporal del servidor para {$correo}.",
+                default                        => "Error al enviar correo a {$correo}: {$errorMsg}",
+            };
+
+            $invoice->update(['estatus_correo' => '0', 'error_correo' => $errorDesc]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $errorDesc,
+            ], 500);
+        }
     }
 }

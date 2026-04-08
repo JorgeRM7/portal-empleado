@@ -23,7 +23,7 @@ class PayrollInvoice extends Model
         'send_correo'
     ];
 
-    public static function index($filtro_planta, $filtro_empleado, $filtro_semana, $tipo_recibo, $filtro_anio, $correo ){
+    public static function index($filtro_empleado, $filtro_semana, $filtro_anio ){
         $sql = "SELECT 
                 branch_offices.code AS planta,
                 employees.id AS numero_nomina,
@@ -41,43 +41,22 @@ class PayrollInvoice extends Model
             INNER JOIN branch_offices ON branch_offices.id = payroll_invoices.branch_office_id
             INNER JOIN employees ON employees.id = payroll_invoices.employee_id
             LEFT JOIN payroll_invoices_types ON payroll_invoices_types.id = payroll_invoices.payroll_invoices_type_id
-            WHERE payroll_invoices.deleted_at IS NULL
+            WHERE payroll_invoices.deleted_at IS NULL AND payroll_invoices.employee_id = '" . intval($filtro_empleado) . "'
         ";
         $condiciones = [];
-        if (!empty($filtro_planta)) {
-            $condiciones[] = "payroll_invoices.branch_office_id = '" . intval($filtro_planta) . "'";
-        }else{
-            $condiciones[] = "payroll_invoices.branch_office_id = 0";
-        }
-        if (!empty($filtro_empleado)) {
-            $condiciones[] = "payroll_invoices.employee_id = '" . intval($filtro_empleado) . "'";
-        }
+        
         if (!empty($filtro_semana)) {
             $condiciones[] = "payroll_invoices.week = '" . intval($filtro_semana) . "'";
         }
         if (!empty($filtro_anio)) {
             $condiciones[] = "payroll_invoices.year = '" . intval($filtro_anio) . "'";
         }
-        if (!empty($tipo_recibo)) {
-            $condiciones[] = "payroll_invoices.payroll_invoices_type_id = '" . intval($tipo_recibo) . "'";
-        }
-    
-        if (!empty($correo)) {
-            
-            if ($correo == 'enviado') {
-                $condiciones[] = "payroll_invoices.estatus_correo = '1'";
-            }
-            
-            if($correo == 'sin_enviar'){
-                $condiciones[] = "payroll_invoices.estatus_correo IS NULL ";
-            }
-        }
-    
+        
         if (count($condiciones) > 0) {
             $sql .= " AND " . implode(" AND ", $condiciones);
         }
     
-        $sql .= "GROUP BY payroll_invoices.id ORDER BY payroll_invoices.week DESC";
+        $sql .= "GROUP BY payroll_invoices.id ORDER BY payroll_invoices.id DESC";
 
         //dd($sql);
 

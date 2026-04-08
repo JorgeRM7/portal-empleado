@@ -82,6 +82,16 @@ return [
             'root' => env('SFTP_ROOT'),
             'timeout' => 30,
         ],
+        'remote_sftp_inv' => [
+            'driver' => 'sftp',
+            'host' => env('SFTP_HOST_INV'),
+            'username' => env('SFTP_USERNAME_INV'),
+            'password' => env('SFTP_PASSWORD_INV'), 
+            'port' => (int) env('SFTP_PORT_INV', 65002),
+
+            'root' => env('SFTP_ROOT_INV'),
+            'timeout' => 30,
+        ],
         'remote_sftp_public' => [
             'driver' => 'sftp',
             'host' => env('SFTP_HOST'),

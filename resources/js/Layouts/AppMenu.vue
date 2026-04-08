@@ -19,7 +19,7 @@ const rawMenu = ref([
     {
         label: "Recibos de Nómina",
         icon: "pi pi-fw pi-file",
-        to: "/paystubs",
+        to: "/payroll/payroll-invoices",
     },
     {
         label: "Quejas",
