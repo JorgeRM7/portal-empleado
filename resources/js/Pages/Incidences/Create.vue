@@ -5,6 +5,17 @@ import { router } from "@inertiajs/vue3";
 import { useToastService } from "@/Stores/toastService";
 import { useToast } from "primevue";
 
+const props = defineProps({
+    employeeId: {
+        type: Number,
+        required: true,
+    },
+    branchOfficeId: {
+        type: Number,
+        required: true,
+    },
+});
+
 const { showSuccess, showError } = useToastService();
 const toast = useToast();
 
@@ -12,7 +23,7 @@ const employees = ref([]);
 const schedules = ref([]);
 const allincidences = ref([]);
 
-const employeeId = ref(null);
+const employeeId = ref(props.employeeId);
 
 const incidencesByEmployee = ref([]);
 
@@ -92,8 +103,9 @@ const form = ref({
     schedule: null,
     document: null,
     document_number: "",
-    employee_id: null,
+    employee_id: props.employeeId,
     days_available: null,
+    branch_office_id: props.branchOfficeId,
 });
 
 const daysCalculated = computed(() => {
@@ -206,7 +218,6 @@ function typeLabel(type) {
 }
 
 function saveIncidence() {
-    form.value.employee_id = employeeId.value;
     form.value.days_to_register = daysEditable.value;
     if (form.value.incidence_id === 23) {
         if (!form.value.singleDate) {
@@ -240,6 +251,9 @@ function updateShiftHours() {
 }
 
 const getData = async () => {
+    if (!employeeId.value) return;
+    loading.value = true;
+
     await axios
         .get("/incidences/employee", {
             params: {
@@ -886,9 +900,7 @@ watch(employeeId, () => {
                                 label="Cancelar"
                                 @click="
                                     () => {
-                                        router.get(
-                                            '/employee/incidences-employee',
-                                        );
+                                        router.get('/incidences-employee');
                                     }
                                 "
                                 icon="pi pi-times"

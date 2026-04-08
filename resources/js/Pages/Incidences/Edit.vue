@@ -289,7 +289,6 @@ function typeLabel(type) {
 }
 
 function saveIncidence() {
-    form.value.employee_id = employeeId.value;
     form.value.days_to_register = daysEditable.value;
     sending.value = true;
     router.put(
@@ -320,7 +319,7 @@ const getData = () => {
     if (!employeeId.value) return;
     loading.value = true;
     axios
-        .get("/api/incidences/employee", {
+        .get("/incidences/employee", {
             params: { employee_id: employeeId.value },
         })
         .then((response) => {
@@ -392,11 +391,7 @@ onMounted(() => {
     getData();
 
     axios
-        .get("/api/incidences/getIncidencesDataLoad", {
-            params: {
-                branch_office_id: branchOfficeId.value,
-            },
-        })
+        .get("/incidences/getIncidencesDataLoad")
         .then((response) => {
             if (response.data?.lastWeekNumber?.[0]) {
                 minIsoWeek.value = response.data.lastWeekNumber[0].week;
@@ -433,7 +428,7 @@ watch(
                     <template #content>
                         <div class="flex flex-col gap-3">
                             <div class="flex flex-col gap-2 w-full">
-                                <label class="text-sm font-medium"
+                                <!-- <label class="text-sm font-medium"
                                     >Empleado</label
                                 >
                                 <Select
@@ -449,7 +444,7 @@ watch(
                                     :loading="loading"
                                     :disabled="true"
                                     @change="getData()"
-                                />
+                                /> -->
                             </div>
                         </div>
                     </template>
@@ -945,7 +940,7 @@ watch(
                                         @click="
                                             () => {
                                                 router.get(
-                                                    '/employee/incidences-employee',
+                                                    '/incidences-employee',
                                                 );
                                             }
                                         "

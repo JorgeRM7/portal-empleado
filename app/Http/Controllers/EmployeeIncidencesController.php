@@ -43,8 +43,10 @@ class EmployeeIncidencesController
     {
         $week = $request->week ? $request->week : date('W');
         $year = $request->year ? $request->year : date('Y');
-        $incidences = EmployeeIncidences::getIncidences($request->branch_office_id, $request->week, $request->year, $request->employee_id, $request->incidence_id, $request->eliminated);
-        $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($request->branch_office_id);
+        $employee_id = Auth::id();
+        $employee = Employee::select('branch_office_id')->where('id', $employee_id)->first();
+        $incidences = EmployeeIncidences::getIncidences($employee->branch_office_id, $request->week, $request->year, $employee_id, $request->incidence_id, $request->eliminated);
+        $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($employee->branch_office_id);
         return json_encode(['incidences' => $incidences, 'lastWeekNumber' => $lastWeekNumber]);
     }
 
@@ -120,8 +122,14 @@ class EmployeeIncidencesController
      */
     public function create(Request $request)
     {
+        $employeeId = Auth::id();
+        $employee = Employee::select('branch_office_id')->where('id', $employeeId)->first();
+
         
-        return Inertia::render('Incidences/Create');
+        return Inertia::render('Incidences/Create', [
+            'employeeId' => $employeeId,
+            'branchOfficeId' => $employee->branch_office_id
+        ]);
     }
 
     /**

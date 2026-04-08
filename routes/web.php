@@ -59,6 +59,11 @@ Route::middleware([
 
     Route::get('incidences/getIncidencesDataLoad', [EmployeeIncidencesController::class, 'getIncidencesDataLoad']);
     Route::get('incidences/employee', [EmployeeIncidencesController::class,'getIncidencesByEmployeeId']);
+    Route::get('incidences/getIncidences', [EmployeeIncidencesController::class, 'getIncidences']);
+    Route::get('incidences/{id_incidence}/pdf', [EmployeeIncidencesController::class, 'createReport'])
+            ->name('incidences.pdf');
+    Route::get('incidences/{id_incidence}/txt', [EmployeeIncidencesController::class, 'createReport'])
+            ->name('incidences.txt');
 
 
 });
