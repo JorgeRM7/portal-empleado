@@ -58,8 +58,8 @@ onBeforeUnmount(() => observer?.disconnect());
 const bgStyle = computed(() => ({
     backgroundImage: `url(${
         isDark.value
-            ? "/assets/media/auth/bg9-dark.jpg"
-            : "/assets/media/auth/bg4.jpg"
+            ? "/assets/media/auth/bg-dark.png"
+            : "/assets/media/auth/bg.png"
     })`,
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -74,19 +74,10 @@ const bgStyle = computed(() => ({
         <!-- Imagen / lado izquierdo -->
         <div class="hidden lg:block lg:col-span-6 relative" :style="bgStyle">
             <!-- Overlay minimal -->
-            <div class="absolute inset-0 bg-black/35"></div>
-
-            <!-- Logo / texto opcional -->
-            <div class="absolute left-10 top-10 z-10">
-                <img
-                    src="/assets/media/logos/logo.png"
-                    alt="Logo"
-                    class="h-12"
-                />
-            </div>
+            <div class="absolute inset-0 bg-black/10"></div>
 
             <div class="absolute left-10 bottom-10 z-10 text-white">
-                <div class="text-xl opacity-80">Nóminas &amp; RRHH</div>
+                <div class="text-xl opacity-80">Mi Portal RH</div>
                 <div class="text-5xl font-semibold mt-1">Bienvenido</div>
                 <div class="opacity-80 mt-1">Inicia sesión para continuar</div>
             </div>
@@ -98,6 +89,14 @@ const bgStyle = computed(() => ({
                 class="shadow-none border-0 w-full h-full flex flex-col justify-center"
             >
                 <template #content>
+
+                    <div class="flex justify-center mb-1">
+                        <img
+                            src="/assets/media/logos/logo.png"
+                            alt="Mi Portal RH"
+                            class="w-80 h-80 object-contain"
+                        />
+                    </div>
                     <!-- Header minimal -->
                     <div class="mb-6">
                         <div class="text-4xl font-semibold text-center">
@@ -158,27 +157,6 @@ const bgStyle = computed(() => ({
                             <small v-if="form.errors.password" class="p-error">
                                 {{ form.errors.password }}
                             </small>
-                        </div>
-
-                        <!-- Remember + Forgot -->
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <Checkbox
-                                    v-model="form.remember"
-                                    :binary="true"
-                                    inputId="remember"
-                                />
-                                <label for="remember" class="text-gray-600">
-                                    Recordarme
-                                </label>
-                            </div>
-
-                            <InertiaLink
-                                :href="route('password.request')"
-                                class="text-sm text-primary hover:underline"
-                            >
-                                ¿Olvidaste tu contraseña?
-                            </InertiaLink>
                         </div>
 
                         <!-- Submit -->

@@ -38,10 +38,6 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user(),
-                'permissions' => $request->user()
-                    ? $request->user()->getAllPermissions()->pluck('name')->values()
-                    : [],
-                'permission_overrides' => $request->user()?->permission_overrides ?? [],
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
