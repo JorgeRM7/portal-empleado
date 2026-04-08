@@ -84,30 +84,6 @@ Route::middleware([
 
     Route::get('payroll-invoice', [PayrollInvoiceController::class, 'getData']);
 
-    Route::resource('incidences-employee', EmployeeIncidencesController::class)
-        ->names([
-            'index' => '/incidences-employee',
-        ]);
-
-    Route::get('incidences/getIncidencesDataLoad', [EmployeeIncidencesController::class, 'getIncidencesDataLoad']);
-    Route::get('incidences/employee', [EmployeeIncidencesController::class,'getIncidencesByEmployeeId']);
-    Route::get('incidences/getIncidences', [EmployeeIncidencesController::class, 'getIncidences']);
-    Route::get('incidences/{id_incidence}/pdf', [EmployeeIncidencesController::class, 'createReport'])
-            ->name('incidences.pdf');
-    Route::get('incidences/{id_incidence}/txt', [EmployeeIncidencesController::class, 'createReport'])
-            ->name('incidences.txt');
-    
-    Route::prefix('payroll')->group(function () {
-    
-        Route::resource('payroll-invoices', PayrollInvoiceController::class)
-            ->names([
-                'index' => '/payroll-invoices',
-            ]);
-        Route::post('payroll-invoices/send-mail', [PayrollInvoiceController::class, 'sendInvoiceEmail'])
-            ->name('payroll-invoices.send-mail');
-    });
-
-    Route::get('payroll-invoice', [PayrollInvoiceController::class, 'getData']);
 
 
 });
