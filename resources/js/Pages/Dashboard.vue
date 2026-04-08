@@ -1,568 +1,537 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { ref, onMounted, onUnmounted, computed } from "vue";
-import axios from "axios";
-import { useToastService } from "../Stores/toastService.js";
+import { usePage, Link } from "@inertiajs/vue3";
 import Button from "primevue/button";
+import Tag from "primevue/tag";
+import Divider from "primevue/divider";
+import Skeleton from "primevue/skeleton";
 import Calendar from "primevue/calendar";
-import { Link } from "@inertiajs/vue3";
+import Tooltip from 'primevue/tooltip';
 
-const { showSuccess, showError } = useToastService();
+// app.directive('tooltip', Tooltip);
+const page = usePage();
+const props = defineProps({});
 
-const props = defineProps({
-    users: Number,
-    user: Object,
-    idEmployee: Array,
+
+
+const authUser = computed(() => page.props.auth?.user ?? null);
+const employee = computed(() => authUser.value?.employee ?? null);
+const employeeData = ref (null);
+const employeeVacations = ref (null);
+const employeeIncidences = ref (null);
+const antiguedad = ref (null);
+const loading = ref(true);
+const attendanceDate = ref(new Date());
+const attendanceData = ref([]);
+
+const employeePhoto = computed(() => {
+    const employeeId =
+        employee.value?.id ?? props.idEmployee?.[0]?.id ?? authUser.value?.id;
+
+    return employeeId
+        ? `https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${employeeId}.jpg`
+        : page.props.auth?.user?.profile_photo_url || "";
 });
 
-console.log(props);
 
-// console.log(props.idEmployee?.[0].id);
+function obtenerEmpleado() {
+    loading.value = true;
 
-const currentTime = ref(new Date().toLocaleTimeString());
-let intervalId = null;
+    let id = employee.value.id;
+    axios.get(`/dashboard/show/${id}`)
+        .then(response => {
+            console.log('Datos del empleado:', response.data);
+            employeeData.value = response.data.employee;
+            employeeVacations.value = response.data.vacaciones;
+            employeeIncidences.value = response.data.incidencias_empleado;
+            antiguedad.value = response.data.antiguedad;
+            attendanceData.value = response.data.asistencia;
+        })
+        .catch(error => {
+            console.error('Error al obtener datos:', error);
+        })
+        .finally(() => {
+            loading.value = false;
+        });
+}
 
-const loadingDashboard = ref(false);
-const payrollStats = ref({});
+function normalizeDate(date) {
+    if (date instanceof Date) return date;
+    return new Date(date.year, date.month, date.day);
+}
 
-const holidays = ref([
-    { date: "2026-01-01", name: "Año Nuevo" },
-    { date: "2026-02-02", name: "Día de la Constitución (puente)" },
-    { date: "2026-03-16", name: "Natalicio de Benito Juárez (puente)" },
-    { date: "2026-05-01", name: "Día del Trabajo" },
-    { date: "2026-09-16", name: "Día de la Independencia" },
-    { date: "2026-11-16", name: "Revolución Mexicana (puente)" },
-    { date: "2026-12-25", name: "Navidad" },
-]);
+function getWeekNumber(date) {
+    const tempDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = tempDate.getUTCDay() || 7;
+    tempDate.setUTCDate(tempDate.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tempDate.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil((((tempDate - yearStart) / 86400000) + 1) / 7);
 
-const plantStats = ref([]);
+    return {
+        week: weekNum,
+        year: tempDate.getUTCFullYear()
+    };
+}
 
-const selectedHolidayDate = ref(new Date());
+function getDayKey(date) {
+    const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    return days[date.getDay()];
+}
 
-const visibleMonth = ref(selectedHolidayDate.value.getMonth());
-const visibleYear = ref(selectedHolidayDate.value.getFullYear());
+function getWeekDataByDate(date) {
+    if (!Array.isArray(attendanceData.value)) return null;
 
-const onMonthChange = (e) => {
-    const m = e.month;
+    const { week, year } = getWeekNumber(date);
 
-    visibleMonth.value = m >= 1 && m <= 12 ? m - 1 : m;
-    visibleYear.value = e.year;
-};
+    return attendanceData.value.find(item =>
+        Number(item.week_number) === Number(week) &&
+        Number(item.week_year) === Number(year)
+    ) || null;
+}
 
-const parseISOToDate = (iso) => {
-    const [y, m, d] = iso.split("-").map(Number);
-    return new Date(y, m - 1, d);
-};
+function getDayStyle(rawDate) {
+    const date = normalizeDate(rawDate);
+    const weekData = getWeekDataByDate(date);
 
-const isSameMonthYear = (d, month, year) =>
-    d.getMonth() === month && d.getFullYear() === year;
+    if (!weekData) return {};
 
-const formatDMY = (iso) => {
-    const d = parseISOToDate(iso);
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yy = d.getFullYear();
-    return `${dd}/${mm}/${yy}`;
-};
+    const dayKey = getDayKey(date);
+    const colorKey = `color_${dayKey}`;
 
-const sortedHolidays = computed(() => {
-    const month = visibleMonth.value;
-    const year = visibleYear.value;
+    if (!weekData[colorKey]) return {};
 
-    return (holidays.value ?? [])
-        .filter((h) => isSameMonthYear(parseISOToDate(h.date), month, year))
-        .slice()
-        .sort((a, b) => parseISOToDate(a.date) - parseISOToDate(b.date))
-        .map((h) => ({
-            ...h,
-            dateFormatted: formatDMY(h.date),
-        }));
-});
+    return {
+        backgroundColor: weekData[colorKey],
+        color: '#fff',
+        borderRadius: '999px',
+        fontWeight: '700'
+    };
+}
 
-const formatNumber = (number) => {
-    return new Intl.NumberFormat().format(number ?? 0);
-};
+function getDayClass(rawDate) {
+    const date = normalizeDate(rawDate);
+    const weekData = getWeekDataByDate(date);
 
-const loadDashboardMetrics = async () => {
-    try {
-        loadingDashboard.value = true;
+    return weekData ? 'attendance-day' : '';
+}
 
-        const { data } = await axios.get("/api/dashboard/metrics");
+function getDayTitle(rawDate) {
+    const date = normalizeDate(rawDate);
+    const weekData = getWeekDataByDate(date);
 
-        payrollStats.value = data;
-        plantStats.value = data.plant_stats;
-    } catch (e) {
-        console.error(e);
-        showError();
-    } finally {
-        loadingDashboard.value = false;
+    if (!weekData) return '';
+
+    const dayKey = getDayKey(date);
+    const nameKey = `nombre_${dayKey}`;
+
+    return weekData[nameKey] || weekData[dayKey] || '';
+}
+
+function getTooltipOptions(rawDate) {
+    const date = normalizeDate(rawDate);
+    const weekData = getWeekDataByDate(date);
+
+    if (!weekData) {
+        return {
+            value: 'Sin registro',
+            class: 'attendance-tooltip'
+        };
     }
-};
+
+    const dayKey = getDayKey(date);
+    const nameKey = `nombre_${dayKey}`;
+    const code = weekData[dayKey] ?? 'N/A';
+    const name = weekData[nameKey] ?? code;
+    const color = weekData[`color_${dayKey}`] ?? '#64748b';
+
+    return {
+        value: `
+            <div class="attendance-tooltip-content">
+                <div class="attendance-tooltip-header">
+                    <span class="attendance-tooltip-dot" style="background:${color}"></span>
+                    <span>${name}</span>
+                </div>
+            </div>
+        `,
+        escape: false,
+        class: 'attendance-tooltip'
+    };
+}
 
 onMounted(() => {
-    intervalId = setInterval(() => {
-        currentTime.value = new Date().toLocaleTimeString();
-    }, 1000);
-
-    loadDashboardMetrics();
+    obtenerEmpleado();
 });
 
-onUnmounted(() => {
-    clearInterval(intervalId);
-});
+
 </script>
 
+<style>
+.attendance-calendar-wrapper {
+    width: 100%;
+}
+
+.attendance-calendar {
+    width: 100% !important;
+}
+
+.attendance-calendar :deep(.p-datepicker) {
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.attendance-calendar :deep(.p-datepicker-group) {
+    width: 100%;
+}
+
+.attendance-calendar :deep(.p-datepicker table) {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.attendance-calendar :deep(.p-datepicker table th) {
+    text-align: center;
+    padding: 0.85rem 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgb(100 116 139);
+}
+
+.attendance-calendar :deep(.p-datepicker table td) {
+    padding: 0.45rem 0.2rem;
+    text-align: center;
+}
+
+.attendance-calendar :deep(.p-datepicker-header) {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    margin-bottom: 0.75rem;
+}
+
+.attendance-calendar :deep(.p-datepicker-title) {
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgb(15 23 42);
+}
+
+.dark .attendance-calendar :deep(.p-datepicker-title) {
+    color: white;
+}
+
+.attendance-day-cell {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    border-radius: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.attendance-day-cell:hover {
+    transform: scale(1.06);
+}
+
+.attendance-day-cell.has-attendance {
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
+}
+
+.attendance-calendar :deep(.p-disabled),
+.attendance-calendar :deep(.p-datepicker-other-month) {
+    opacity: 0.35;
+}
+
+.attendance-tooltip .p-tooltip-text {
+    background: linear-gradient(135deg, #0f172a, #1e293b) !important;
+    color: #fff !important;
+    border-radius: 16px !important;
+    padding: 0.85rem 1rem !important;
+    box-shadow: 0 18px 40px rgba(2, 6, 23, 0.35) !important;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    font-size: 0.85rem;
+    min-width: 170px;
+}
+
+.attendance-tooltip-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.attendance-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.attendance-tooltip-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.attendance-tooltip-code {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.78);
+}
+.attendance-calendar :deep(.p-datepicker table thead th span) {
+    font-size: 0 !important;
+    position: relative;
+}
+
+.attendance-calendar :deep(.p-datepicker table thead th:nth-child(1) span::after) {
+    content: "Lunes";
+    font-size: 0.85rem;
+}
+
+.attendance-calendar :deep(.p-datepicker table thead th:nth-child(2) span::after) {
+    content: "Martes";
+    font-size: 0.85rem;
+}
+
+.attendance-calendar :deep(.p-datepicker table thead th:nth-child(3) span::after) {
+    content: "Miércoles";
+    font-size: 0.85rem;
+}
+
+.attendance-calendar :deep(.p-datepicker table thead th:nth-child(4) span::after) {
+    content: "Jueves";
+    font-size: 0.85rem;
+}
+
+.attendance-calendar :deep(.p-datepicker table thead th:nth-child(5) span::after) {
+    content: "Viernes";
+    font-size: 0.85rem;
+}
+
+.attendance-calendar :deep(.p-datepicker table thead th:nth-child(6) span::after) {
+    content: "Sábado";
+    font-size: 0.85rem;
+}
+
+.attendance-calendar :deep(.p-datepicker table thead th:nth-child(7) span::after) {
+    content: "Domingo";
+    font-size: 0.85rem;
+}
+</style>
 <template>
     <AppLayout title="Dashboard">
-        <!-- FILA SUPERIOR: BIENVENIDA / USUARIOS / HORA -->
-        <div class="flex flex-col lg:flex-row gap-4 mb-6">
-            <div class="lg:w-1/2 card border-none">
-                <div class="flex items-center">
-                    <img
-                        class="w-16 h-16 rounded-full object-cover"
-                        :src="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${props.idEmployee[0]?.id}.jpg`"
-                        @error="
-                            (e) =>
-                                (e.target.src =
-                                    $page.props.auth.user?.profile_photo_url)
-                        "
-                        alt="Foto de perfil"
-                    />
-                    <div>
-                        <h1 class="text-xl font-normal mb-0 ml-5 font-display">
-                            Bienvenid@ {{ $page.props.auth.user?.name }}
-                        </h1>
-                        <h2
-                            class="text-sm text-gray-600 font-normal ml-5 mt-1 mb-0"
-                        >
-                            Panel general del sistema de nóminas
-                        </h2>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-0 lg:w-1/4 border-none">
-                <div class="flex justify-between">
-                    <div>
-                        <h3 class="block text-lg font-medium mb-2">
-                            Usuarios totales
-                        </h3>
-                        <div
-                            class="text-surface-900 dark:text-surface-0 font-medium text-xl"
-                        >
-                            <h4>{{ formatNumber(props.users) }}</h4>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">
-                            Usuarios con acceso al sistema
-                        </p>
-                    </div>
-                    <div
-                        class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded"
-                        style="width: 3.5rem; height: 3.5rem"
-                    >
-                        <i class="pi pi-users text-cyan-500 !text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-0 lg:w-1/4 border-none">
-                <div class="flex justify-between">
-                    <div
-                        class="text-surface-900 dark:text-surface-0 font-medium text-xl"
-                    >
-                        <h3 class="block text-lg font-medium mb-2">
-                            Hora actual
-                        </h3>
-                        <h4>{{ currentTime }}</h4>
-                        <p class="text-xs text-gray-500 mt-1">Horario local</p>
-                    </div>
-                    <div
-                        class="flex items-center justify-center bg-indigo-100 dark:bg-indigo-400/10 rounded mt-2"
-                        style="width: 3.5rem; height: 3.5rem"
-                    >
-                        <i class="pi pi-clock text-indigo-500 !text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- FILA DE MÉTRICAS PRINCIPALES -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-            <div class="card">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-sm text-gray-500">
-                            Empleados totales
-                        </span>
-                        <h2
-                            v-if="!loadingDashboard"
-                            class="text-2xl font-semibold mt-1"
-                        >
-                            {{ formatNumber(payrollStats.total_employees) }}
-                        </h2>
-                        <Skeleton v-else class="h-6 w-20" />
-                        <p class="text-xs text-gray-500 mt-1">
-                            Incluye activos e inactivos
-                        </p>
-                    </div>
-                    <div
-                        class="flex items-center justify-center bg-emerald-100 dark:bg-emerald-400/10 rounded"
-                        style="width: 3rem; height: 3rem"
-                    >
-                        <i
-                            class="pi pi-briefcase text-emerald-500 !text-xl"
-                        ></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-sm text-gray-500">
-                            Empleados dados de alta
-                        </span>
-                        <h2
-                            v-if="!loadingDashboard"
-                            class="text-2xl font-semibold mt-1"
-                        >
-                            {{ formatNumber(payrollStats.new_employees) }}
-                        </h2>
-                        <Skeleton v-else class="h-6 w-20" />
-                        <p class="text-xs text-gray-500 mt-1">
-                            Disponibles para nómina
-                        </p>
-                    </div>
-                    <div
-                        class="flex items-center justify-center bg-lime-100 dark:bg-lime-400/10 rounded"
-                        style="width: 3rem; height: 3rem"
-                    >
-                        <i class="pi pi-user-plus text-lime-600 !text-xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-sm text-gray-500">
-                            Empleados dados de baja
-                        </span>
-                        <h2
-                            v-if="!loadingDashboard"
-                            class="text-2xl font-semibold mt-1"
-                        >
-                            {{
-                                formatNumber(payrollStats.termination_employees)
-                            }}
-                        </h2>
-                        <Skeleton v-else class="h-6 w-20" />
-                        <p class="text-xs text-gray-500 mt-1">
-                            Historial conservado para reportes
-                        </p>
-                    </div>
-                    <div
-                        class="flex items-center justify-center bg-rose-100 dark:bg-rose-400/10 rounded"
-                        style="width: 3rem; height: 3rem"
-                    >
-                        <i class="pi pi-user-minus text-rose-500 !text-xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-sm text-gray-500">
-                            Asistencias registradas hoy
-                        </span>
-                        <h2
-                            v-if="!loadingDashboard"
-                            class="text-2xl font-semibold mt-1"
-                        >
-                            {{ formatNumber(payrollStats.assistances) }}
-                        </h2>
-                        <Skeleton v-else class="h-6 w-20" />
-                        <p class="text-xs text-gray-500 mt-1">
-                            Entradas registradas en el día
-                        </p>
-                    </div>
-                    <div
-                        class="flex items-center justify-center bg-sky-100 dark:bg-sky-400/10 rounded"
-                        style="width: 3rem; height: 3rem"
-                    >
-                        <i
-                            class="pi pi-calendar-clock text-sky-500 !text-xl"
-                        ></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="lg:col-span-2 flex flex-col">
-                <div class="card">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold">
-                            Resumen de asistencias de hoy
-                        </h3>
-                        <Link href="/assistences/weekly-assistences">
-                            <Button
-                                label="Ver asistencias"
-                                icon="pi pi-arrow-right"
-                                text
-                            />
-                        </Link>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div
-                            class="border rounded-lg p-4 flex flex-col justify-between"
-                        >
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"
-                                    >Presentes</span
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <div class="xl:col-span-12">
+                <div
+                    class="card border-none shadow-sm rounded-3xl"
+                >
+                    <div class="relative p-6 md:p-8">
+                        <div class="flex flex-col xl:flex-row xl:items-center gap-6">
+                            
+                            <div class="flex justify-center xl:justify-start">
+                                <div
+                                    class="w-24 h-24 md:w-28 md:h-28 rounded-3xl overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-lg dark:bg-slate-800 shrink-0"
                                 >
-                                <i
-                                    class="pi pi-check-circle text-emerald-500 !text-xl"
-                                ></i>
-                            </div>
-                            <h2
-                                v-if="!loadingDashboard"
-                                class="text-2xl font-semibold mt-2"
-                            >
-                                {{
-                                    formatNumber(
-                                        payrollStats.complete_assistances,
-                                    )
-                                }}
-                            </h2>
-                            <Skeleton v-else class="h-6 w-20" />
-                        </div>
-
-                        <div
-                            class="border rounded-lg p-4 flex flex-col justify-between"
-                        >
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"
-                                    >Ausentes</span
-                                >
-                                <i
-                                    class="pi pi-times-circle text-rose-500 !text-xl"
-                                ></i>
-                            </div>
-                            <h2
-                                v-if="!loadingDashboard"
-                                class="text-2xl font-semibold mt-2"
-                            >
-                                {{ formatNumber(payrollStats.abstences) }}
-                            </h2>
-                            <Skeleton v-else class="h-6 w-20" />
-                        </div>
-
-                        <div
-                            class="border rounded-lg p-4 flex flex-col justify-between"
-                        >
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"
-                                    >Retardos</span
-                                >
-                                <i
-                                    class="pi pi-exclamation-circle text-amber-500 !text-xl"
-                                ></i>
-                            </div>
-                            <h2
-                                v-if="!loadingDashboard"
-                                class="text-2xl font-semibold mt-2"
-                            >
-                                {{ formatNumber(payrollStats.late) }}
-                            </h2>
-                            <Skeleton v-else class="h-6 w-20" />
-                        </div>
-                    </div>
-                </div>
-                <div class="card h-[250px] overflow-y-auto">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold">
-                            Resumen de empleados por planta
-                        </h3>
-                    </div>
-
-                    <div
-                        v-if="loadingDashboard"
-                        class="grid grid-cols-1 md:grid-cols-3 gap-4"
-                    >
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                        <Skeleton class="h-20 w-full" />
-                    </div>
-
-                    <div v-else>
-                        <div
-                            v-if="!plantStats || plantStats.length === 0"
-                            class="text-sm text-gray-500"
-                        >
-                            No hay información de plantas.
-                        </div>
-
-                        <div
-                            v-else
-                            class="grid grid-cols-1 md:grid-cols-3 gap-4"
-                        >
-                            <div
-                                v-for="(p, i) in plantStats"
-                                :key="i"
-                                class="border rounded-lg p-4 flex items-center justify-between"
-                            >
-                                <div class="flex flex-col">
-                                    <span class="text-sm text-gray-500"
-                                        >Planta</span
-                                    >
-                                    <span class="text-base font-semibold">{{
-                                        p.branch_office
-                                    }}</span>
+                                    <img
+                                        class="w-full h-full object-cover"
+                                        :src="employeePhoto"
+                                        @error="(e) => (e.target.src = $page.props.auth.user?.profile_photo_url)"
+                                        alt="Foto de perfil"
+                                    />
                                 </div>
+                            </div>
+                            <div class="flex-1">
+                                
 
-                                <div class="text-right">
-                                    <span class="text-sm text-gray-500"
-                                        >Empleados</span
-                                    >
-                                    <div class="text-2xl font-semibold">
-                                        {{ formatNumber(p.total_employees) }}
+                                <h1 class="text-2xl md:text-3xl font-semibold dark:text-white">
+                                    Bienvenid@, {{ employeeData?.full_name }}
+                                </h1>
+
+                                <p class="text-slate-600 dark:text-slate-300 mt-2 text-sm md:text-base">
+                                    Consulta tu información laboral, asistencia y accesos rápidos desde un solo lugar.
+                                </p>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
+                                    <div class="rounded-2xl bg-blue-50 dark:bg-blue-950/30 px-4 py-3">
+                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                            Empleado
+                                        </div>
+                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                            {{ employeeData?.id }}
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/70 px-4 py-3">
+                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                            Puesto
+                                        </div>
+                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                            {{ employeeData?.posicion }}
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/70 px-4 py-3">
+                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                            Departamento
+                                        </div>
+                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                            {{ employeeData?.departamento }}
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/70 px-4 py-3">
+                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                            Planta
+                                        </div>
+                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                            {{ employeeData?.planta }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        <div
-                            class="mt-4 pt-4 border-t flex items-center justify-between"
-                        >
-                            <span class="text-sm text-gray-500"
-                                >Total general</span
-                            >
-                            <span class="text-base font-semibold">
-                                {{
-                                    formatNumber(
-                                        plantStats.reduce(
-                                            (acc, x) =>
-                                                acc + (x.total_employees ?? 0),
-                                            0,
-                                        ),
-                                    )
-                                }}
-                            </span>
+        
+            <div class="xl:col-span-12">
+                <div class="card border-none shadow-sm rounded-3xl">
+                    <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+                        <div>
+                            <h3 class="text-xl font-semibold mb-1">Accesos rápidos</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">
+                                Información frecuente para tu operación diaria.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <div class="rounded-3xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900/60 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                            <div class="flex items-start justify-between gap-4 h-full">
+                                <div class="flex flex-col justify-between h-full w-full">
+                                    <div>
+                                        <h4 class="font-semibold dark:text-white mb-1">
+                                            Antigüedad
+                                        </h4>
+
+                                        <template v-if="loading">
+                                            <Skeleton width="10rem" height="2rem" class="mb-2"></Skeleton>
+                                        </template>
+                                        <template v-else>
+                                            <p class="text-2xl md:text-3xl font-bold dark:text-white">
+                                                {{ antiguedad }}
+                                            </p>
+                                        </template>
+                                    </div>
+
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
+                                        Tiempo acumulado desde tu fecha de ingreso a la empresa.
+                                    </p>
+                                </div>
+
+                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 dark:bg-blue-500/10 shrink-0">
+                                    <i class="pi pi-calendar text-blue-600 dark:text-blue-400 !text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-3xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900/60 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                            <div class="flex items-start justify-between gap-4 h-full">
+                                <div class="flex flex-col justify-between h-full w-full">
+                                    <div>
+                                        <h4 class="font-semibold dark:text-white mb-1">
+                                            Vacaciones
+                                        </h4>
+
+                                        <template v-if="loading">
+                                            <Skeleton width="6rem" height="2rem" class="mb-2"></Skeleton>
+                                        </template>
+                                        <template v-else>
+                                            <p class="text-2xl md:text-3xl font-bold dark:text-white">
+                                                {{ employeeVacations?.vacaciones_disponibles }}
+                                            </p>
+                                        </template>
+                                    </div>
+
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
+                                        Consulta los días disponibles o el estatus actual de tus vacaciones.
+                                    </p>
+                                </div>
+
+                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/10 shrink-0">
+                                    <i class="pi pi-briefcase text-emerald-600 dark:text-emerald-400 !text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-3xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900/60 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                            <div class="flex items-start justify-between gap-4 h-full">
+                                <div class="flex flex-col justify-between h-full w-full">
+                                    <div>
+                                        <h4 class="font-semibold dark:text-white mb-1">
+                                            Incidencias
+                                        </h4>
+
+                                        <template v-if="loading">
+                                            <Skeleton width="5rem" height="2rem" class="mb-2"></Skeleton>
+                                        </template>
+                                        <template v-else>
+                                            <p class="text-2xl md:text-3xl font-bold  dark:text-white">
+                                                {{ employeeIncidences?.incidencias_empleado }}
+                                            </p>
+                                        </template>
+                                    </div>
+
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
+                                        Revisa movimientos, registros o incidencias relacionadas con tu actividad.
+                                    </p>
+                                </div>
+
+                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-orange-100 dark:bg-orange-500/10 shrink-0">
+                                    <i class="pi pi-exclamation-circle text-orange-600 dark:text-orange-400 !text-xl"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="card">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">
-                        Calendario de días feriados
-                    </h3>
-                    <span class="text-xs text-gray-500"
-                        >Días no laborales considerados en la nómina</span
-                    >
-                </div>
-
-                <Calendar
-                    v-model="selectedHolidayDate"
-                    inline
-                    :show-button-bar="false"
-                    date-format="dd/mm/yy"
-                    class="w-full"
-                    @month-change="onMonthChange"
-                />
-
-                <div class="mt-4">
-                    <h4 class="text-sm font-semibold mb-2">
-                        Días feriados del mes
-                    </h4>
-
-                    <div v-if="loadingDashboard" class="text-sm text-gray-500">
-                        Cargando días feriados...
-                    </div>
-
-                    <div v-else>
-                        <div
-                            v-if="sortedHolidays.length === 0"
-                            class="text-sm text-gray-500"
-                        >
-                            No hay días feriados registrados para este mes.
+            <!-- {{ attendanceData }} -->
+            <div class="xl:col-span-12">
+                <div class="card border-none shadow-sm rounded-3xl">
+                    <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+                        <div>
+                            <h3 class="text-xl font-semibold mb-1">Calendario de asistencia</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">
+                                Vista rápida de tu comportamiento mensual.
+                            </p>
                         </div>
+                        <Tag value="Mes actual" severity="info" rounded />
+                    </div>
 
-                        <ul
-                            v-else
-                            class="space-y-2 max-h-52 overflow-auto pr-1"
+                    <div class="attendance-calendar-wrapper">
+                        <Calendar
+                            v-model="attendanceDate"
+                            inline
+                            class="w-full attendance-calendar"
                         >
-                            <li
-                                v-for="(holiday, index) in sortedHolidays"
-                                :key="index"
-                                class="flex justify-between text-sm border rounded px-2 py-1"
-                            >
-                                <span>{{ holiday.name }}</span>
-                                <span class="text-gray-600">{{
-                                    holiday.dateFormatted
-                                }}</span>
-                            </li>
-                        </ul>
+                            <template #date="slotProps">
+                                <div
+                                    class="attendance-day-cell"
+                                    :class="{ 'has-attendance': !!getWeekDataByDate(normalizeDate(slotProps.date)) }"
+                                    :style="getDayStyle(slotProps.date)"
+                                    v-tooltip.top="getTooltipOptions(slotProps.date)"
+                                >
+                                    {{ slotProps.date.day }}
+                                </div>
+                            </template>
+                        </Calendar>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- ACCIONES RÁPIDAS -->
-        <div class="card">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold">Acciones rápidas</h3>
-                <span class="text-xs text-gray-500">
-                    Atajos frecuentes del sistema de nóminas
-                </span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <Link href="/employee/catalog">
-                    <Button
-                        class="w-full justify-start"
-                        icon="pi pi-id-card"
-                        label="Ver empleados"
-                        outlined
-                    />
-                </Link>
-
-                <Link href="/payroll/payroll-departaments">
-                    <Button
-                        class="w-full justify-start"
-                        icon="pi pi-money-bill"
-                        label="Nomina"
-                        outlined
-                    />
-                </Link>
-
-                <Link href="/assistences/weekly-assistences">
-                    <Button
-                        class="w-full justify-start"
-                        icon="pi pi-wallet"
-                        label="Ver asistencias"
-                        outlined
-                    />
-                </Link>
-
-                <Link href="/employee/incidences-employee">
-                    <Button
-                        class="w-full justify-start"
-                        icon="pi pi-exclamation-triangle"
-                        label="Nueva incidencia"
-                        outlined
-                    />
-                </Link>
             </div>
         </div>
     </AppLayout>

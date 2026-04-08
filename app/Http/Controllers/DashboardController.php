@@ -13,14 +13,12 @@ class DashboardController
 {
     public function index()
     {
-        $usersCount = User::count();
-        $idEmployee = Employee::select('id')->where('user_id', Auth::id())->get();
-        return Inertia::render("Dashboard", ['users' => $usersCount, 'idEmployee' => $idEmployee]);
+        return Inertia::render("Dashboard", []);
     }
 
-    public function metrics()
+    public function show($id)
     {
-        $dashboard_data = Dashboard::metrics();
-        return response()->json($dashboard_data);
+        $data = Dashboard::getData($id);
+        return response()->json($data);
     }
 }

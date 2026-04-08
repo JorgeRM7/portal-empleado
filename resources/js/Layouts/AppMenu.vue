@@ -14,7 +14,6 @@ const rawMenu = ref([
                 label: "Dashboard",
                 icon: "pi pi-fw pi-home",
                 to: "/dashboard",
-                permission: "dashboard.index",
             },
         ],
     },
@@ -23,16 +22,9 @@ const rawMenu = ref([
         icon: "pi pi-fw pi-check-circle",
         items: [
             {
-                label: "Reporte de ausentismos",
-                icon: "pi pi-fw pi-check-circle",
-                to: "/assistences/absenteeism",
-                permission: "absenteeism.index",
-            },
-            {
                 label: "Registro de asistencias",
                 icon: "pi pi-fw pi-id-card",
-                to: "/assistences/assistences",
-                permission: "assistences.index",
+                to: "/weekly-assistences",
             },
         ],
     },

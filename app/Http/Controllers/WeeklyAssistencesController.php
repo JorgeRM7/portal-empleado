@@ -27,41 +27,13 @@ class WeeklyAssistencesController
     }
 
     public function index( Request $request ){
-        $user = Auth::user();
-        $branchOffices = $user->branchOffices()
-            ->where('active', true)
-            ->orderBy('name')
-            ->get();
-        $deparments =   Departments::select('id', 'name')->get();
-        $incidences = Incidence::select('id', 'name')->get();
-        return Inertia::render('WeeklyAssistances/Index', [
-            'branch_offices' => $branchOffices,
-            'deparments' => $deparments,
-            'incidences' => $incidences
-        ]);
+        return Inertia::render('WeeklyAssistances/Index', []);
     }
 
     public function filter_data( Request $request ){
         $data = $this->getFilteredData($request);
-        
-        $employees = Employee::select('id', 'full_name')->whereIn('status', ['entry', 'reentry'])
-        ->where('branch_office_id', $request->planta)->get();
-
-        $fechasSemana = [
-            'monday'    => $this->getDateFromWeekDay($request->semana, $request->anio, 1),
-            'wednesday' => $this->getDateFromWeekDay($request->semana, $request->anio, 3),
-            'thursday'  => $this->getDateFromWeekDay($request->semana, $request->anio, 4),
-            'friday'    => $this->getDateFromWeekDay($request->semana, $request->anio, 5),
-            'saturday'  => $this->getDateFromWeekDay($request->semana, $request->anio, 6),
-            'sunday'    => $this->getDateFromWeekDay($request->semana, $request->anio, 7),
-            'tuesday'   => $this->getDateFromWeekDay($request->semana, $request->anio, 2),
-        ];
-
-
         return response()->json([
             'data'  => $data,
-            'dates' => $fechasSemana,
-            'employees' => $employees
         ]);
 
     }
@@ -145,15 +117,7 @@ class WeeklyAssistencesController
     private function getFilteredData($request)
     {
 
-        $data = WeeklyAssistence::index([
-            'planta'       => $request->planta,
-            'departamento' => $request->departamento,
-            'empleados'    => $request->empleados,
-            'semana'       => $request->semana,
-            'anio'         => $request->anio,
-            'incidencia'   => $request->incidencia,
-            'reglas'       => $request->reglas,
-        ]);
+        $data = WeeklyAssistence::index($request);
 
         $data = collect($data)->map(function ($item) {
 

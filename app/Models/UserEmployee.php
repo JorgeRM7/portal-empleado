@@ -26,4 +26,9 @@ class UserEmployee extends Authenticatable
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+    public function employee()
+    {
+        return $this->hasOne(Employee::class, 'id', 'id');
+    }
 }
