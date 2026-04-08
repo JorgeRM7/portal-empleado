@@ -140,21 +140,74 @@ const spanishLocale = {
     invalidFileTypeMessage: "Tipo de archivo no permitido, se esperaba: {0}.",
 };
 
+// const MyPreset = definePreset(Aura, {
+//     semantic: {
+//         primary: {
+//             0: "#ffffff",
+//             50: "{orange.50}",
+//             100: "{orange.100}",
+//             200: "{orange.200}",
+//             300: "{orange.300}",
+//             400: "{orange.400}",
+//             500: "{orange.500}",
+//             600: "{orange.600}",
+//             700: "{orange.700}",
+//             800: "{orange.800}",
+//             900: "{orange.900}",
+//             950: "{orange.950}",
+//         },
+//         colorScheme: {
+//             light: {
+//                 surface: {
+//                     0: "#ffffff",
+//                     50: "{zinc.50}",
+//                     100: "{zinc.100}",
+//                     200: "{zinc.200}",
+//                     300: "{zinc.300}",
+//                     400: "{zinc.400}",
+//                     500: "{zinc.500}",
+//                     600: "{zinc.600}",
+//                     700: "{zinc.700}",
+//                     800: "{zinc.800}",
+//                     900: "{zinc.900}",
+//                     950: "{zinc.950}",
+//                 },
+//             },
+//             dark: {
+//                 surface: {
+//                     0: "{stone.50}",
+//                     50: "{stone.50}",
+//                     100: "{stone.100}",
+//                     200: "{stone.200}",
+//                     300: "{stone.300}",
+//                     400: "{stone.400}",
+//                     500: "{stone.500}",
+//                     600: "{stone.600}",
+//                     700: "{stone.700}",
+//                     800: "{stone.800}",
+//                     900: "#0f1014",
+//                     950: "{stone.950}",
+//                 },
+//             },
+//         },
+//     },
+// });
+
 const MyPreset = definePreset(Aura, {
     semantic: {
         primary: {
             0: "#ffffff",
-            50: "{orange.50}",
-            100: "{orange.100}",
-            200: "{orange.200}",
-            300: "{orange.300}",
-            400: "{orange.400}",
-            500: "{orange.500}",
-            600: "{orange.600}",
-            700: "{orange.700}",
-            800: "{orange.800}",
-            900: "{orange.900}",
-            950: "{orange.950}",
+            50: "{blue.50}",
+            100: "{blue.100}",
+            200: "{blue.200}",
+            300: "{blue.300}",
+            400: "{blue.400}",
+            500: "{blue.500}",
+            600: "{blue.600}",
+            700: "{blue.700}",
+            800: "{blue.800}",
+            900: "{blue.900}",
+            950: "{blue.950}",
         },
         colorScheme: {
             light: {

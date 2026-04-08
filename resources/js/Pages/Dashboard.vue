@@ -120,7 +120,7 @@ onUnmounted(() => {
                 <div class="flex items-center">
                     <img
                         class="w-16 h-16 rounded-full object-cover"
-                        :src="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${props.idEmployee[0].id}.jpg`"
+                        :src="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${props.idEmployee[0]?.id}.jpg`"
                         @error="
                             (e) =>
                                 (e.target.src =
