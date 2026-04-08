@@ -102,71 +102,7 @@ const toggleNotifications = (event) => {
     opNotifications.value.toggle(event);
 };
 
-// onMounted(async () => {
-//     try {
-//         // 1. Obtener lista de plantas
-//         const branchOfficesDB = await axios.get("/branch-offices-user");
-//         branchOffices.value = branchOfficesDB.data;
-//         branchOfficesCopy.value = branchOfficesDB.data;
-
-//         if (branchOffices.value.length === 0) {
-//             console.warn("No hay sucursales disponibles para este usuario");
-//             return;
-//         }
-
-//         // 2. INTENTO 1: Leer de LocalStorage
-//         let storedBranch = null;
-//         try {
-//             const item = localStorage.getItem("selectedBranchOffice");
-//             storedBranch = item ? JSON.parse(item) : null;
-
-//             // Validar que la planta guardada siga existiendo en la lista actual
-//             const isValid = branchOffices.value.find(
-//                 (b) => b.id === storedBranch?.id,
-//             );
-//             if (!isValid) storedBranch = null;
-//         } catch (e) {
-//             console.warn("LocalStorage corrupto, limpiando...");
-//             localStorage.removeItem("selectedBranchOffice");
-//         }
-
-//         // 3. INTENTO 2 (PLAN B): Si localStorage falló, pedir al Backend
-//         if (!storedBranch) {
-//             try {
-//                 // Asumiendo que tienes una ruta que devuelve la preferencia del usuario
-//                 // Si no la tienes, crea una rápida en tu backend: Route::get('/user/default-branch')
-//                 const response = await axios.get("/user/default-branch");
-//                 if (response.data) {
-//                     storedBranch = response.data;
-//                     console.log("Recuperada planta desde Backend (Plan B)");
-//                 }
-//             } catch (error) {
-//                 console.log(
-//                     "No se pudo recuperar preferencia del backend, usando fallback.",
-//                 );
-//             }
-//         }
-
-//         // 4. INTENTO 3 (FALLBACK): Usar la primera disponible
-//         const finalBranch = storedBranch || branchOffices.value[0];
-
-//         // Aplicar selección
-//         select(finalBranch);
-
-//         // IMPORTANTE: Si venimos de un fallo de localStorage, a veces es mejor forzar un reload
-//         // para asegurar que las variables de sesión del servidor (PHP/Laravel) se actualicen
-//         if (!storedBranch && branchOffices.value.length > 0) {
-//             // Opcional: Descomentar si los errores SQL son graves al inicio
-//             // reloadPage();
-//         }
-
-//         await fetchNotifications();
-//         initTheme();
-//     } catch (error) {
-//         console.error("Error crítico en inicialización del Topbar:", error);
-//         // Aquí podrías redirigir a una página de error o mantenimiento
-//     }
-// });
+onMounted(async () => {});
 </script>
 
 <template>

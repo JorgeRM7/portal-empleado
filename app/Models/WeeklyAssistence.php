@@ -52,20 +52,8 @@ class WeeklyAssistence extends Model
     ];
 
 
-    public static function index($filtros = []){
-        $filtro_planta       = $filtros['planta'] ?? null;
-        $filtro_departamento = $filtros['departamento'] ?? null;
-        $ids_empleados       = $filtros['empleados'] ?? [];
-        $filtro_semana       = $filtros['semana'] ?? null;
-        $filtro_anio         = $filtros['anio'] ?? null;
-        $filtro_incidencia   = $filtros['incidencia'] ?? null;
-
-        if (empty($filtro_semana) || empty($filtro_anio)) {
-            $fecha = Carbon::now('America/Mexico_City');
-
-            $filtro_semana = $fecha->isoWeek();
-            $filtro_anio   = $fecha->isoWeekYear();
-        }
+    public static function index($data){
+        
 
 
         $sql = "
@@ -113,40 +101,13 @@ class WeeklyAssistence extends Model
             LEFT JOIN branch_offices  bo  ON bo.id = e.branch_office_id
             WHERE e.status != 'termination'
             AND wa.deleted_at IS NULL
-            AND wa.week_number = '$filtro_semana'
-            AND wa.week_year   = '$filtro_anio'
+            AND wa.employee_id IN (319)
+            AND wa.week_year = 2026
         ";
 
-        if (!empty($filtro_planta)) {
-            $sql .= " AND wa.branch_office_id = '$filtro_planta'";
-        }
-
-        if (!empty($ids_empleados)) {
-            $ids = implode(",", $ids_empleados);
-            $sql .= " AND wa.employee_id IN ($ids)";
-        }
-
-        if (!empty($filtro_departamento)) {
-            $ids = implode(",", $filtro_departamento);
-            $sql .= " AND e.department_id IN ($ids)";
-        }
-
-        if (!empty($filtro_incidencia)) {
-            $ids = implode(",", $filtro_incidencia);
-            $sql .= " AND (
-                wa.monday_status IN ( $ids) OR
-                wa.tuesday_status IN ( $ids) OR
-                wa.wednesday_status IN ($ids) OR
-                wa.thursday_status IN ( $ids) OR
-                wa.friday_status IN ($ids ) OR
-                wa.saturday_status IN ($ids) OR
-                wa.sunday_status IN ($ids)
-            )";
-        }
-
         $sql .= "
-            GROUP BY wa.employee_id, wa.week_number
-            ORDER BY wa.employee_id ASC
+            GROUP BY wa.employee_id, CAST(wa.week_number AS UNSIGNED), wa.week_year 
+            ORDER BY wa.id DESC
             LIMIT 5000
         ";
         $rows = DB::select($sql);

@@ -33,11 +33,46 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
+    // public function share(Request $request): array
+    // {
+    //     return array_merge(parent::share($request), [
+    //         'auth' => [
+    //             'user' => $request->user(),
+    //         ],
+    //         'flash' => [
+    //             'success' => fn () => $request->session()->get('success'),
+    //             'error'   => fn () => $request->session()->get('error'),
+    //             'page' => fn () => $request->session()->get('page'),
+    //             'import_failures' => fn () => session('import_failures'),
+    //         ],
+    //     ]);
+    // }
+
     public function share(Request $request): array
     {
+        $user = $request->user();
+
+        if ($user) {
+            $user->loadMissing([
+                'employee:id,full_name,branch_office_id,position_id,department_id,status,entry_date'
+            ]);
+        }
+
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'employee' => $user->employee ? [
+                        'id' => $user->employee->id,
+                        'full_name' => $user->employee->full_name,
+                        'branch_office_id' => $user->employee->branch_office_id,
+                        'position_id' => $user->employee->position_id,
+                        'department_id' => $user->employee->department_id,
+                        'status' => $user->employee->status,
+                        'entry_date' => $user->employee->entry_date,
+                    ] : null,
+                ] : null,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

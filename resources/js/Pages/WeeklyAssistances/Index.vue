@@ -119,8 +119,8 @@ const showColumns = ref({
     Triples: true,
     Faltas: true,
     Planta: false,
-    Semana: false,
-    Año: false,
+    Semana: true,
+    Año: true,
 });
 
 //Filtros adicionales
@@ -135,15 +135,7 @@ const otherFilters = ref([
 const otherFilterDialog = ref(false);
 
 //Filtros del modal
-const startDate = ref();
-const endDate = ref();
-const selectedBranchOfficeId = ref(null);
 const selectedWeek = ref(null);
-const selectedYear = ref(null);
-const selectedBranchOfficeName = ref(null);
-const selectedEmployees = ref(null);
-const selectedDeparments = ref(null);
-const selectedIncidences = ref(null);
 
 //Referencia a la tabla de datos
 const dt = ref(null);
@@ -175,8 +167,8 @@ const frozenColumns = ref({
     Triples: false,
     Faltas: false,
     Planta: false,
-    Semana: false,
-    Año: false,
+    Semana: true,
+    Año: true,
 });
 
 //Diálogo de selección de columnas
@@ -201,11 +193,6 @@ const visible = ref(false);
 
 //Referencia al servicio de toast personalizado
 const interval = ref();
-
-//Funciones para alternar los popovers
-const toggleAccionesMasivas = (event) => {
-    op.value.toggle(event);
-};
 
 const toggleMostrarColumnas = (event) => {
     opMostrarColumnas.value.toggle(event);
@@ -232,17 +219,8 @@ const rows = ref([
         domingo: "",
     },
 ]);
-const dates = ref();
-//Filas seleccionadas
-const selected = ref([]);
 
-const getSelectedFields = () => {
-    return Object.keys(exportColumns.value).filter(
-        (key) => exportColumns.value[key],
-    );
-};
 
-//Función para guardar las columnas seleccionadas para exportar
 const saveColumns = async () => {
     const campos = getSelectedFields();
     columnsDialog.value = false;
@@ -304,7 +282,6 @@ const saveColumns = async () => {
     }
 };
 
-//Función para limpiar filtros
 const clearFilter = () => {
     selectedEmployees.value = null;
     selectedDeparments.value = null;
@@ -316,28 +293,15 @@ const clearFilter = () => {
 //Función para aplicar filtros adicionales
 const filter_data = async () => {
     loading.value = true;
-    selected.value = [];
-    const [anio, semana] = selectedWeek.value.split("-W");
     otherFilterDialog.value = false;
-    selectedYear.value = anio;
-    selectedBranchOfficeName.value = selectedBranchOfficeId.value.code;
     try {
-        const response = await axios.get(
-            "/assistences/weekly-assistences/filter-data",
-            {
-                params: {
-                    planta: selectedBranchOfficeId.value.id,
-                    anio: parseInt(anio),
-                    semana: parseInt(semana, 10),
-                    empleados: selectedEmployees.value,
-                    departamento: selectedDeparments.value,
-                    incidencia: selectedIncidences.value,
-                },
-            },
+        const response = await axios.get("/weekly-assistences/filter-data",{
+            params:{
+                selectedWeek
+            }
+        }
         );
         rows.value = response.data.data;
-        dates.value = response.data.dates;
-        employees.value = response.data.employees;
         loading.value = false;
     } catch (error) {
         console.error("Error refrescando tabla:", error);
@@ -347,20 +311,7 @@ const filter_data = async () => {
 
 onMounted(async () => {
     rows.value = props.data;
-    branch_offices.value = props.branch_offices;
-    deparments.value = props.deparments;
-    employees.value = props.employees;
-    incidences.value = props.incidences;
-    dates.value = props.dates;
-    selectedWeek.value = getCurrentWeek();
-    const savedBranch = JSON.parse(
-        localStorage.getItem("selectedBranchOffice"),
-    );
-    if (savedBranch) {
-        const match = branch_offices.value.find((b) => b.id === savedBranch.id);
-        selectedBranchOfficeId.value = match ?? null;
-        selectedBranchOfficeName.value = selectedBranchOfficeId.value.code;
-    }
+    selectedWeek.value = getCurrentWeekMX();
     filter_data();
 });
 
@@ -403,248 +354,8 @@ const show_details = (data, day) => {
     };
 
     modalDetails.value = true;
-};
+}
 
-// const revisarIncidencias = () => {
-//     const fecha_inicial = startDate.value;
-//     const fecha_final = endDate.value;
-
-//     if (!fecha_inicial || !fecha_final) {
-//         showError("Selecciona fecha inicial y final");
-//         return;
-//     }
-
-//     const selectedRows = selected.value.map((e) => e.employee_id);
-
-//     if (selectedRows.length < 1) {
-//         showError("Selecciona al menos un empleado");
-//         return;
-//     }
-
-//     const fechas = [];
-//     let fInicio = new Date(fecha_inicial);
-//     const fFin = new Date(fecha_final);
-
-//     while (fInicio <= fFin) {
-//         fechas.push(fInicio.toISOString().split("T")[0]);
-//         fInicio.setDate(fInicio.getDate() + 1);
-//     }
-
-//     modalTurns.value = false;
-//     toast.add({
-//         severity: "info",
-//         summary: "Revisión de turnos iniciada",
-//         life: 5000,
-//     });
-
-//     let url =
-//         "https://grupo-ortiz.site/apis/Controllers/weeklyAsistenceController.php?op=revisar-turno";
-
-//     let peticiones = [];
-
-//     selectedRows.forEach((id) => {
-//         fechas.forEach((fecha) => {
-//             peticiones.push(() =>
-//                 $.ajax({
-//                     url: url,
-//                     method: "POST",
-//                     data: { id: id, validity_from: fecha },
-//                 })
-//                     .then(function (response) {
-//                         let res =
-//                             typeof response === "string"
-//                                 ? JSON.parse(response)
-//                                 : response;
-
-//                         res.empleadoId = id;
-//                         res.fechaError = fecha;
-
-//                         return res;
-//                     })
-//                     .catch(function () {
-//                         return {
-//                             estatus: "error",
-//                             message: "No se encontró un rol de turno activo",
-//                             empleadoId: id,
-//                             fechaError: fecha,
-//                         };
-//                     }),
-//             );
-//         });
-//     });
-
-//     const total = peticiones.length;
-//     let procesados = 0;
-//     let resultados = [];
-
-//     const tamañoLote = 70;
-
-//     const ejecutar = async () => {
-//         for (let i = 0; i < peticiones.length; i += tamañoLote) {
-//             const lote = peticiones.slice(i, i + tamañoLote);
-
-//             const res = await Promise.all(lote.map((fn) => fn()));
-
-//             resultados = resultados.concat(res);
-
-//             procesados += lote.length;
-
-//             const porcentaje = Math.round((procesados / total) * 100);
-//             toast.add({
-//                 severity: "info",
-//                 summary: "Procesando...",
-//                 detail: `${porcentaje}% (${procesados}/${total})`,
-//                 life: 5000,
-//             });
-
-//             await new Promise((r) => setTimeout(r, 120));
-//         }
-
-//         const errores = resultados.filter(
-//             (res) => res && res.estatus === "error",
-//         );
-
-//         toast.add({
-//             severity: "success",
-//             summary: "Finalizado",
-//             detail: `Procesados: ${total}`,
-//             life: 5000,
-//         });
-//         filter_data();
-//     };
-
-//     ejecutar().catch((err) => {
-//         showError();
-//         console.error("Error crítico:", err);
-//     });
-// };
-
-
-const revisarIncidencias = async () => {
-    const fecha_inicial = startDate.value;
-    const fecha_final = endDate.value;
-
-    if (!fecha_inicial || !fecha_final) {
-        showError("Selecciona fecha inicial y final");
-        return;
-    }
-
-    const selectedRows = selected.value.map((e) => e.employee_id);
-
-    if (selectedRows.length < 1) {
-        showError("Selecciona al menos un empleado");
-        return;
-    }
-
-    const fechas = [];
-    let fInicio = new Date(fecha_inicial);
-    const fFin = new Date(fecha_final);
-
-    while (fInicio <= fFin) {
-        fechas.push(fInicio.toISOString().split("T")[0]);
-        fInicio.setDate(fInicio.getDate() + 1);
-    }
-
-    modalTurns.value = false;
-
-    toast.add({
-        severity: "info",
-        summary: "Revisión de turnos iniciada",
-        life: 5000,
-    });
-
-    const url = "/assistences/weekly-assistances/check-turn";
-
-    let peticiones = [];
-
-    selectedRows.forEach((id) => {
-        fechas.forEach((fecha) => {
-            peticiones.push(() =>
-                axios.post(url, {
-                    id: id,
-                    validity_from: fecha,
-                })
-                .then((response) => {
-                    let res = response.data;
-
-                    res.empleadoId = id;
-                    res.fechaError = fecha;
-                    console.log(res)
-
-                    return res;
-                })
-                .catch((error) => {
-                    console.error("Error en petición:", error);
-
-                    return {
-                        estatus: "error",
-                        message: error?.response?.data?.message || "No se encontró un rol de turno activo",
-                        empleadoId: id,
-                        fechaError: fecha,
-                    };
-                })
-            );
-        });
-    });
-
-    const total = peticiones.length;
-    let procesados = 0;
-    let resultados = [];
-
-    const tamañoLote = 200;
-
-    try {
-        for (let i = 0; i < peticiones.length; i += tamañoLote) {
-            const lote = peticiones.slice(i, i + tamañoLote);
-
-            const res = await Promise.all(lote.map((fn) => fn()));
-
-            resultados = resultados.concat(res);
-
-            procesados += lote.length;
-
-            const porcentaje = Math.round((procesados / total) * 100);
-
-            toast.add({
-                severity: "info",
-                summary: "Procesando...",
-                detail: `${porcentaje}% (${procesados}/${total})`,
-                life: 3000,
-            });
-
-            await new Promise((r) => setTimeout(r, 120));
-        }
-
-        const errores = resultados.filter(
-            (res) => res && res.estatus === "error"
-        );
-
-        console.log("Errores detectados:", errores);
-
-        toast.add({
-            severity: "success",
-            summary: "Finalizado",
-            detail: `Procesados: ${total}`,
-            life: 5000,
-        });
-
-        filter_data();
-    } catch (err) {
-        console.error("Error crítico:", err);
-        showError("Ocurrió un error al procesar la revisión");
-    }
-};
-
-const getCurrentWeek = () => {
-    const date = new Date();
-    const d = new Date(
-        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-    );
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-    return `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, "0")}`;
-};
 
 const parseJSON = (val) => {
     try {
@@ -653,41 +364,36 @@ const parseJSON = (val) => {
         return null;
     }
 };
+
+function getCurrentWeekMX() {
+    const now = new Date();
+
+    const mexicoDate = new Date(
+        now.toLocaleString('en-US', { timeZone: 'America/Mexico_City' })
+    );
+
+    const date = new Date(Date.UTC(
+        mexicoDate.getFullYear(),
+        mexicoDate.getMonth(),
+        mexicoDate.getDate()
+    ));
+
+    const dayNum = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+
+    return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
 </script>
 
 <template>
     <AppLayout :title="'Asistencia Semanal'">
         <Toast group="download" position="top-right" />
         <Toast group="processing" />
-        <Toast position="top-center" group="headless" @close="visible = false">
-            <template #container="{ message, closeCallback }">
-                <section
-                    class="flex flex-col p-4 gap-4 w-full bg-gray-100 dark:bg-gray-800 rounded-xl"
-                >
-                    <div class="flex items-center gap-5">
-                        <i class="pi pi-cloud-upload text-2xl text-white"></i>
-                        <span class="font-bold text-base text-white">{{
-                            message.summary
-                        }}</span>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <ProgressBar
-                            :value="progress"
-                            :showValue="false"
-                            :style="{ height: '4px' }"
-                            pt:value:class="!bg-primary-50 dark:!bg-primary-900"
-                            class="!bg-primary/80"
-                        ></ProgressBar>
-                        <label class="text-sm font-bold text-white"
-                            >{{ progress }}% subido</label
-                        >
-                    </div>
-                </section>
-            </template>
-        </Toast>
+        
         <div class="card">
-            <!-- <pre>{{ rows }}</pre> -->
-
             <Toolbar>
                 <template #start>
                     <Button
@@ -701,18 +407,12 @@ const parseJSON = (val) => {
                 </template>
 
                 <template #end>
-                    <Button
-                        label="Revisar turnos"
-                        icon="pi pi-send"
-                        severity="success"
-                        @click="modalTurns = true"
-                    />
+                    
                 </template>
             </Toolbar>
 
             <DataTable
                 ref="dt"
-                v-model:selection="selected"
                 :value="rows"
                 dataKey="employee_id"
                 :paginator="true"
@@ -761,11 +461,7 @@ const parseJSON = (val) => {
                                 v-tooltip.top="'Limpiar filtros'"
                                 @click="clearFilter()"
                             />
-                            <Tag
-                                v-if="selected.length > 0"
-                                severity="info"
-                                :value="'Seleccionados: ' + selected.length"
-                            ></Tag>
+                           
                         </div>
                         <div class="flex">
                             <IconField>
@@ -874,55 +570,8 @@ const parseJSON = (val) => {
                     </div>
                     <div class="mb-2">
                         <Chip :label="'Semanas: ' + selectedWeek" />
-                        <Chip
-                            v-if="selectedBranchOfficeName != null"
-                            :label="'Planta: ' + selectedBranchOfficeName"
-                        />
-                        <Chip
-                            v-if="selectedEmployees"
-                            :label="'Empleados: ' + selectedEmployees"
-                            removable
-                            @remove="
-                                () => {
-                                    selected = [];
-                                    selectedEmployees = null;
-                                    filter_data();
-                                }
-                            "
-                        />
-                        <Chip
-                            v-if="selectedDeparments"
-                            :label="'Departamentos: ' + selectedDeparments"
-                            removable
-                            @remove="
-                                () => {
-                                    selected = [];
-                                    selectedDeparments = null;
-                                    filter_data();
-                                }
-                            "
-                        />
-                        <Chip
-                            v-if="selectedIncidences"
-                            :label="'Incidencias: ' + selectedIncidences"
-                            removable
-                            @remove="
-                                () => {
-                                    selected = [];
-                                    selectedIncidences = null;
-                                    filter_data();
-                                }
-                            "
-                        />
                     </div>
                 </template>
-
-                <Column
-                    selectionMode="multiple"
-                    style="width: 1rem"
-                    :exportable="false"
-                    :frozen="true"
-                ></Column>
                 <Column
                     field="employee_id"
                     header="Clave"
@@ -1089,7 +738,7 @@ const parseJSON = (val) => {
                 ></Column>
                 <Column
                     field="monday_code"
-                    :header="'Lunes (' + dates?.monday ?? '' + ')'"
+                    :header="'Lunes'"
                     sortable
                     :frozen="frozenColumns.Lunes"
                     :style="{
@@ -1218,7 +867,7 @@ const parseJSON = (val) => {
                 </Column>
                 <Column
                     field="tuesday_code"
-                    :header="'Martes (' + dates?.tuesday + ')'"
+                    :header="'Martes'"
                     sortable
                     :frozen="frozenColumns.Martes"
                     :style="{
@@ -1347,7 +996,7 @@ const parseJSON = (val) => {
                 </Column>
                 <Column
                     field="wednesday_code"
-                    :header="'Miercoles (' + dates?.wednesday + ')'"
+                    :header="'Miercoles'"
                     sortable
                     :frozen="frozenColumns.Miercoles"
                     :style="{
@@ -1482,7 +1131,7 @@ const parseJSON = (val) => {
                 </Column>
                 <Column
                     field="thursday_code"
-                    :header="'Jueves (' + dates?.thursday + ')'"
+                    :header="'Jueves'"
                     sortable
                     :frozen="frozenColumns.Jueves"
                     :style="{
@@ -1615,7 +1264,7 @@ const parseJSON = (val) => {
                 </Column>
                 <Column
                     field="friday_code"
-                    :header="'Viernes (' + dates?.friday + ')'"
+                    :header="'Viernes'"
                     sortable
                     :frozen="frozenColumns.Viernes"
                     :style="{
@@ -1744,7 +1393,7 @@ const parseJSON = (val) => {
                 </Column>
                 <Column
                     field="saturday_code"
-                    :header="'Sabado (' + dates?.saturday + ')'"
+                    :header="'Sabado'"
                     sortable
                     :frozen="frozenColumns.Sabado"
                     :style="{
@@ -1877,7 +1526,7 @@ const parseJSON = (val) => {
                 </Column>
                 <Column
                     field="sunday_code"
-                    :header="'Domingo (' + dates?.sunday + ')'"
+                    :header="'Domingo'"
                     sortable
                     :frozen="frozenColumns.Domingo"
                     :style="{
@@ -2121,20 +1770,6 @@ const parseJSON = (val) => {
                 :modal="true"
             >
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Planta
-                    </label>
-                    <Select
-                        v-model="selectedBranchOfficeId"
-                        display="chip"
-                        :options="branch_offices"
-                        optionLabel="code"
-                        filter
-                        placeholder="Selecciona una planta"
-                        class="w-full"
-                    />
-                </div>
-                <div>
                     <label
                         class="font-semibold text-sm text-gray-600 dark:text-gray-300"
                     >
@@ -2146,111 +1781,6 @@ const parseJSON = (val) => {
                         class="w-full"
                     />
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Departamentos
-                    </label>
-                    <Multiselect
-                        v-model="selectedDeparments"
-                        display="chip"
-                        :options="deparments"
-                        optionLabel="name"
-                        filter
-                        optionValue="id"
-                        placeholder="Selecciona un departamento"
-                        class="w-full"
-                    >
-                        <template #value="slotProps">
-                            <span
-                                v-if="
-                                    !slotProps.value || !slotProps.value.length
-                                "
-                            >
-                                Selecciona un departamento
-                            </span>
-
-                            <span v-else-if="slotProps.value.length > 5">
-                                {{ slotProps.value.length }} departamentos
-                                seleccionados
-                            </span>
-                        </template>
-                    </Multiselect>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Incidencias
-                    </label>
-                    <Multiselect
-                        v-model="selectedIncidences"
-                        display="chip"
-                        :options="incidences"
-                        optionLabel="name"
-                        filter
-                        optionValue="id"
-                        placeholder="Selecciona una incidencia"
-                        class="w-full"
-                    >
-                        <template #value="slotProps">
-                            <span
-                                v-if="
-                                    !slotProps.value || !slotProps.value.length
-                                "
-                            >
-                                Selecciona una incidencia
-                            </span>
-
-                            <span v-else-if="slotProps.value.length > 5">
-                                {{ slotProps.value.length }} incidencias
-                                seleccionadas
-                            </span>
-                        </template>
-                    </Multiselect>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Empleados
-                    </label>
-
-                    <Multiselect
-                        v-model="selectedEmployees"
-                        :options="employees"
-                        optionLabel="full_name"
-                        optionValue="id"
-                        filter
-                        :filterFields="['full_name', 'id']"
-                        placeholder="Selecciona un empleado"
-                        class="w-full"
-                        display="chip"
-                    >
-                        <!-- Texto cuando no hay selección -->
-                        <template #value="slotProps">
-                            <span
-                                v-if="
-                                    !slotProps.value ||
-                                    slotProps.value.length === 0
-                                "
-                            >
-                                Selecciona un empleado
-                            </span>
-
-                            <span v-else-if="slotProps.value.length > 5">
-                                {{ slotProps.value.length }} empleados
-                                seleccionados
-                            </span>
-                        </template>
-
-                        <!-- Personalizar cómo se muestran las opciones -->
-                        <template #option="{ option }">
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold text-gray-700"
-                                    >({{ option.id }})</span
-                                >
-                                <span>{{ option.full_name }}</span>
-                            </div>
-                        </template>
-                    </Multiselect>
-                </div>
-
                 <template #footer>
                     <Button
                         label="Cancelar"
@@ -2462,11 +1992,6 @@ const parseJSON = (val) => {
                                             <div
                                                 class="flex justify-between items-center mb-1"
                                             >
-                                                <p
-                                                    class="text-sm font-semibold text-gray-700"
-                                                >
-                                                    {{ item?.device_name }}
-                                                </p>
                                                 <span
                                                     class="text-xs text-gray-400"
                                                 >
@@ -2504,57 +2029,6 @@ const parseJSON = (val) => {
                         icon="pi pi-times"
                         class="p-button-sm p-button-secondary"
                         @click="modalDetails = false"
-                    />
-                </template>
-            </Dialog>
-
-            <Dialog
-                v-model:visible="modalTurns"
-                :style="{ width: '450px' }"
-                header="Revisar turnos"
-                :modal="true"
-            >
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="flex flex-col gap-2">
-                        <label class="font-semibold text-sm text-gray-600"
-                            >Fecha inicio</label
-                        >
-                        <DatePicker
-                            v-model="startDate"
-                            dateFormat="yy-mm-dd"
-                            placeholder="Inicio"
-                            showIcon
-                        />
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <label class="font-semibold text-sm text-gray-600"
-                            >Fecha fin</label
-                        >
-                        <DatePicker
-                            v-model="endDate"
-                            dateFormat="yy-mm-dd"
-                            placeholder="Fin"
-                            showIcon
-                        />
-                    </div>
-                </div>
-
-                <template #footer>
-                    <Button
-                        label="Cancelar"
-                        icon="pi pi-times"
-                        severity="danger"
-                        @click="modalTurns = false"
-                    />
-                    <Button
-                        v-if="selected.length >= 1"
-                        label="Revisar"
-                        icon="pi pi-send"
-                        severity="success"
-                        @click="revisarIncidencias"
-                        :loading="submitted"
-                        style="color: #fff"
                     />
                 </template>
             </Dialog>

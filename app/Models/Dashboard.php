@@ -2,89 +2,95 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class Dashboard extends Model
 {
-    public static function metrics()
+    public static function getData($id)
     {
-        $total_employees = DB::select("SELECT COUNT(id) as total_employees FROM employees WHERE status != 'termination';");
-        $new_employees = DB::select("SELECT COUNT(*) AS new_employees
-                                    FROM employees
-                                    WHERE status = 'entry'
-                                    AND entry_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
-                                    AND entry_date <  DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01');");
+        $employee = DB::selectOne("
+            SELECT 
+                employees.id, 
+                employees.email, 
+                employees.status, 
+                employees.dni, 
+                employees.profile_photo_path, 
+                branch_offices.code AS planta, 
+                employees.entry_date, 
+                employees.full_name,
+                employees.birthday,
+                users.username,
+                positions.name AS posicion,
+                employees.personal_phone AS telefono,
+                employees.name,
+                employees.surname,
+                employees.mother_surname,
+                departments.name AS departamento,
+                JSON_UNQUOTE(JSON_EXTRACT(employees.additional_info, '$.profession')) AS level_study
+            FROM employees
+            INNER JOIN genders ON genders.id = employees.gender_id
+            INNER JOIN branch_offices ON branch_offices.id = employees.branch_office_id
+            INNER JOIN users ON users.id = employees.user_id
+            INNER JOIN positions ON positions.id = employees.position_id 
+            INNER JOIN departments ON departments.id = employees.department_id
+            WHERE employees.id = ?
+        ", [$id]);
 
-        $termination_employees = DB::select("SELECT COUNT(*) AS termination_employees
-                                            FROM employees
-                                            WHERE status = 'termination'
-                                            AND termination_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
-                                            AND termination_date <  DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01');");
+        $vacaciones = DB::selectOne("SELECT SUM(amount) AS vacaciones_disponibles FROM `employee_day_vacations` WHERE employee_id =?  AND deleted_at is null" ,[$id]);
 
-        $assistances = DB::select("SELECT COUNT(*) AS assistances
-                                    FROM weekly_assistances
-                                    WHERE week_from = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-                                    AND CASE DAYOFWEEK(CURDATE())
-                                        WHEN 2 THEN monday_status
-                                        WHEN 3 THEN tuesday_status
-                                        WHEN 4 THEN wednesday_status
-                                        WHEN 5 THEN thursday_status
-                                        WHEN 6 THEN friday_status
-                                        WHEN 7 THEN saturday_status
-                                        WHEN 1 THEN sunday_status
-                                    END IN (1, 30, 31, 33, 24, 25, 26);"); 
-        $complete_assistances = DB::select("SELECT COUNT(*) AS complete_assistances
-                                    FROM weekly_assistances
-                                    WHERE week_from = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-                                    AND CASE DAYOFWEEK(CURDATE())
-                                        WHEN 2 THEN monday_status
-                                        WHEN 3 THEN tuesday_status
-                                        WHEN 4 THEN wednesday_status
-                                        WHEN 5 THEN thursday_status
-                                        WHEN 6 THEN friday_status
-                                        WHEN 7 THEN saturday_status
-                                        WHEN 1 THEN sunday_status
-                                    END IN (1, 30, 31, 33, 24, 25, 26);"); 
-        $abstences = DB::select("SELECT COUNT(*) AS abstences
-                                    FROM weekly_assistances
-                                    WHERE week_from = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-                                    AND CASE DAYOFWEEK(CURDATE())
-                                        WHEN 2 THEN monday_status
-                                        WHEN 3 THEN tuesday_status
-                                        WHEN 4 THEN wednesday_status
-                                        WHEN 5 THEN thursday_status
-                                        WHEN 6 THEN friday_status
-                                        WHEN 7 THEN saturday_status
-                                        WHEN 1 THEN sunday_status
-                                    END = 9;");
-        $late = DB::select("SELECT COUNT(*) AS late
-                            FROM weekly_assistances
-                            WHERE week_from = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-                            AND CASE DAYOFWEEK(CURDATE())
-                                WHEN 2 THEN monday_status
-                                WHEN 3 THEN tuesday_status
-                                WHEN 4 THEN wednesday_status
-                                WHEN 5 THEN thursday_status
-                                WHEN 6 THEN friday_status
-                                WHEN 7 THEN saturday_status
-                                WHEN 1 THEN sunday_status
-                            END = 52;");
-        $plant_stats = DB::select("SELECT branch_offices.code AS branch_office, COUNT(*) AS total_employees
-                                    FROM employees
-                                    INNER JOIN branch_offices ON branch_office_id = branch_offices.id
-                                    GROUP BY branch_office_id
-                                    ORDER BY total_employees DESC;");
+        $incidencias_empleado = DB::selectOne("SELECT COUNT(id) AS incidencias_empleado FROM `employee_incidences` WHERE employee_id =? AND expires_at IS NULL", [$id]);
+
+
+        $asistencia = DB::select("
+            SELECT 
+            	(SELECT code FROM incidences WHERE id = weekly_assistances.monday_status) AS lunes,
+                (SELECT code FROM incidences WHERE id = weekly_assistances.tuesday_status) AS martes,
+                (SELECT code FROM incidences WHERE id = weekly_assistances.wednesday_status) AS miercoles,
+                (SELECT code FROM incidences WHERE id = weekly_assistances.thursday_status) AS jueves,
+                (SELECT code FROM incidences WHERE id = weekly_assistances.friday_status) AS viernes,
+                (SELECT code FROM incidences WHERE id = weekly_assistances.saturday_status) AS sabado,
+                (SELECT code FROM incidences WHERE id = weekly_assistances.sunday_status) AS domingo,
+                
+                (SELECT color FROM incidences WHERE id = weekly_assistances.monday_status) AS color_lunes,
+                (SELECT color FROM incidences WHERE id = weekly_assistances.tuesday_status) AS color_martes,
+                (SELECT color FROM incidences WHERE id = weekly_assistances.wednesday_status) AS color_miercoles,
+                (SELECT color FROM incidences WHERE id = weekly_assistances.thursday_status) AS color_jueves,
+                (SELECT color FROM incidences WHERE id = weekly_assistances.friday_status) AS color_viernes,
+                (SELECT color FROM incidences WHERE id = weekly_assistances.saturday_status) AS color_sabado,
+                (SELECT color FROM incidences WHERE id = weekly_assistances.sunday_status) AS color_domingo,
+                
+                (SELECT name FROM incidences WHERE id = weekly_assistances.monday_status) AS nombre_lunes,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.tuesday_status) AS nombre_martes,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.wednesday_status) AS nombre_miercoles,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.thursday_status) AS nombre_domingo,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.friday_status) AS nombre_domingo,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.saturday_status) AS nombre_domingo,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.sunday_status) AS nombre_domingo,
+                
+                weekly_assistances.week_number,
+                weekly_assistances.week_year
+                
+            FROM `weekly_assistances`
+            WHERE weekly_assistances.employee_id =? AND weekly_assistances.deleted_at IS NULL 
+            GROUP BY  weekly_assistances.week_number, weekly_assistances.week_year
+            ORDER BY weekly_assistances.id DESC
+        ",[$id]);
+
+        $fechaIngreso = Carbon::parse($employee->entry_date);
+        $hoy = Carbon::now();
+
+        $diff = $fechaIngreso->diff($hoy);
+
+        $antiguedad = $diff->y . ' años, ' . $diff->m . ' meses y ' . $diff->d . ' días';
 
         return [
-            'total_employees' => $total_employees[0]->total_employees,
-            'new_employees' => $new_employees[0]->new_employees,
-            'termination_employees' => $termination_employees[0]->termination_employees,
-            'assistances' => $assistances[0]->assistances,
-            'complete_assistances' => $complete_assistances[0]->complete_assistances,
-            'abstences' => $abstences[0]->abstences,
-            'late' => $late[0]->late,
-            'plant_stats' => $plant_stats,
+            'employee'              => $employee,
+            'vacaciones'            =>$vacaciones,
+            'incidencias_empleado'  => $incidencias_empleado,
+            'asistencia'            =>$asistencia,
+            'antiguedad'            => $antiguedad
         ];
     }
 }
