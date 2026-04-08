@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmployeeIncidencesController;
 
 // -----------------------------------------------------
 // ROOT / LOGIN
@@ -50,6 +51,14 @@ Route::middleware([
         //     'index' => 'assistences-daily'
         // ]);
     });
+
+    Route::resource('incidences-employee', EmployeeIncidencesController::class)
+        ->names([
+            'index' => '/incidences-employee',
+        ]);
+
+    Route::get('incidences/getIncidencesDataLoad', [EmployeeIncidencesController::class, 'getIncidencesDataLoad']);
+    Route::get('incidences/employee', [EmployeeIncidencesController::class,'getIncidencesByEmployeeId']);
 
 
 });

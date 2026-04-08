@@ -18,33 +18,11 @@ const incidencesByEmployee = ref([]);
 
 const sending = ref(false);
 
-const getSafeBranchId = () => {
-    try {
-        const item = localStorage.getItem("selectedBranchOffice");
-        if (!item) return null; // Si no hay nada, retorna null
-
-        const parsed = JSON.parse(item);
-        return parsed?.id || null; // Si no tiene id, retorna null
-    } catch (e) {
-        console.warn("Error leyendo localStorage:", e);
-        return null;
-    }
-};
-
-const branchOfficeId = ref(getSafeBranchId());
-
 const incidences = computed(
     () => incidencesByEmployee.value[employeeId.value] ?? [],
 );
 
 const loading = ref(false);
-
-const employeeOptions = computed(() =>
-    employees.value.map((e) => ({
-        ...e,
-        label: `(${e.id}) ${e.full_name}`,
-    })),
-);
 
 function atMidnight(d) {
     const x = new Date(d);
@@ -116,7 +94,6 @@ const form = ref({
     document_number: "",
     employee_id: null,
     days_available: null,
-    branch_office_id: branchOfficeId.value,
 });
 
 const daysCalculated = computed(() => {
@@ -262,18 +239,15 @@ function updateShiftHours() {
     form.value.shift_hours = shiftTotalHours;
 }
 
-const getData = () => {
-    if (!employeeId.value) return;
-    loading.value = true;
-
-    axios
-        .get("/api/incidences/employee", {
+const getData = async () => {
+    await axios
+        .get("/incidences/employee", {
             params: {
                 employee_id: employeeId.value,
             },
         })
         .then((response) => {
-            console.log(response.data);
+            console.log("incidencias por empleado", response.data);
             if (!response.data[employeeId.value][0].id) {
                 incidencesByEmployee.value = {};
                 loading.value = false;
@@ -355,17 +329,11 @@ watch(
     },
 );
 
-onMounted(() => {
+onMounted(async () => {
     loading.value = true;
-    axios
-        .get("/api/incidences/getIncidencesDataLoad", {
-            params: {
-                branch_office_id: JSON.parse(
-                    localStorage.getItem("selectedBranchOffice"),
-                ).id,
-            },
-        })
-        .then((response) => {
+    await axios
+        .get("/incidences/getIncidencesDataLoad")
+        .then(async (response) => {
             console.log(response.data);
             employees.value = response.data.employees;
             schedules.value = response.data.schedules;
@@ -373,12 +341,12 @@ onMounted(() => {
             minIsoWeek.value = response.data.lastWeekNumber[0].week;
             minIsoYear.value = response.data.lastWeekNumber[0].year;
 
-            loading.value = false;
-
             typeOptions.value = allincidences.value.map((inc) => ({
                 label: inc.name,
                 value: inc.id,
             }));
+
+            await getData();
 
             console.log(typeOptions.value);
         });
@@ -397,7 +365,7 @@ watch(employeeId, () => {
             <div class="grid gap-4">
                 <Card>
                     <template #title>Crear Incidencia</template>
-                    <template #content>
+                    <!-- <template #content>
                         <div class="flex flex-col gap-3">
                             <div class="flex flex-col gap-2 w-full">
                                 <label class="text-sm font-medium"
@@ -419,7 +387,7 @@ watch(employeeId, () => {
                                 />
                             </div>
                         </div>
-                    </template>
+                    </template> -->
                 </Card>
                 <div class="grid gap-4 lg:grid-cols-2">
                     <Card>

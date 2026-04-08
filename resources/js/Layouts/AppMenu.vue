@@ -63,7 +63,7 @@ const flatMenu = computed(() => {
             .map((item) => ({
                 ...item,
                 section: section.label,
-            }))
+            })),
     );
 });
 </script>
@@ -77,11 +77,14 @@ const flatMenu = computed(() => {
             :index="i"
         />
 
-        <li
-            v-if="flatMenu.length === 0"
-            class="p-4 text-center text-gray-500"
-        >
+        <li v-if="flatMenu.length === 0" class="p-4 text-center text-gray-500">
             No tienes acceso a ninguna sección
         </li>
     </ul>
 </template>
+
+<style scoped>
+.layout-menu {
+    margin-top: 1rem;
+}
+</style>
