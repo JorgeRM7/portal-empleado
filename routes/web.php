@@ -80,6 +80,10 @@ Route::middleware([
             ]);
         Route::post('payroll-invoices/send-mail', [PayrollInvoiceController::class, 'sendInvoiceEmail'])
             ->name('payroll-invoices.send-mail');
+
+        Route::get('payroll-invoices/invoice-h/{id}', [PayrollInvoiceController::class, 'downloadDocumentHostinger']);
+        Route::get('payroll-invoices/invoice-d/{id}', [PayrollInvoiceController::class, 'downloadDocumentDigitalOcean']);
+        Route::post('payroll-invoices/download', [PayrollInvoiceController::class, 'downloadDocuments']);
     });
 
     Route::get('payroll-invoice', [PayrollInvoiceController::class, 'getData']);

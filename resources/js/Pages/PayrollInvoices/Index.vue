@@ -9,6 +9,10 @@ import { useToast } from "primevue";
 import { useLayout } from "@/Layouts/composables/layout";
 import { useAuthz } from "@/composables/useAuthz";
 
+const props = defineProps({
+    email: String,
+});
+
 const { can } = useAuthz();
 
 const toast = useToast();
@@ -51,7 +55,7 @@ const statusFilter = ref();
 const weekFilter = ref(`${year.value}-W${weekNumber.value}`);
 const multipleDeleteDialog = ref(false);
 const sendEmailDialog = ref(false);
-const email = ref();
+const email = ref(props.email);
 const idInvoice = ref(null);
 
 const loading = ref(false);
@@ -455,8 +459,8 @@ const downloadSelected = async () => {
 };
 
 const sendInvoiceEmail = async () => {
+    loading.value = true;
     try {
-        console.log(idInvoice.value, email.value);
         await axios.post(route("payroll-invoices.send-mail"), {
             id_recibo: idInvoice.value,
             correo: email.value,
@@ -488,6 +492,9 @@ const sendInvoiceEmail = async () => {
             detail: errorMessage,
             life: 8000,
         });
+    } finally {
+        loading.value = false;
+        sendEmailDialog.value = false;
     }
 };
 
@@ -501,7 +508,7 @@ initFilters();
 <template>
     <AppLayout title="Recibos de Nómina">
         <div class="card">
-            <Toolbar>
+            <!-- <Toolbar>
                 <template #start> </template>
                 <template #end>
                     <Button
@@ -553,7 +560,7 @@ initFilters();
                         @click="downloadSelected"
                     />
                 </template>
-            </Toolbar>
+            </Toolbar> -->
             <DataTable
                 ref="dt"
                 v-model:selection="selected"
@@ -1093,6 +1100,7 @@ initFilters();
                         label="Enviar"
                         icon="pi pi-envelope"
                         severity="info"
+                        :loading="loading"
                         @click="sendInvoiceEmail"
                     />
                 </template>

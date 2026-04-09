@@ -23,7 +23,10 @@ class PayrollInvoiceController
      */
     public function index()
     {
-        return Inertia::render('PayrollInvoices/Index');
+        $email = Auth::user()->email;
+        return Inertia::render('PayrollInvoices/Index', [
+            'email' => $email
+        ]);
     }
 
     public function getData(Request $request){
