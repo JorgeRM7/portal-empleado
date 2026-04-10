@@ -80,7 +80,7 @@ function isOutsideClicked(event) {
             </div>
             <app-footer></app-footer>
         </div>
-        <Assistant use-backend="true" endpoint="/chat" />
+        <!-- <Assistant use-backend="true" endpoint="/chat" /> -->
         <div class="layout-mask animate-fadein"></div>
     </div>
     <Toast />
