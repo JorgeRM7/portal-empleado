@@ -54,7 +54,9 @@ class WeeklyAssistence extends Model
 
     public static function index($data){
         
-
+        $employeeId = $data->employee_id ?? null;
+        $week       = $data->week ?? null;
+        $year       = $data->year ?? null;
 
         $sql = "
             SELECT
@@ -101,16 +103,31 @@ class WeeklyAssistence extends Model
             LEFT JOIN branch_offices  bo  ON bo.id = e.branch_office_id
             WHERE e.status != 'termination'
             AND wa.deleted_at IS NULL
-            AND wa.employee_id IN (319)
-            AND wa.week_year = 2026
         ";
+
+        $params = [];
+
+        if (!empty($employeeId)) {
+            $sql .= " AND wa.employee_id = ? ";
+            $params[] = $employeeId;
+        }
+
+        if (!empty($week)) {
+            $sql .= " AND CAST(wa.week_number AS UNSIGNED) = ? ";
+            $params[] = (int) $week;
+        }
+
+        if (!empty($year)) {
+            $sql .= " AND wa.week_year = ? ";
+            $params[] = (int) $year;
+        }
 
         $sql .= "
             GROUP BY wa.employee_id, CAST(wa.week_number AS UNSIGNED), wa.week_year 
             ORDER BY wa.id DESC
             LIMIT 5000
         ";
-        $rows = DB::select($sql);
+        $rows = DB::select($sql, $params);
 
         return $rows;
 

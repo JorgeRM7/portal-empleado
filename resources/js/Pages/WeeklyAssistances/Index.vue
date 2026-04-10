@@ -17,13 +17,6 @@ const props = defineProps({
     incidences: Array,
 });
 
-// console.log(props)
-
-// Variables globales
-const branch_offices = ref();
-const employees = ref();
-const deparments = ref();
-const incidences = ref();
 
 const modalDetails = ref(false);
 const details = ref(null);
@@ -123,19 +116,15 @@ const showColumns = ref({
     Año: true,
 });
 
-//Filtros adicionales
-const otherFilters = ref([
-    {
-        startDate: null,
-        endDate: null,
-    },
-]);
+
 
 //Diálogo de filtros adicionales
 const otherFilterDialog = ref(false);
 
 //Filtros del modal
 const selectedWeek = ref(null);
+const selectedYear = ref(null);
+const yearOptions = ref([]);
 
 //Referencia a la tabla de datos
 const dt = ref(null);
@@ -182,17 +171,6 @@ const op = ref();
 const opMostrarColumnas = ref();
 const opFijarColumnas = ref();
 
-//Estado de diálogo de subida de archivos
-const openUploadDialog = ref(false);
-
-//Estado de progreso de subida
-const progress = ref(0);
-
-//Estado de visibilidad del toast
-const visible = ref(false);
-
-//Referencia al servicio de toast personalizado
-const interval = ref();
 
 const toggleMostrarColumnas = (event) => {
     opMostrarColumnas.value.toggle(event);
@@ -294,24 +272,34 @@ const clearFilter = () => {
 const filter_data = async () => {
     loading.value = true;
     otherFilterDialog.value = false;
+
+    let year = '';
+    let week = '';
+
+    if (selectedWeek.value) {
+        [year, week] = selectedWeek.value.split('-W');
+    }
+
     try {
-        const response = await axios.get("/weekly-assistences/filter-data",{
-            params:{
-                selectedWeek
+        const response = await axios.get("/weekly-assistences/filter-data", {
+            params: {
+                year: selectedYear.value || year || '',
+                week: week || '',
             }
-        }
-        );
+        });
+
         rows.value = response.data.data;
-        loading.value = false;
     } catch (error) {
         console.error("Error refrescando tabla:", error);
         showError("No se pudo actualizar la tabla");
+    } finally {
+        loading.value = false;
     }
 };
 
 onMounted(async () => {
     rows.value = props.data;
-    selectedWeek.value = getCurrentWeekMX();
+    loadYears();
     filter_data();
 });
 
@@ -365,26 +353,19 @@ const parseJSON = (val) => {
     }
 };
 
-function getCurrentWeekMX() {
-    const now = new Date();
+function loadYears(range = 5) {
+    const currentYear = new Date().getFullYear();
 
-    const mexicoDate = new Date(
-        now.toLocaleString('en-US', { timeZone: 'America/Mexico_City' })
-    );
+    yearOptions.value = [];
 
-    const date = new Date(Date.UTC(
-        mexicoDate.getFullYear(),
-        mexicoDate.getMonth(),
-        mexicoDate.getDate()
-    ));
+    for (let i = currentYear - range; i <= currentYear + range; i++) {
+        yearOptions.value.push({
+            label: String(i),
+            value: String(i)
+        });
+    }
 
-    const dayNum = date.getUTCDay() || 7;
-    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-
-    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-
-    return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+    selectedYear.value = String(currentYear);
 }
 </script>
 
@@ -394,23 +375,6 @@ function getCurrentWeekMX() {
         <Toast group="processing" />
         
         <div class="card">
-            <Toolbar>
-                <template #start>
-                    <Button
-                        type="button"
-                        icon="pi pi-upload"
-                        label="Exportar"
-                        severity="secondary"
-                        class="mt-2 ml-2"
-                        @click="columnsDialog = true"
-                    />
-                </template>
-
-                <template #end>
-                    
-                </template>
-            </Toolbar>
-
             <DataTable
                 ref="dt"
                 :value="rows"
@@ -569,7 +533,30 @@ function getCurrentWeekMX() {
                         </div>
                     </div>
                     <div class="mb-2">
-                        <Chip :label="'Semanas: ' + selectedWeek" />
+                        
+                        <Chip
+                            v-if="selectedWeek"
+                            :label="'Semana: ' + (selectedWeek ? selectedWeek.split('-W')[1] : '')"
+                            removable
+                            @remove="
+                                () => {
+                                    selectedWeek = null;
+                                    filter_data();
+                                }
+                            "
+                        />
+
+                        <Chip
+                            v-if="selectedYear"
+                            :label="'Año: ' + selectedYear"
+                            removable
+                            @remove="
+                                () => {
+                                    selectedYear = null;
+                                    filter_data();
+                                }
+                            "
+                        />
                     </div>
                 </template>
                 <Column
@@ -1769,6 +1756,20 @@ function getCurrentWeekMX() {
                 header="Filtros"
                 :modal="true"
             >
+                <div>
+                    <label class="font-semibold text-sm text-gray-600 dark:text-gray-300">
+                        Año
+                    </label>
+                    <Select
+                        v-model="selectedYear"
+                        :options="yearOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Selecciona un año"
+                        class="w-full"
+                    />
+                </div>
+
                 <div>
                     <label
                         class="font-semibold text-sm text-gray-600 dark:text-gray-300"

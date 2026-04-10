@@ -116,7 +116,9 @@ class WeeklyAssistencesController
 
     private function getFilteredData($request)
     {
-
+        $request->merge([
+            'employee_id' => auth()->user()->employee->id ?? null
+        ]);
         $data = WeeklyAssistence::index($request);
 
         $data = collect($data)->map(function ($item) {
