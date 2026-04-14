@@ -46,6 +46,17 @@ const rawMenu = ref([
             },
         ],
     },
+    {
+        label: "Modúlo de Quejas",
+        icon: "pi pi-megaphone",
+        items: [
+            {
+                label: "Modúlo de Quejas",
+                icon: "pi pi-megaphone",
+                to: "/complaints",
+            },
+        ],
+    },
 ]);
 
 const flatMenu = computed(() => {

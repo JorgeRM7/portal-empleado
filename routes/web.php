@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\WeeklyAssistencesController;
+use App\Http\Controllers\ComplaintsModuleController;
 
 
 // -----------------------------------------------------
@@ -40,7 +41,7 @@ Route::middleware([
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/show/{id}', [DashboardController::class, 'show'])->name('dashboard.show');
-    
+
     Route::get('weekly-assistences/filter-data', [WeeklyAssistencesController::class, 'filter_data'])
         ->name('weekly-assistences.filter-data');
     Route::resource('weekly-assistences', WeeklyAssistencesController::class)->names([
@@ -54,10 +55,22 @@ Route::middleware([
         // Route::get('assistences-daily/filter-data', [AssistencesDailysController::class, 'filter_data'])
         // ->name('assistences-daily.filter-data');
 
-        
+
     });
 
+    // Route::prefix('complaints')->group(function () {
 
+    //     Route::resource('/', ComplaintsModuleController::class)->names([
+    //         'index' => 'complaints'
+    //     ]);
+    // });
+
+    Route::post('complaints/improve-writing', [ComplaintsModuleController::class, 'improveWriting'])
+    ->name('complaints.improve');
+
+    Route::resource('complaints', ComplaintsModuleController::class)->names([
+        'index' => 'complaints'
+    ]);
 });
 
 
