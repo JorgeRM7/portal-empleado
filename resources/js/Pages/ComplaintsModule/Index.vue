@@ -37,6 +37,7 @@ const updating = ref(false);
 const deleting = ref(false);
 
 const dates = ref(null);
+const rows = ref([])
 
 const { sendNotification } = useNotifications();
 
@@ -340,10 +341,6 @@ const otherFilters = ref({
 //Diálogo de filtros adicionales
 const otherFilterDialog = ref(false);
 
-//Filtros del modal
-const startDate = ref();
-const endDate = ref();
-
 //Referencia a la tabla de datos
 const dt = ref(null);
 const toast = useToast();
@@ -373,22 +370,12 @@ const op = ref();
 const opMostrarColumnas = ref();
 const opFijarColumnas = ref();
 
-//Estado de diálogo de subida de archivos
-const openUploadDialog = ref(false);
-
 //Estado de progreso de subida
 const progress = ref(0);
 
 //Estado de visibilidad del toast
 const visible = ref(false);
 
-//Referencia al servicio de toast personalizado
-const interval = ref();
-
-//Funciones para alternar los popovers
-const toggleAccionesMasivas = (event) => {
-    op.value.toggle(event);
-};
 
 const toggleMostrarColumnas = (event) => {
     opMostrarColumnas.value.toggle(event);
@@ -398,18 +385,6 @@ const toggleFijarColumnas = (event) => {
     opFijarColumnas.value.toggle(event);
 };
 
-//Inicializacion de una fila para mostrar el esqueleto de inicio en lo que carga la tabla
-const rows = ref([
-    {
-        id: 1,
-        nombre: "",
-        correo: "",
-        rol: "",
-        telefono: "",
-        direccion: "",
-        ciudad: "",
-    },
-]);
 
 //Filas seleccionadas
 const selected = ref([]);
@@ -417,7 +392,10 @@ const selected = ref([]);
 //Función para guardar las columnas seleccionadas para exportar
 const saveColumns = () => {
     columnsDialog.value = false;
-    dt.value.exportCSV();
+
+    dt.value.exportCSV({
+        selectionOnly: true
+    });
 };
 
 //Función para limpiar filtros
@@ -532,14 +510,6 @@ onMounted(async () => {
         <div class="card">
             <Toolbar>
                 <template #start>
-                    <!-- <Button
-                        type="button"
-                        icon="pi pi-download"
-                        label="Importar"
-                        severity="contrast"
-                        class="mt-2 ml-2"
-                        @click="openUploadDialog = true"
-                    /> -->
                     <Button
                         type="button"
                         icon="pi pi-upload"
@@ -551,61 +521,6 @@ onMounted(async () => {
                 </template>
 
                 <template #end>
-                    <!-- <Button
-                        type="button"
-                        label="Acciones Masivas"
-                        class="min-w-48"
-                        icon="pi pi-wrench"
-                        @click="toggleAccionesMasivas($event)"
-                        :disabled="selected.length === 0"
-                    />
-                    <Popover ref="op">
-                        <div class="flex flex-col gap-4">
-                            <div>
-                                <span class="font-medium block mb-2"
-                                    >Acciones Masivas</span
-                                >
-                                <ul class="list-none p-0 m-0 flex flex-col">
-                                    <li
-                                        class="flex items-center gap-2 px-1 py-1 hover:bg-emphasis cursor-pointer rounded-border"
-                                    >
-                                        <Button
-                                            type="button"
-                                            icon="pi pi-check-square"
-                                            label="Aprobar seleccionados"
-                                            severity="success"
-                                            text
-                                            class="mt-2 ml-2"
-                                        />
-                                    </li>
-                                    <li
-                                        class="flex items-center gap-2 px-1 py-1 hover:bg-emphasis cursor-pointer rounded-border"
-                                    >
-                                        <Button
-                                            type="button"
-                                            icon="pi pi-times-circle"
-                                            label="Rechazar seleccionados"
-                                            severity="warn"
-                                            text
-                                            class="mt-2 ml-2"
-                                        />
-                                    </li>
-                                    <li
-                                        class="flex items-center gap-2 px-1 py-1 hover:bg-emphasis cursor-pointer rounded-border"
-                                    >
-                                        <Button
-                                            type="button"
-                                            icon="pi pi-trash"
-                                            label="Eliminar seleccionados"
-                                            severity="danger"
-                                            text
-                                            class="mt-2 ml-2"
-                                        />
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </Popover> -->
                     <Button
                         label="Crear"
                         icon="pi pi-plus-circle"
@@ -627,10 +542,10 @@ onMounted(async () => {
                 tableStyle="min-width: 110rem"
                 v-model:filters="filters"
                 filterDisplay="menu"
-                exportFilename="prueba"
+                exportFilename="Historial_de_Quejas"
                 :globalFilterFields="['id', 'employee_id', 'subject', 'case', 'date', 'hour', 'status']"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de prueba"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Quejas"
             >
                 <template #header>
                     <div
