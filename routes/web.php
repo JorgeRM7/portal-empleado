@@ -65,6 +65,9 @@ Route::middleware([
     //     ]);
     // });
 
+    Route::get('complaints/filter-data', [ComplaintsModuleController::class, 'filter_data'])
+        ->name('complaints.filter-data');
+
     Route::post('complaints/improve-writing', [ComplaintsModuleController::class, 'improveWriting'])
     ->name('complaints.improve');
 

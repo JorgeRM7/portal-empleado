@@ -10,6 +10,8 @@ use App\Models\EmployeeComplainsAsigments;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use App\Models\BranchOffice;
 
 class ComplaintsModuleController
 {
@@ -30,25 +32,18 @@ class ComplaintsModuleController
             ->orderBy('hour', 'desc')
             ->get();
 
-        // 2. Transformamos la colección para incluir los archivos
         $history->transform(function ($queja) {
             $files = [];
 
-            // Si existe una ruta en la base de datos y la carpeta existe físicamente
             if ($queja->path_complain && Storage::disk('public')->exists($queja->path_complain)) {
-                // Obtenemos todos los archivos de esa carpeta
                 $allFiles = Storage::disk('public')->files($queja->path_complain);
-
-                // Formateamos la URL completa para que sea accesible desde el navegador
                 $files = array_map(function ($file) {
                     return [
-                        'name' => basename($file), // Solo el nombre del archivo
-                        'url'  => asset('storage/' . $file) // URL para mostrar o descargar
+                        'name' => basename($file),
+                        'url'  => asset('storage/' . $file)
                     ];
                 }, $allFiles);
             }
-
-            // Agregamos el array de archivos al objeto de la queja
             $queja->archivos = $files;
             return $queja;
         });
@@ -56,6 +51,64 @@ class ComplaintsModuleController
         return Inertia::render('ComplaintsModule/Index', [
             'history' => $history
         ]);
+    }
+
+    public function filter_data(Request $request)
+    {
+        try {
+            $userId = auth()->id();
+
+            if (!$userId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autenticado'
+                ], 401);
+            }
+
+            // 🔥 Ya NO usamos mapStatus aquí
+            $dataRaw = EmployeeComplains::filterComplaints([
+                'employee_id' => $userId,
+                'startDate'   => $request->startDate,
+                'endDate'     => $request->endDate,
+                'status'      => $request->status, // 👈 directo
+                'subject'     => $request->subject,
+            ]);
+
+            $data = collect($dataRaw)->map(function ($queja) {
+
+                $files = [];
+
+                if (
+                    $queja->path_complain &&
+                    Storage::disk('public')->exists($queja->path_complain)
+                ) {
+                    $allFiles = Storage::disk('public')->files($queja->path_complain);
+
+                    $files = array_map(function ($file) {
+                        return [
+                            'name' => basename($file),
+                            'url'  => asset('storage/' . $file)
+                        ];
+                    }, $allFiles);
+                }
+
+                $queja->archivos = $files;
+
+                return $queja;
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al filtrar',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function improveWriting(Request $request)
@@ -73,7 +126,6 @@ class ComplaintsModuleController
         $flags = [
             'insultos' => preg_match('/c[a4]br[o0]n|pendej[o0a4]|idiot[a4]?|est[uú]pid[o0a4]|mierd[a4]|verg[a4]|imb[eé]cil|culer[o0a4]|maric[o0a4]|jod(er|ido)|basur[a4]|maldit[o0a4]/i', $rawText),
             'grave' => preg_match('/me agarran|me tocan|manosean|empuj|jalone|contacto f[ií]sico|nalge|pito|verga|sexo|sexual|cog(er|iendo)|acos[o]?|morbos|violar|golp(e|an|ado)|peg(ar|an|ado)|putaz|madraz|agresi[oó]n f[ií]sica|violencia/i', $rawText),
-            // 'insultos' => preg_match('/c[a4]br[o0]n|pendej[o0a4]|idiot[a4]?|est[uú]pid[o0a4]|mierd[a4]|verg[a4]|imb[eé]cil|culer[o0a4]|maric[o0a4]|jod(er|ido)|basur[a4]|maldit[o0a4]/i', $rawText),
             'contacto_fisico' => preg_match('/me agarran|me tocan|manosean|empuj|jalone|contacto f[ií]sico|nalge/i', $rawText),
             'sexual' => preg_match('/pito|verga|genital|sexo|sexual|cog(er|iendo)|intim|acos[o]?|morbos|violar|tijeras/i', $rawText),
             'acoso' => preg_match('/acos(an|o|ando)|hostig(an|o|amiento)|molest(an|ia constante)|me siguen|me vigilan/i', $rawText),
@@ -185,7 +237,6 @@ class ComplaintsModuleController
      */
     private function reconstruirEsenciaDinamica($texto)
     {
-        // Conceptos (El "Qué")
         $conceptos = [
             'vacaciones' => ['vacacion', 'dias', 'descanso', 'vaca', 'mesa len'],
             'nómina'     => ['nomina', 'pago', 'sueldo', 'deposito', 'dinero'],
@@ -271,7 +322,21 @@ class ComplaintsModuleController
      */
     public function create()
     {
-        //
+        $userId = auth()->id();
+
+        if (!$userId) {
+            return redirect()->route('login');
+        }
+
+        $history = EmployeeComplains::where('employee_id', $userId)
+            ->orderBy('date', 'desc')
+            ->orderBy('hour', 'desc')
+            ->take(5)
+            ->get();
+
+        return Inertia::render('ComplaintsModule/Create', [
+            'history' => $history
+        ]);
     }
 
     /**
@@ -290,44 +355,51 @@ class ComplaintsModuleController
 
         return DB::transaction(function () use ($request, $employeeData) {
             try {
-                date_default_timezone_set('America/Mexico_City');
-                $now = now();
 
-                // 1. Creamos la queja (primero sin la ruta para obtener el ID)
                 $queja = EmployeeComplains::create([
-                    'case'             => $request->asunto_texto,
-                    'subject'          => $request->descripcion,
+                    'case'             => $request->descripcion,
+                    'subject'          => $request->asunto_texto,
                     'response'         => null,
-                    'date'             => $now->format('Y-m-d'),
-                    'hour'             => $now->format('H:i:s'),
+                    'date'             => Carbon::now('America/Mexico_City')->format('Y-m-d'),
+                    'hour'             => Carbon::now('America/Mexico_City')->format('H:i:s'),
                     'branch_office_id' => $employeeData->branch_office_id,
                     'employee_id'      => auth()->id(),
                     'path_complain'    => null,
                 ]);
 
-                // 2. Manejo de múltiples archivos
                 if ($request->hasFile('archivos')) {
-                    // Definimos una ruta única por queja: ej. complaints/empleado_1/queja_25
                     $folderPath = "complaints/emp_" . auth()->id() . "/q_" . $queja->id;
 
                     foreach ($request->file('archivos') as $file) {
-                        // Guardamos cada archivo en esa carpeta
                         $file->storeAs($folderPath, $file->getClientOriginalName(), 'public');
                     }
 
-                    // 3. Guardamos la ruta de la CARPETA en la base de datos
                     $queja->update([
                         'path_complain' => $folderPath
                     ]);
                 }
 
-                EmployeeComplainsAsigments::create([
-                    'employee_complain_id'  => $queja->id,
-                    'user_id'               => 14555,
-                    'assigment_date'        => $now,
-                    'assigment_hour'        => $now->format('H:i:s'),
-                    'type'                  => 'ASIGNACION'
-                ]);
+                // 🔹 Obtener sucursal
+                    $branchOffice = BranchOffice::find($queja->branch_office_id);
+
+                    $usersRH = is_string($branchOffice->users_rh_json)
+                        ? json_decode($branchOffice->users_rh_json, true)
+                        : $branchOffice->users_rh_json;
+
+                    if (!is_array($usersRH)) {
+                        $usersRH = [];
+                    }
+
+                    foreach ($usersRH as $userId) {
+
+                        EmployeeComplainsAsigments::create([
+                            'employee_complain_id' => $queja->id,
+                            'user_id'              => $userId,
+                            'assigment_date'       => Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s'),
+                            'assigment_hour'       => Carbon::now('America/Mexico_City')->format('H:i:s'),
+                            'type'                 => 'ASIGNACION'
+                        ]);
+                    }
 
                 return response()->json([
                     'success' => true,
@@ -365,7 +437,56 @@ class ComplaintsModuleController
      */
     public function update(Request $request, string $id)
     {
-        //
+        $request->validate([
+            'descripcion' => 'required|string',
+            'asunto_texto' => 'required|string',
+            'archivos.*' => 'file|max:10240'
+        ]);
+
+        return DB::transaction(function () use ($request, $id) {
+
+            $queja = EmployeeComplains::findOrFail($id);
+
+            $queja->update([
+                'case'    => $request->descripcion,
+                'subject' => $request->asunto_texto,
+            ]);
+
+            $folderPath = $queja->path_complain;
+
+            // 🔥 ELIMINAR
+            if ($request->has('deleted_files')) {
+                foreach ($request->deleted_files as $fileName) {
+                    Storage::disk('public')->delete(
+                        $folderPath . '/' . $fileName
+                    );
+                }
+            }
+
+            // 🔥 AGREGAR
+            if ($request->hasFile('archivos')) {
+
+                if (!$folderPath) {
+                    $folderPath = "complaints/emp_" . auth()->id() . "/q_" . $queja->id;
+                }
+
+                foreach ($request->file('archivos') as $file) {
+
+                    $fileName = time() . '_' . $file->getClientOriginalName();
+
+                    $file->storeAs($folderPath, $fileName, 'public');
+                }
+
+                $queja->update([
+                    'path_complain' => $folderPath
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Queja actualizada correctamente'
+            ]);
+        });
     }
 
     /**
@@ -373,7 +494,18 @@ class ComplaintsModuleController
      */
     public function destroy(string $id)
     {
-        //
+        $queja = EmployeeComplains::findOrFail($id);
+
+        if ($queja->path_complain) {
+            Storage::disk('public')->deleteDirectory($queja->path_complain);
+        }
+
+        $queja->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Queja eliminada correctamente'
+        ]);
     }
 
 
