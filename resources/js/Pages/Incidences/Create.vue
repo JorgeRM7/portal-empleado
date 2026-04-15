@@ -403,7 +403,7 @@ watch(employeeId, () => {
                         </div>
                     </template> -->
                 </Card>
-                <div class="grid gap-4 lg:grid-cols-2">
+                <div class="grid gap-4 max-sm:grid-cols-1 lg:grid-cols-2">
                     <Card>
                         <template #title>Fechas no disponibles</template>
                         <template #content>

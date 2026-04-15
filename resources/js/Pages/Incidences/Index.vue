@@ -216,7 +216,7 @@ const exportColumns = ref({
 
 const showColumns = ref({
     acciones: true,
-    id: true,
+    // id: true,
     num_empleado: true,
     nombre_empleado: true,
     tipo_incidencia: true,
@@ -241,7 +241,7 @@ const showColumns = ref({
 
 const frozenColumns = ref({
     acciones: false,
-    id: false,
+    // id: false,
     num_empleado: false,
     nombre_empleado: false,
     tipo_incidencia: false,
@@ -830,6 +830,7 @@ onMounted(() => {
                 </template>
             </Toolbar>
             <DataTable
+                class="max-sm:px-0"
                 ref="dt"
                 v-model:selection="selected"
                 :value="incidences"
@@ -848,7 +849,7 @@ onMounted(() => {
             >
                 <template #header>
                     <div
-                        class="flex flex-wrap gap-2 items-end justify-between mb-6"
+                        class="flex gap-2 items-end justify-between mb-6 overflow-auto"
                     >
                         <div>
                             <h4 class="m-0">Incidencias</h4>
@@ -1020,9 +1021,9 @@ onMounted(() => {
                     :exportable="false"
                     columnKey="acciones"
                     :style="{
-                        width: '20rem',
+                        width: '8rem',
                         display: showColumns.acciones ? '' : 'none',
-                        minWidth: '20rem',
+                        minWidth: '8rem',
                     }"
                     header="Acciones"
                 >
@@ -1106,7 +1107,7 @@ onMounted(() => {
                         </div>
                     </template>
                 </Column>
-                <Column
+                <!-- <Column
                     field="id"
                     header="ID"
                     :filter="true"
@@ -1130,6 +1131,7 @@ onMounted(() => {
                         />
                     </template>
                 </Column>
+                -->
                 <Column
                     field="employee_id"
                     header="Clave Empleado"
@@ -1137,8 +1139,9 @@ onMounted(() => {
                     columnKey="employee_id"
                     :frozen="frozenColumns.num_empleado"
                     :style="{
-                        width: '5rem',
+                        width: '2rem',
                         display: showColumns.num_empleado ? '' : 'none',
+                        minWidth: '2rem',
                     }"
                     :exportable="exportColumns.num_empleado"
                 >

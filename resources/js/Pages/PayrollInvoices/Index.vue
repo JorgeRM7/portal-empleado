@@ -562,6 +562,7 @@ initFilters();
                 </template>
             </Toolbar> -->
             <DataTable
+                class="max-sm:px-0"
                 ref="dt"
                 v-model:selection="selected"
                 :value="payrolls"
@@ -588,7 +589,7 @@ initFilters();
             >
                 <template #header>
                     <div
-                        class="flex flex-wrap gap-2 items-end justify-between mb-6"
+                        class="flex gap-2 items-end justify-between mb-6 overflow-auto"
                     >
                         <div>
                             <h4 class="m-0">Recibos de Nómina</h4>
