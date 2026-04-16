@@ -14,6 +14,8 @@ use App\Http\Controllers\ComplaintsModuleController;
 
 use App\Http\Controllers\EmployeeIncidencesController;
 use App\Http\Controllers\PayrollInvoiceController;
+use App\Http\Controllers\TermConditionController;
+
 
 // -----------------------------------------------------
 // ROOT / LOGIN
@@ -105,6 +107,10 @@ Route::middleware([
 
     Route::resource('complaints', ComplaintsModuleController::class)->names([
         'index' => 'complaints'
+    ]);
+
+    Route::resource('term-conditions', TermConditionController::class)->names([
+        'index' => 'term-conditions'
     ]);
 });
 

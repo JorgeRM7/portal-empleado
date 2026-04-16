@@ -26,6 +26,11 @@ const rawMenu = ref([
         icon: "pi pi-fw pi-book",
         to: "/complaints",
     },
+    {
+        label: "Terminos y Condiciones",
+        icon: "pi pi-file-check",
+        to: "/term-conditions",
+    },
 ]);
 
 // const flatMenu = computed(() => {
