@@ -377,9 +377,9 @@ watch(employeeId, () => {
         <Toast />
         <div class="p-4 lg:p-6">
             <div class="grid gap-4">
-                <Card>
+                <!-- <Card>
                     <template #title>Crear Incidencia</template>
-                    <!-- <template #content>
+                    <template #content>
                         <div class="flex flex-col gap-3">
                             <div class="flex flex-col gap-2 w-full">
                                 <label class="text-sm font-medium"
@@ -401,9 +401,9 @@ watch(employeeId, () => {
                                 />
                             </div>
                         </div>
-                    </template> -->
-                </Card>
-                <div class="grid gap-4 max-sm:grid-cols-1 lg:grid-cols-2">
+                    </template>
+                </Card> -->
+                <!-- <div class="grid gap-4 max-sm:grid-cols-1 lg:grid-cols-2">
                     <Card>
                         <template #title>Fechas no disponibles</template>
                         <template #content>
@@ -516,9 +516,9 @@ watch(employeeId, () => {
                             </DataTable>
                         </template>
                     </Card>
-                </div>
+                </div> -->
 
-                <Card v-if="employeeId && !loading">
+                <Card>
                     <template #title>Crear incidencia</template>
                     <template #content>
                         <div class="flex flex-col gap-4">
@@ -535,6 +535,8 @@ watch(employeeId, () => {
                                         filter
                                         placeholder="Selecciona una incidencia"
                                         class="w-full"
+                                        :loading="loading"
+                                        :disabled="loading"
                                     />
                                     <small class="text-gray-500">
                                         Los campos se ajustan según la
