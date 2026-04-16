@@ -3,7 +3,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { useToastService } from "@/Stores/toastService";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
-import { onMounted, ref, watch, computed } from "vue";
+import { onMounted, ref, watch, computed, onUnmounted } from "vue";
 import { usePrimeVue } from "primevue/config";
 import { useConfirm } from "primevue/useconfirm";
 import ConfirmDialog from "primevue/confirmdialog";
@@ -368,15 +368,15 @@ const enviarQueja = async () => {
         return;
     }
 
-    // if (contieneGroserias(descripcionLimpia)) {
-    //     toast.add({
-    //         severity: "error",
-    //         summary: "Lenguaje no permitido",
-    //         detail: "Por favor, redacta tu queja sin utilizar lenguaje ofensivo o da click en el botón de Redactar con IA.",
-    //         life: 4000,
-    //     });
-    //     return;
-    // }
+    if (contieneGroserias(descripcionLimpia)) {
+        toast.add({
+            severity: "error",
+            summary: "Lenguaje no permitido",
+            detail: "Por favor, redacta tu queja sin utilizar lenguaje ofensivo o da click en el botón de Redactar con IA.",
+            life: 4000,
+        });
+        return;
+    }
 
     sending.value = true;
 
@@ -452,8 +452,54 @@ const limpiarFormulario = () => {
 /* =====================
 MOUNTED
 ===================== */
+const isExpanded = ref(false);
+const isDesktop = ref(false);
+
+const checkScreenSize = () => {
+    isDesktop.value = window.innerWidth >= 768; // md breakpoint de Tailwind
+    if (isDesktop.value) isExpanded.value = true;
+};
+
+const toggleExpand = () => {
+    isExpanded.value = !isExpanded.value;
+};
+
+// Animaciones manuales para altura dinámica
+const onEnter = (el) => {
+    el.style.height = "0";
+    el.style.opacity = "0";
+    el.style.overflow = "hidden";
+    requestAnimationFrame(() => {
+        el.style.transition = "height 300ms ease, opacity 300ms ease";
+        el.style.height = el.scrollHeight + "px";
+        el.style.opacity = "1";
+    });
+};
+
+const onAfterEnter = (el) => {
+    el.style.height = "auto";
+};
+
+const onBeforeLeave = (el) => {
+    el.style.height = el.scrollHeight + "px";
+    el.style.overflow = "hidden";
+    requestAnimationFrame(() => {
+        el.style.transition = "height 300ms ease, opacity 300ms ease";
+    });
+};
+
+const onLeave = (el) => {
+    el.style.height = "0";
+    el.style.opacity = "0";
+};
+
 onMounted(() => {
-    console.log(props.history);
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+});
+
+onUnmounted(() => {
+    window.removeEventListener("resize", checkScreenSize);
 });
 </script>
 
@@ -977,33 +1023,84 @@ onMounted(() => {
 
                 <div class="confidential-card">
                     <div class="flex flex-col gap-4">
-                        <div
-                            class="bg-white/20 w-12 h-12 rounded-full flex items-center justify-center"
-                        >
-                            <i class="pi pi-shield text-2xl text-white"></i>
+                        <!-- Ícono y Título (siempre visibles) -->
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="bg-white/20 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                            >
+                                <i class="pi pi-shield text-2xl text-white"></i>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <h2
+                                    class="text-xl font-bold text-white leading-tight"
+                                >
+                                    Compromiso de Confidencialidad
+                                </h2>
+
+                                <!-- Botón toggle solo en móvil -->
+                                <Button
+                                    v-if="!isDesktop"
+                                    type="button"
+                                    class="p-0 mt-2 text-blue-100 hover:text-white transition-colors"
+                                    link
+                                    @click="toggleExpand"
+                                    :aria-expanded="isExpanded"
+                                    aria-controls="confidential-content"
+                                >
+                                    <span
+                                        class="flex items-center gap-1 text-xs font-medium"
+                                    >
+                                        <i
+                                            :class="[
+                                                'pi',
+                                                isExpanded
+                                                    ? 'pi-chevron-up'
+                                                    : 'pi-chevron-down',
+                                            ]"
+                                        ></i>
+                                        {{
+                                            isExpanded
+                                                ? "Ocultar detalles"
+                                                : "Ver detalles de seguridad"
+                                        }}
+                                    </span>
+                                </Button>
+                            </div>
                         </div>
 
-                        <h2 class="text-xl font-bold text-white leading-tight">
-                            Compromiso de Confidencialidad
-                        </h2>
-
-                        <p class="text-sm text-blue-50 leading-relaxed">
-                            Toda queja o denuncia registrada en este portal está
-                            protegida por un ecosistema de seguridad diseñado
-                            para blindar la integridad del usuario. La
-                            información proporcionada se procesa mediante
-                            protocolos de cifrado avanzado, asegurando que el
-                            contenido de su reporte permanezca inaccesible para
-                            terceros ajenos al proceso. Nos comprometemos a
-                            mantener el anonimato absoluto de quien lo solicite,
-                            gestionando cada caso bajo políticas de estricta
-                            confidencialidad. El flujo de datos está limitado
-                            exclusivamente a los miembros facultados de la
-                            empresa, garantizando un entorno de confianza donde
-                            su identidad y sus declaraciones están plenamente
-                            resguardadas contra cualquier acceso no autorizado o
-                            filtración.
-                        </p>
+                        <!-- Contenido colapsable -->
+                        <transition
+                            name="fade-slide"
+                            @enter="onEnter"
+                            @after-enter="onAfterEnter"
+                            @before-leave="onBeforeLeave"
+                            @leave="onLeave"
+                        >
+                            <p
+                                v-show="isExpanded || isDesktop"
+                                id="confidential-content"
+                                class="text-sm text-blue-50 leading-relaxed overflow-hidden"
+                                ref="contentRef"
+                            >
+                                Toda queja o denuncia registrada en este portal
+                                está protegida por un ecosistema de seguridad
+                                diseñado para blindar la integridad del usuario.
+                                La información proporcionada se procesa mediante
+                                protocolos de cifrado avanzado, asegurando que
+                                el contenido de su reporte permanezca
+                                inaccesible para terceros ajenos al proceso. Nos
+                                comprometemos a mantener el anonimato absoluto
+                                de quien lo solicite, gestionando cada caso bajo
+                                políticas de estricta confidencialidad. El flujo
+                                de datos está limitado exclusivamente a los
+                                miembros facultados de la empresa, garantizando
+                                un entorno de confianza donde su identidad y sus
+                                declaraciones están plenamente resguardadas
+                                contra cualquier acceso no autorizado o
+                                filtración.
+                            </p>
+                        </transition>
                     </div>
                 </div>
             </div>
@@ -1070,5 +1167,26 @@ onMounted(() => {
 }
 .custom-scroll::-webkit-scrollbar-thumb:hover {
     background: #cbd5e1;
+}
+
+/* Transición suave para fade-slide */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+    opacity: 0;
+}
+
+/* Ajuste para que el párrafo no "salte" al colapsar */
+#confidential-content {
+    will-change: height, opacity;
+}
+
+/* Opcional: efecto hover sutil en el botón móvil */
+:deep(.p-button.p-button-link:hover) {
+    background: transparent !important;
 }
 </style>
