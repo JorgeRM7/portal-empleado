@@ -13,8 +13,6 @@ import Tooltip from 'primevue/tooltip';
 const page = usePage();
 const props = defineProps({});
 
-
-
 const authUser = computed(() => page.props.auth?.user ?? null);
 const employee = computed(() => authUser.value?.employee ?? null);
 const employeeData = ref (null);
@@ -159,6 +157,7 @@ function getTooltipOptions(rawDate) {
     };
 }
 
+
 onMounted(() => {
     obtenerEmpleado();
 });
@@ -196,7 +195,7 @@ onMounted(() => {
     padding: 0.85rem 0.35rem;
     font-size: 0.85rem;
     font-weight: 700;
-    color: rgb(100 116 139);
+    color: #475569 !important;
 }
 
 .attendance-calendar :deep(.p-datepicker table td) {
@@ -331,7 +330,7 @@ onMounted(() => {
                 >
                     <div class="relative p-6 md:p-8">
                         <div class="flex flex-col xl:flex-row xl:items-center gap-6">
-                            
+
                             <div class="flex justify-center xl:justify-start">
                                 <div
                                     class="w-24 h-24 md:w-28 md:h-28 rounded-3xl overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-lg dark:bg-slate-800 shrink-0"
@@ -345,51 +344,51 @@ onMounted(() => {
                                 </div>
                             </div>
                             <div class="flex-1">
-                                
 
-                                <h1 class="text-2xl md:text-3xl font-semibold dark:text-white">
+
+                                <h1 class="text-2xl md:text-3xl font-semibold">
                                     Bienvenid@, {{ employeeData?.full_name }}
                                 </h1>
 
-                                <p class="text-slate-600 dark:text-slate-300 mt-2 text-sm md:text-base">
+                                <p class="mt-2 text-sm md:text-base">
                                     Consulta tu información laboral, asistencia y accesos rápidos desde un solo lugar.
                                 </p>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
-                                    <div class="rounded-2xl bg-blue-50 dark:bg-blue-950/30 px-4 py-3">
+                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
                                         <div class="text-xs text-slate-500 dark:text-slate-400">
                                             Empleado
                                         </div>
-                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                        <p class="font-semibold">
                                             {{ employeeData?.id }}
-                                        </div>
+                                        </p>
                                     </div>
 
-                                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/70 px-4 py-3">
+                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
                                         <div class="text-xs text-slate-500 dark:text-slate-400">
                                             Puesto
                                         </div>
-                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                        <p class="font-semibold">
                                             {{ employeeData?.posicion }}
-                                        </div>
+                                        </p>
                                     </div>
 
-                                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/70 px-4 py-3">
+                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
                                         <div class="text-xs text-slate-500 dark:text-slate-400">
                                             Departamento
                                         </div>
-                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                        <p class="font-semibold">
                                             {{ employeeData?.departamento }}
-                                        </div>
+                                        </p>
                                     </div>
 
-                                    <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/70 px-4 py-3">
+                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
                                         <div class="text-xs text-slate-500 dark:text-slate-400">
                                             Planta
                                         </div>
-                                        <div class="font-semibold text-slate-800 dark:text-white">
+                                        <p class="font-semibold">
                                             {{ employeeData?.planta }}
-                                        </div>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -398,7 +397,7 @@ onMounted(() => {
                 </div>
             </div>
 
-        
+
             <div class="xl:col-span-12">
                 <div class="card border-none shadow-sm rounded-3xl">
                     <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
@@ -411,11 +410,11 @@ onMounted(() => {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        <div class="rounded-3xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900/60 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                        <div class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                             <div class="flex items-start justify-between gap-4 h-full">
                                 <div class="flex flex-col justify-between h-full w-full">
                                     <div>
-                                        <h4 class="font-semibold dark:text-white mb-1">
+                                        <h4 class="font-semibold mb-1">
                                             Antigüedad
                                         </h4>
 
@@ -423,7 +422,7 @@ onMounted(() => {
                                             <Skeleton width="10rem" height="2rem" class="mb-2"></Skeleton>
                                         </template>
                                         <template v-else>
-                                            <p class="text-2xl md:text-3xl font-bold dark:text-white">
+                                            <p class="text-2xl md:text-3xl font-bold">
                                                 {{ antiguedad }}
                                             </p>
                                         </template>
@@ -440,11 +439,11 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="rounded-3xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900/60 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                        <div class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                             <div class="flex items-start justify-between gap-4 h-full">
                                 <div class="flex flex-col justify-between h-full w-full">
                                     <div>
-                                        <h4 class="font-semibold dark:text-white mb-1">
+                                        <h4 class="font-semibold mb-1">
                                             Vacaciones
                                         </h4>
 
@@ -452,7 +451,7 @@ onMounted(() => {
                                             <Skeleton width="6rem" height="2rem" class="mb-2"></Skeleton>
                                         </template>
                                         <template v-else>
-                                            <p class="text-2xl md:text-3xl font-bold dark:text-white">
+                                            <p class="text-2xl md:text-3xl font-bold">
                                                 {{ employeeVacations?.vacaciones_disponibles }}
                                             </p>
                                         </template>
@@ -469,11 +468,11 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="rounded-3xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900/60 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                        <div class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                             <div class="flex items-start justify-between gap-4 h-full">
                                 <div class="flex flex-col justify-between h-full w-full">
                                     <div>
-                                        <h4 class="font-semibold dark:text-white mb-1">
+                                        <h4 class="font-semibold mb-1">
                                             Incidencias
                                         </h4>
 
@@ -481,7 +480,7 @@ onMounted(() => {
                                             <Skeleton width="5rem" height="2rem" class="mb-2"></Skeleton>
                                         </template>
                                         <template v-else>
-                                            <p class="text-2xl md:text-3xl font-bold  dark:text-white">
+                                            <p class="text-2xl md:text-3xl font-bold ">
                                                 {{ employeeIncidences?.incidencias_empleado }}
                                             </p>
                                         </template>
