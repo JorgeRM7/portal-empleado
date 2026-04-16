@@ -26,28 +26,6 @@ const rawMenu = ref([
         icon: "pi pi-fw pi-book",
         to: "/complaints",
     },
-    {
-        label: "Modúlo de Quejas",
-        icon: "pi pi-megaphone",
-        items: [
-            {
-                label: "Modúlo de Quejas",
-                icon: "pi pi-megaphone",
-                to: "/complaints",
-            },
-        ],
-    },
-    {
-        label: "Modúlo de Quejas",
-        icon: "pi pi-megaphone",
-        items: [
-            {
-                label: "Modúlo de Quejas",
-                icon: "pi pi-megaphone",
-                to: "/complaints",
-            },
-        ],
-    },
 ]);
 
 // const flatMenu = computed(() => {
