@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\BranchOffice;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ComplaintsModuleController
 {
@@ -20,7 +22,7 @@ class ComplaintsModuleController
      */
     public function index()
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
 
         if (!$userId) {
             return redirect()->route('login');
@@ -56,7 +58,7 @@ class ComplaintsModuleController
     public function filter_data(Request $request)
     {
         try {
-            $userId = auth()->id();
+            $userId = Auth::id();
 
             if (!$userId) {
                 return response()->json([
@@ -115,214 +117,186 @@ class ComplaintsModuleController
     {
         $original = $request->input('text') ?? $request->input('texto');
         $asuntoCod = $request->input('asunto_cod');
-
+        $asuntoTexto = $request->input('asunto_texto');
+    
         if (!$original) {
             return response()->json(['success' => false, 'message' => 'No se recibió texto'], 400);
         }
-
-        $rawText = mb_strtolower($original, 'UTF-8');
-
-        // 1. DETECCIÓN DE FLAGS (Gravedad)
-        $flags = [
-            'insultos' => preg_match('/c[a4]br[o0]n|pendej[o0a4]|idiot[a4]?|est[uú]pid[o0a4]|mierd[a4]|verg[a4]|imb[eé]cil|culer[o0a4]|maric[o0a4]|jod(er|ido)|basur[a4]|maldit[o0a4]/i', $rawText),
-            'grave' => preg_match('/me agarran|me tocan|manosean|empuj|jalone|contacto f[ií]sico|nalge|pito|verga|sexo|sexual|cog(er|iendo)|acos[o]?|morbos|violar|golp(e|an|ado)|peg(ar|an|ado)|putaz|madraz|agresi[oó]n f[ií]sica|violencia/i', $rawText),
-            'contacto_fisico' => preg_match('/me agarran|me tocan|manosean|empuj|jalone|contacto f[ií]sico|nalge/i', $rawText),
-            'sexual' => preg_match('/pito|verga|genital|sexo|sexual|cog(er|iendo)|intim|acos[o]?|morbos|violar|tijeras/i', $rawText),
-            'acoso' => preg_match('/acos(an|o|ando)|hostig(an|o|amiento)|molest(an|ia constante)|me siguen|me vigilan/i', $rawText),
-            'violencia_fisica' => preg_match('/golp(e|an|ado)|peg(ar|an|ado)|putaz|madraz|agresi[oó]n f[ií]sica|violencia/i', $rawText),
-            'abuso_poder' => preg_match('/jef[ea]|descont|quit[oó]|autoridad|abuso|patr[oó]n|oblig(o|a)|presionan/i', $rawText),
-        ];
-
-        // 2. DICCIONARIOS PARA CONSTRUCCIÓN
-        $peticion = [
-            // --- Acción e Intervención ---
-            'se solicita la mediación inmediata de',
-            'se requiere la presencia activa de',
-            'se insta a la participación de',
-            'se solicita el arbitraje de',
-            'es imperativo el involucramiento de',
-            'se demanda la intervención directa de',
-            'se requiere que tome cartas en el asunto el área de',
-
-            // --- Revisión y Análisis ---
-            'se requiere una revisión formal por parte de',
-            'se solicita someter a dictamen técnico por',
-            'se pide una evaluación exhaustiva de los registros por',
-            'se encomienda el análisis del caso a',
-            'se solicita el cotejo de la información a través de',
-            'es necesaria una auditoría de los datos por parte de',
-
-            // --- Seguimiento y Protocolo ---
-            'se espera el debido seguimiento de',
-            'se solicita el acompañamiento administrativo de',
-            'se busca el deslinde de responsabilidades ante',
-            'se turna el presente reporte para la validación de',
-            'se canaliza oficialmente la inquietud hacia',
-            'se pide establecer medidas correctivas en conjunto con',
-
-            // --- Notificación Formal ---
-            'se da vista formal del incidente a',
-            'se remite la documentación pertinente para revisión de',
-            'se informa para los efectos conducentes al área de',
-            'se pone a disposición del departamento de'
-        ];
-
-        // 3. LÓGICA DINÁMICA DE RECONSTRUCCIÓN (EL CORAZÓN DE LA "IA")
-        $ideas = [];
-
-        if ($flags['grave']) {
-            $ideas[] = "se notifican incidentes que vulneran la integridad física y el respeto en el entorno laboral";
-        } elseif ($flags['insultos']) {
-            $ideas[] = "se reporta el uso de lenguaje inapropiado y conductas contrarias al profesionalismo";
-        } else {
-            // Reconstrucción dinámica basada en palabras clave
-            $ideas[] = $this->reconstruirEsenciaDinamica($rawText);
-        }
-
-        // Mapeo de Asunto para la petición final
-        $tipoMap = ['NOM' => 'Nómina', 'COM' => 'Compensaciones', 'EXT' => 'Tiempos extra', 'VAC' => 'Vacaciones'];
-        $asuntoNombre = ($asuntoCod && $asuntoCod !== 'OTR') ? ($tipoMap[$asuntoCod] ?? "el área") : "este caso";
-
-        $ideas[] = $this->randomItem($peticion) . " Recursos Humanos para la atención de $asuntoNombre";
-
-        // 4. GENERACIÓN DE OPCIONES CON ESTRUCTURAS FORMALES
-        $estructuras = [
-            // --- Estilo Directivo y Ejecutivo (Serio) ---
-            "Se formaliza el presente registro administrativo para informar que {cuerpo}.",
-            "Por medio de este reporte institucional, se hace constar que {cuerpo}.",
-            "Se establece un precedente documental debido a que {cuerpo}.",
-            "Queda asentado para los fines que correspondan que {cuerpo}.",
-
-            // --- Estilo Informativo / Notificación ---
-            "Se comunica de manera formal y para el seguimiento preventivo que {cuerpo}.",
-            "Por medio de la presente notificación electrónica, se expone que {cuerpo}.",
-            "Se emite este aviso de incidencia laboral puesto que {cuerpo}.",
-            "Se pone en conocimiento del área pertinente que {cuerpo}.",
-
-            // --- Estilo de Gestión de Casos (Analítico) ---
-            "Derivado de la información recibida, se identifica que {cuerpo}.",
-            "Se ha activado el flujo de atención correspondiente debido a que {cuerpo}.",
-            "De acuerdo con los hechos manifestados, se observa que {cuerpo}.",
-            "Se presenta esta notificación bajo el protocolo de resolución indicando que {cuerpo}.",
-
-            // --- Estilo Resumen / Sintético (Breve) ---
-            "Resumen de incidencia: {cuerpo}. Se solicita proceder según el protocolo vigente.",
-            "Reporte de seguimiento: {cuerpo}. Quedando a la espera de una resolución formal.",
-            "Documentación de incidencia: {cuerpo}. Favor de dar la atención debida.",
-            "Información relevante para el área: {cuerpo}. Se pide seguimiento administrativo."
-        ];
-
-        $opcionesFinales = [];
-        $ideasUnicas = array_values(array_unique($ideas));
-
-        foreach ($estructuras as $plantilla) {
-            $cuerpo = $this->unirIdeas($ideasUnicas);
-            $frase = str_replace("{cuerpo}", $cuerpo, $plantilla);
-
-            if (mb_strlen($frase) > 300) {
-                $frase = mb_substr($frase, 0, 297) . '...';
+    
+        try {
+            // 1. VALIDACIÓN DE LONGITUD
+            if (mb_strlen($original) > 300) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El texto no debe exceder 300 caracteres'
+                ], 400);
             }
-            $opcionesFinales[] = $frase;
+    
+            // 2. CONSTRUCCIÓN DEL PROMPT PARA GROQ
+            $prompt = $this->construirPrompt($original, $asuntoCod, $asuntoTexto);
+    
+            // 3. LLAMADA A GROQ
+            $opciones = $this->obtenerOpciones($prompt);
+    
+            if (!$opciones || count($opciones) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudieron generar sugerencias'
+                ], 500);
+            }
+    
+            return response()->json([
+                'success' => true,
+                'asunto' => "REPORTE DE " . mb_strtoupper($asuntoTexto ?? 'INCIDENCIA', 'UTF-8'),
+                'opciones' => $opciones
+            ]);
+    
+        } catch (\Exception $e) {
+            Log::error('Error en improveWriting: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar la solicitud'
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'asunto' => "REPORTE DE " . mb_strtoupper($asuntoNombre, 'UTF-8'),
-            'opciones' => array_values(array_unique($opcionesFinales))
-        ]);
+    }
+    
+    /**
+     * Construye el prompt para Groq de manera estratégica
+     */
+    private function construirPrompt($original, $asuntoCod, $asuntoTexto)
+    {
+        $contexto = $this->mapearContextoAsunto($asuntoCod);
+        
+        return <<<PROMPT
+    Eres un especialista en redacción corporativa y compliance laboral. 
+    Tu tarea es reescribir quejas o denuncias laborales de manera profesional, clara, objetiva y respetuosa.
+    
+    CONTEXTO DEL ASUNTO: $asuntoTexto
+    TIPO DE REPORTE: $contexto
+    
+    TEXTO ORIGINAL (puede contener errores, palabras antisonantes, o ser poco claro):
+    "{$original}"
+    
+    INSTRUCCIONES:
+    1. Reescribe el texto eliminando palabras ofensivas, malsonantes o inapropiadas
+    2. Corrige errores de ortografía y gramática sin cambiar el significado original
+    3. Estructura la redacción de forma clara y profesional
+    4. Mantén el tono formal pero accesible (apto para un documento corporativo)
+    5. Asegúrate de que sea fácil de entender
+    6. La redacción debe mantener la esencia del problema reportado
+    7. Máximo 300 caracteres en la salida
+    8. No agregues información que no esté en el texto original
+    9. Habla en primera persona, como si tu estuvieras reportando el problema
+    
+    FORMATO DE RESPUESTA:
+    Genera EXACTAMENTE 3 versiones reescritas diferentes. 
+    Cada una debe tener un enfoque ligeramente distinto en la presentación.
+    Responde SOLO con las 3 versiones, una por línea, sin numeración ni explicaciones adicionales.
+    
+    IMPORTANTE: Cada versión debe estar completa y ser independiente.
+    PROMPT;
+    }
+    
+    /**
+     * Mapea el código de asunto a contexto para Groq
+     */
+    private function mapearContextoAsunto($asuntoCod)
+    {
+        $mapeo = [
+            'NOM' => 'Discrepancia en nómina o cálculo de salario',
+            'COM' => 'Cuestión relacionada con compensaciones o bonificaciones',
+            'EXT' => 'Reclamo sobre tiempos extras o horas adicionales',
+            'ACI' => 'Aclaración necesaria sobre incidencias laborales',
+            'CDP' => 'Cambio en datos personales del empleado',
+            'CDB' => 'Cambio en datos bancarios o información de depósito',
+            'VAC' => 'Cuestión sobre vacaciones, permisos o días libres',
+            'DCP' => 'Descuentos de créditos, préstamos o pensiones',
+            'DVD' => 'Asunto sobre despensas o vales de despensa',
+            'INC' => 'Reclamo sobre incentivos, bonos o pago anual',
+            'CON' => 'Solicitud de constancias o documentación',
+            'OTR' => 'Otro tipo de reporte laboral',
+        ];
+    
+        return $mapeo[$asuntoCod] ?? 'Reporte laboral general';
+    }
+    
+    /**
+     * Realiza la llamada a Groq y procesa la respuesta
+     */
+    private function obtenerOpciones($prompt)
+    {
+        $apiUrl = env('AI_API_URL');
+        $apiKey = env('AI_API_KEY');
+        $model = env('AI_MODEL');
+    
+        if (!$apiKey) {
+            throw new \Exception('Credencial AI_API_KEY no configurada');
+        }
+    
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post($apiUrl, [
+                'model' => $model,
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ],
+                'temperature' => 0.7,  // Balance entre creatividad y coherencia
+                'max_tokens' => 600,   // Suficiente para 3 versiones
+                'top_p' => 0.95,
+            ]);
+    
+            if (!$response->successful()) {
+                Log::error('Error Groq API: ' . $response->status(), $response->json());
+                throw new \Exception('Error en respuesta de Groq: ' . $response->status());
+            }
+    
+            $data = $response->json();
+            $contenido = $data['choices'][0]['message']['content'] ?? '';
+    
+            // Parsear las opciones separadas por saltos de línea
+            $opciones = array_filter(
+                array_map('trim', explode("\n", $contenido)),
+                fn($linea) => !empty($linea) && mb_strlen($linea) > 10
+            );
+    
+            // Tomar máximo 3 opciones y limpiar
+            $opcionesLimpias = array_map(function ($opcion) {
+                // Remover números iniciales o viñetas
+                $opcion = preg_replace('/^[\d\.\-\*\s]+/', '', $opcion);
+                $opcion = trim($opcion);
+                
+                // Asegurar que no exceda 300 caracteres
+                if (mb_strlen($opcion) > 300) {
+                    $opcion = mb_substr($opcion, 0, 297) . '...';
+                }
+                
+                return $opcion;
+            }, array_slice($opciones, 0, 3));
+    
+            return array_values(array_filter($opcionesLimpias));
+    
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            Log::error('RequestException Groq: ' . $e->getMessage());
+            throw new \Exception('Error de conexión con Groq: ' . $e->getMessage());
+        }
     }
 
     /**
      * Reconstruye el mensaje desde cero basándose en conceptos encontrados.
      */
-    private function reconstruirEsenciaDinamica($texto)
-    {
-        $conceptos = [
-            'vacaciones' => ['vacacion', 'dias', 'descanso', 'vaca', 'mesa len'],
-            'nómina'     => ['nomina', 'pago', 'sueldo', 'deposito', 'dinero'],
-            'asistencia' => ['falta', 'retardo', 'checador', 'entrada', 'salida']
-        ];
 
-        $tema = "la situación laboral";
-        foreach ($conceptos as $key => $sinonimos) {
-            foreach ($sinonimos as $sinonimo) {
-                if (str_contains($texto, $sinonimo)) { $tema = $key; break 2; }
-            }
-        }
-
-        // Intenciones (El "Problema")
-        $intenciones = [
-            'inconsistencia' => ['no sale', 'mal', 'menos', 'error', 'incorrecto', 'mnos', 'falta', 'diferencia'],
-            'aclaracion'     => ['porque', 'duda', 'saber', 'como', 'explicacion']
-        ];
-
-        $problema = "la revisión de";
-        foreach ($intenciones as $key => $sinonimos) {
-            foreach ($sinonimos as $sinonimo) {
-                if (str_contains($texto, $sinonimo)) { $problema = $key; break 2; }
-            }
-        }
-
-        // Mapeo de frases objetivas
-        $frasesIA = [
-            'inconsistencia' => [
-                "se identifican discrepancias en el cálculo y registro de $tema",
-                "existen posibles errores u omisiones en los datos referentes a $tema",
-                "se observa una falta de concordancia técnica en la información de $tema",
-                "se detectan anomalías en las cifras reportadas sobre $tema",
-                "se presenta una diferencia significativa entre lo registrado y lo percibido en $tema",
-                "la información reflejada en $tema no coincide con los parámetros esperados"
-            ],
-            'aclaracion' => [
-                "se requiere una aclaración detallada y formal sobre $tema",
-                "existen inquietudes manifestadas respecto a la gestión administrativa de $tema",
-                "se solicita información adicional y precisa para comprender el estatus de $tema",
-                "es necesaria una orientación específica sobre los procesos de $tema",
-                "se busca resolver dudas puntuales derivadas de la reciente actualización de $tema",
-                "se pide profundizar en los criterios aplicados para la determinación de $tema"
-            ],
-            'negligencia' => [
-                "se reporta una posible falta de atención o seguimiento en las tareas de $tema",
-                "se observa un cumplimiento parcial o tardío en los protocolos de $tema",
-                "existen señalamientos sobre una gestión ineficaz en el área de $tema",
-                "se identifica una omisión de responsabilidades vinculadas a $tema"
-            ],
-            'maltrato' => [
-                "se describen conductas que afectan el clima laboral y la sana convivencia",
-                "se manifiestan inconformidades por tratos ajenos a los valores institucionales",
-                "se documentan situaciones de interacción profesional que requieren revisión ética",
-                "se reportan incidencias relacionadas con la comunicación y el respeto mutuo"
-            ],
-            'revision' => [
-                "se solicita un análisis preventivo y exhaustivo sobre $tema",
-                "se requiere someter a validación técnica el proceso actual de $tema",
-                "es pertinente realizar una auditoría interna sobre los movimientos de $tema",
-                "se busca garantizar la transparencia en la ejecución de $tema"
-            ]
-        ];
-
-        $opciones = $frasesIA[$problema] ?? ["se solicita una revisión de $tema"];
-        return $this->randomItem($opciones);
-    }
-
-    private function randomItem($array)
-    {
-        return empty($array) ? '' : $array[array_rand($array)];
-    }
-
-    private function unirIdeas($ideas)
-    {
-        if (count($ideas) <= 1) return $ideas[0] ?? '';
-        $conectores = ['asimismo', 'aunado a lo anterior', 'de igual forma', 'adicionalmente'];
-        return $ideas[0] . ', ' . $this->randomItem($conectores) . ' ' . $ideas[1];
-    }
 
     /**
      * Show the form for creating a new resource.
      */
     public function create()
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
 
         if (!$userId) {
             return redirect()->route('login');
@@ -339,13 +313,93 @@ class ComplaintsModuleController
         ]);
     }
 
+    private function validarTextoConIA($texto, $asuntoCod, $asuntoTexto)
+    {
+        $prompt = <<<PROMPT
+    Eres un validador de quejas laborales. Analiza el siguiente texto:
+
+    CONTEXTO: $asuntoTexto
+    TEXTO A VALIDAR: "$texto"
+
+    Evalúa:
+    1. ¿Contiene lenguaje ofensivo, agresivo o inapropiado para un entorno corporativo?
+
+    No importa si el texto no es claro, si no tiene coherencia lógica o si podría reescribirse para ser más profesional, solo evalua si 
+    el texto contiene lenguaje ofensivo, agresivo o inapropiado para un entorno corporativo.
+
+    RESPONDE EXACTAMENTE en este formato JSON:
+    {
+    "apto": true|false,
+    "razon": "breve explicación",
+    "version_mejorada": "texto reescrito profesionalmente (solo si apto=false pero recuperable)"
+    }
+    PROMPT;
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('AI_API_KEY'),
+                'Content-Type' => 'application/json',
+            ])->timeout(15)->post(env('AI_API_URL'), [
+                'model' => env('AI_MODEL'),
+                'messages' => [['role' => 'user', 'content' => $prompt]],
+                'temperature' => 0.3, // Más determinista para validación
+                'max_tokens' => 400,
+                'response_format' => ['type' => 'json_object'] // Si Groq lo soporta
+            ]);
+
+            if (!$response->successful()) {
+                Log::warning('Validación IA fallida: ' . $response->status());
+                return ['valid' => true, 'razon' => 'Validación omitida por error técnico']; // Fail-open por UX
+            }
+
+            $data = $response->json();
+            $contenido = $data['choices'][0]['message']['content'] ?? '';
+            $analisis = json_decode($contenido, true);
+
+            return [
+                'valid' => $analisis['apto'] ?? true,
+                'razon' => $analisis['razon'] ?? 'Análisis no disponible',
+                'sugerencia' => $analisis['version_mejorada'] ?? null
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error validando texto con IA: ' . $e->getMessage());
+            // Fail-open: permitir guardar pero registrar advertencia
+            return ['valid' => true, 'razon' => 'Error técnico en validación'];
+        }
+    }
+
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
+        $validated = $request->validate([
+            'descripcion' => 'required|string|min:10|max:300',
+            'asunto_texto' => 'required|string|max:100',
+            'asunto_cod' => 'required|string|size:3',
+            'archivos' => 'nullable|array|max:5',
+            'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240'
+        ]);
+        $textoOriginal = $validated['descripcion'];
+        $validacionIA = $this->validarTextoConIA(
+            $textoOriginal, 
+            $request->input('asunto_cod'), 
+            $request->input('asunto_texto')
+        );
+
+        // Si la IA detecta problemas y NO hay versión mejorada → rechazar
+        if (!$validacionIA['valid']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La queja no cumple con los criterios de redacción profesional',
+                'code' => 'REDACCION_INVALIDA',
+                'detalles' => $validacionIA['razon'],
+                'accion_sugerida' => 'Usa la herramienta "Mejorar redacción" antes de enviar'
+            ], 422);
+        }
         $employeeData = DB::table('employees')
-            ->where('id', auth()->id())
+            ->where('id', Auth::id())
             ->select('branch_office_id')
             ->first();
 
@@ -363,12 +417,12 @@ class ComplaintsModuleController
                     'date'             => Carbon::now('America/Mexico_City')->format('Y-m-d'),
                     'hour'             => Carbon::now('America/Mexico_City')->format('H:i:s'),
                     'branch_office_id' => $employeeData->branch_office_id,
-                    'employee_id'      => auth()->id(),
+                    'employee_id'      => Auth::id(),
                     'path_complain'    => null,
                 ]);
 
                 if ($request->hasFile('archivos')) {
-                    $folderPath = "complaints/emp_" . auth()->id() . "/q_" . $queja->id;
+                    $folderPath = "complaints/emp_" . Auth::id() . "/q_" . $queja->id;
 
                     foreach ($request->file('archivos') as $file) {
                         $file->storeAs($folderPath, $file->getClientOriginalName(), 'public');
@@ -414,6 +468,7 @@ class ComplaintsModuleController
                 ], 500);
             }
         });
+        
     }
 
     /**
@@ -467,7 +522,7 @@ class ComplaintsModuleController
             if ($request->hasFile('archivos')) {
 
                 if (!$folderPath) {
-                    $folderPath = "complaints/emp_" . auth()->id() . "/q_" . $queja->id;
+                    $folderPath = "complaints/emp_" . Auth::id() . "/q_" . $queja->id;
                 }
 
                 foreach ($request->file('archivos') as $file) {
