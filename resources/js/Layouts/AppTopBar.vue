@@ -102,9 +102,7 @@ const toggleNotifications = (event) => {
     opNotifications.value.toggle(event);
 };
 
-onMounted(async () => {
-    
-});
+onMounted(async () => {});
 </script>
 
 <template>

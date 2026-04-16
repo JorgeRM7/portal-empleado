@@ -69,6 +69,7 @@ function checkActiveRoute(item) {
     transition: all 0.2s ease;
     white-space: normal;
     word-break: break-word;
+    margin-bottom: 0.5rem;
 }
 
 .menu-item-link:hover {

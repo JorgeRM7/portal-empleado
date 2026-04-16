@@ -7,42 +7,33 @@ const { can } = useAuthz();
 
 const rawMenu = ref([
     {
-        label: "Panel",
+        label: "Inicio",
         icon: "pi pi-fw pi-home",
-        items: [
-            {
-                label: "Dashboard",
-                icon: "pi pi-fw pi-home",
-                to: "/dashboard",
-            },
-        ],
+        to: "/dashboard",
     },
     {
-        label: "Asistencias",
-        icon: "pi pi-fw pi-check-circle",
-        items: [
-            {
-                label: "Registro de asistencias",
-                icon: "pi pi-fw pi-id-card",
-                to: "/weekly-assistences",
-            },
-        ],
+        label: "Incidencias",
+        icon: "pi pi-fw pi-book",
+        to: "/incidences-employee",
     },
     {
-        label: "Administración",
-        icon: "pi pi-fw pi-cog",
+        label: "Recibos de Nómina",
+        icon: "pi pi-fw pi-file",
+        to: "/payroll/payroll-invoices",
+    },
+    {
+        label: "Quejas",
+        icon: "pi pi-fw pi-book",
+        to: "/complaints",
+    },
+    {
+        label: "Modúlo de Quejas",
+        icon: "pi pi-megaphone",
         items: [
             {
-                label: "Usuarios",
-                icon: "pi pi-user",
-                to: "/users",
-                permission: "users.index",
-            },
-            {
-                label: "Roles",
-                icon: "pi pi-user",
-                to: "/roles",
-                permission: "roles.index",
+                label: "Modúlo de Quejas",
+                icon: "pi pi-megaphone",
+                to: "/complaints",
             },
         ],
     },
@@ -59,32 +50,36 @@ const rawMenu = ref([
     },
 ]);
 
-const flatMenu = computed(() => {
-    return rawMenu.value.flatMap((section) =>
-        (section.items || [])
-            .filter((item) => !item.permission || can(item.permission))
-            .map((item) => ({
-                ...item,
-                section: section.label,
-            }))
-    );
-});
+// const flatMenu = computed(() => {
+//     return rawMenu.value.flatMap((section) =>
+//         (section.items || [])
+//             .filter((item) => !item.permission || can(item.permission))
+//             .map((item) => ({
+//                 ...item,
+//                 section: section.label,
+//             })),
+//     );
+// });
 </script>
 
 <template>
     <ul class="layout-menu">
         <AppMenuItem
-            v-for="(item, i) in flatMenu"
+            v-for="(item, i) in rawMenu"
             :key="item.label + '-' + i"
             :item="item"
             :index="i"
         />
 
-        <li
-            v-if="flatMenu.length === 0"
-            class="p-4 text-center text-gray-500"
-        >
+        <li v-if="rawMenu.length === 0" class="p-4 text-center text-gray-500">
             No tienes acceso a ninguna sección
         </li>
     </ul>
 </template>
+
+<style scoped>
+.layout-menu {
+    margin-top: 1rem;
+}
+</style>
+

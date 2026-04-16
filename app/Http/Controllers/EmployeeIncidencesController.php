@@ -43,8 +43,10 @@ class EmployeeIncidencesController
     {
         $week = $request->week ? $request->week : date('W');
         $year = $request->year ? $request->year : date('Y');
-        $incidences = EmployeeIncidences::getIncidences($request->branch_office_id, $request->week, $request->year, $request->employee_id, $request->incidence_id, $request->eliminated);
-        $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($request->branch_office_id);
+        $employee_id = Auth::id();
+        $employee = Employee::select('branch_office_id')->where('id', $employee_id)->first();
+        $incidences = EmployeeIncidences::getIncidences($employee->branch_office_id, $request->week, $request->year, $employee_id, $request->incidence_id, $request->eliminated);
+        $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($employee->branch_office_id);
         return json_encode(['incidences' => $incidences, 'lastWeekNumber' => $lastWeekNumber]);
     }
 
@@ -89,26 +91,26 @@ class EmployeeIncidencesController
         }
     }
 
-    public function getIncidencesByEmployeeId(Request $request)
+    public function getIncidencesByEmployeeId()
     {
-        $incidences = EmployeeIncidences::groupedForIndexByEmployeeId($request->employee_id);
+        $employee_id = Auth::id();
+        $incidences = EmployeeIncidences::groupedForIndexByEmployeeId($employee_id);
 
         return json_encode($incidences);
     }
 
-    public function getIncidencesDataLoad(Request $request){
-        $employees = Employee::select("id","full_name", "branch_office_id")->
-        where("branch_office_id", "=", $request->branch_office_id)->where("status", "!=", "termination")->orderBy('id', 'ASC')->get();
+    public function getIncidencesDataLoad(){
+        $employee_id = Auth::id();
+        $employee = Employee::select('branch_office_id')->where('id', $employee_id)->first();
         $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
-        if($request->branch_office_id != 19){
+        if($employee->branch_office_id != 19){
             $allincidences = Incidence::select('id','name')->where('read_only', '=', '0')->where('active', '=', '1')->whereNotIn('id', [12,24,25,41])->get();
         }else{
             $allincidences = Incidence::select('id','name')->where('read_only', '=', '0')->where('active', '=', '1')->get();
         }
-        $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($request->branch_office_id);
+        $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($employee->branch_office_id);
 
         return json_encode([
-            'employees' => $employees,
             'schedules' => $schedules,
             'allincidences' => $allincidences,
             'lastWeekNumber' => $lastWeekNumber
@@ -120,8 +122,14 @@ class EmployeeIncidencesController
      */
     public function create(Request $request)
     {
+        $employeeId = Auth::id();
+        $employee = Employee::select('branch_office_id')->where('id', $employeeId)->first();
+
         
-        return Inertia::render('Incidences/Create');
+        return Inertia::render('Incidences/Create', [
+            'employeeId' => $employeeId,
+            'branchOfficeId' => $employee->branch_office_id
+        ]);
     }
 
     /**

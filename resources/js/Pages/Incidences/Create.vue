@@ -5,6 +5,17 @@ import { router } from "@inertiajs/vue3";
 import { useToastService } from "@/Stores/toastService";
 import { useToast } from "primevue";
 
+const props = defineProps({
+    employeeId: {
+        type: Number,
+        required: true,
+    },
+    branchOfficeId: {
+        type: Number,
+        required: true,
+    },
+});
+
 const { showSuccess, showError } = useToastService();
 const toast = useToast();
 
@@ -12,39 +23,17 @@ const employees = ref([]);
 const schedules = ref([]);
 const allincidences = ref([]);
 
-const employeeId = ref(null);
+const employeeId = ref(props.employeeId);
 
 const incidencesByEmployee = ref([]);
 
 const sending = ref(false);
-
-const getSafeBranchId = () => {
-    try {
-        const item = localStorage.getItem("selectedBranchOffice");
-        if (!item) return null; // Si no hay nada, retorna null
-
-        const parsed = JSON.parse(item);
-        return parsed?.id || null; // Si no tiene id, retorna null
-    } catch (e) {
-        console.warn("Error leyendo localStorage:", e);
-        return null;
-    }
-};
-
-const branchOfficeId = ref(getSafeBranchId());
 
 const incidences = computed(
     () => incidencesByEmployee.value[employeeId.value] ?? [],
 );
 
 const loading = ref(false);
-
-const employeeOptions = computed(() =>
-    employees.value.map((e) => ({
-        ...e,
-        label: `(${e.id}) ${e.full_name}`,
-    })),
-);
 
 function atMidnight(d) {
     const x = new Date(d);
@@ -114,9 +103,9 @@ const form = ref({
     schedule: null,
     document: null,
     document_number: "",
-    employee_id: null,
+    employee_id: props.employeeId,
     days_available: null,
-    branch_office_id: branchOfficeId.value,
+    branch_office_id: props.branchOfficeId,
 });
 
 const daysCalculated = computed(() => {
@@ -229,7 +218,6 @@ function typeLabel(type) {
 }
 
 function saveIncidence() {
-    form.value.employee_id = employeeId.value;
     form.value.days_to_register = daysEditable.value;
     if (form.value.incidence_id === 23) {
         if (!form.value.singleDate) {
@@ -262,18 +250,18 @@ function updateShiftHours() {
     form.value.shift_hours = shiftTotalHours;
 }
 
-const getData = () => {
+const getData = async () => {
     if (!employeeId.value) return;
     loading.value = true;
 
-    axios
-        .get("/api/incidences/employee", {
+    await axios
+        .get("/incidences/employee", {
             params: {
                 employee_id: employeeId.value,
             },
         })
         .then((response) => {
-            console.log(response.data);
+            console.log("incidencias por empleado", response.data);
             if (!response.data[employeeId.value][0].id) {
                 incidencesByEmployee.value = {};
                 loading.value = false;
@@ -355,17 +343,11 @@ watch(
     },
 );
 
-onMounted(() => {
+onMounted(async () => {
     loading.value = true;
-    axios
-        .get("/api/incidences/getIncidencesDataLoad", {
-            params: {
-                branch_office_id: JSON.parse(
-                    localStorage.getItem("selectedBranchOffice"),
-                ).id,
-            },
-        })
-        .then((response) => {
+    await axios
+        .get("/incidences/getIncidencesDataLoad")
+        .then(async (response) => {
             console.log(response.data);
             employees.value = response.data.employees;
             schedules.value = response.data.schedules;
@@ -373,12 +355,12 @@ onMounted(() => {
             minIsoWeek.value = response.data.lastWeekNumber[0].week;
             minIsoYear.value = response.data.lastWeekNumber[0].year;
 
-            loading.value = false;
-
             typeOptions.value = allincidences.value.map((inc) => ({
                 label: inc.name,
                 value: inc.id,
             }));
+
+            await getData();
 
             console.log(typeOptions.value);
         });
@@ -397,7 +379,7 @@ watch(employeeId, () => {
             <div class="grid gap-4">
                 <Card>
                     <template #title>Crear Incidencia</template>
-                    <template #content>
+                    <!-- <template #content>
                         <div class="flex flex-col gap-3">
                             <div class="flex flex-col gap-2 w-full">
                                 <label class="text-sm font-medium"
@@ -419,9 +401,9 @@ watch(employeeId, () => {
                                 />
                             </div>
                         </div>
-                    </template>
+                    </template> -->
                 </Card>
-                <div class="grid gap-4 lg:grid-cols-2">
+                <div class="grid gap-4 max-sm:grid-cols-1 lg:grid-cols-2">
                     <Card>
                         <template #title>Fechas no disponibles</template>
                         <template #content>
@@ -918,9 +900,7 @@ watch(employeeId, () => {
                                 label="Cancelar"
                                 @click="
                                     () => {
-                                        router.get(
-                                            '/employee/incidences-employee',
-                                        );
+                                        router.get('/incidences-employee');
                                     }
                                 "
                                 icon="pi pi-times"

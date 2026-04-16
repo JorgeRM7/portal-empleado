@@ -613,7 +613,7 @@ const getDocument = (urlPath) => {
                             severity="secondary"
                             @click="
                                 () => {
-                                    router.get('/employee/incidences-employee');
+                                    router.get('/incidences-employee');
                                 }
                             "
                             class="rounded-full"
