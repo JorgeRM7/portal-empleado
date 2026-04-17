@@ -315,26 +315,228 @@ class ComplaintsModuleController
         ]);
     }
 
+    // private function validarTextoConIA($texto, $asuntoCod, $asuntoTexto)
+    // {
+    //     $prompt = <<<PROMPT
+    // Eres un validador de quejas laborales. Analiza el siguiente texto:
+
+    // CONTEXTO: $asuntoTexto
+    // TEXTO A VALIDAR: "$texto"
+
+    // Evalúa:
+    // 1. ¿Contiene lenguaje ofensivo, agresivo o inapropiado para un entorno corporativo?
+
+    // No importa si el texto no es claro, si no tiene coherencia lógica o si podría reescribirse para ser más profesional, solo evalua si 
+    // el texto contiene lenguaje ofensivo, agresivo o inapropiado para un entorno corporativo.
+
+    // RESPONDE EXACTAMENTE en este formato JSON:
+    // {
+    // "apto": true|false,
+    // "razon": "breve explicación",
+    // "version_mejorada": "texto reescrito profesionalmente (solo si apto=false pero recuperable)"
+    // }
+    // PROMPT;
+
+    //     try {
+    //         $response = Http::withHeaders([
+    //             'Authorization' => 'Bearer ' . env('AI_API_KEY'),
+    //             'Content-Type' => 'application/json',
+    //         ])->timeout(15)->post(env('AI_API_URL'), [
+    //             'model' => env('AI_MODEL'),
+    //             'messages' => [['role' => 'user', 'content' => $prompt]],
+    //             'temperature' => 0.3, // Más determinista para validación
+    //             'max_tokens' => 400,
+    //             'response_format' => ['type' => 'json_object'] // Si Groq lo soporta
+    //         ]);
+
+    //         if (!$response->successful()) {
+    //             Log::warning('Validación IA fallida: ' . $response->status());
+    //             return ['valid' => true, 'razon' => 'Validación omitida por error técnico']; // Fail-open por UX
+    //         }
+
+    //         $data = $response->json();
+    //         $contenido = $data['choices'][0]['message']['content'] ?? '';
+    //         $analisis = json_decode($contenido, true);
+
+    //         return [
+    //             'valid' => $analisis['apto'] ?? true,
+    //             'razon' => $analisis['razon'] ?? 'Análisis no disponible',
+    //             'sugerencia' => $analisis['version_mejorada'] ?? null
+    //         ];
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Error validando texto con IA: ' . $e->getMessage());
+    //         // Fail-open: permitir guardar pero registrar advertencia
+    //         return ['valid' => true, 'razon' => 'Error técnico en validación'];
+    //     }
+    // }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    // public function store(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'asunto_texto' => 'required|string|max:100',
+    //         'asunto_cod' => 'required|string|size:3',
+    //         'archivos' => 'nullable|array|max:5',
+    //         'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240',
+    //         'descripcion' => 'nullable|required_unless:asunto_cod,CON|string|min:10|max:300',
+    //     ]);
+    //     $textoOriginal = $validated['descripcion'];
+    //     $validacionIA = $this->validarTextoConIA(
+    //         $textoOriginal, 
+    //         $request->input('asunto_cod'), 
+    //         $request->input('asunto_texto')
+    //     );
+
+    //     // Si la IA detecta problemas y NO hay versión mejorada → rechazar
+    //     if (!$validacionIA['valid']) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'La queja no cumple con los criterios de redacción profesional',
+    //             'code' => 'REDACCION_INVALIDA',
+    //             'detalles' => $validacionIA['razon'],
+    //             'accion_sugerida' => 'Usa la herramienta "Mejorar redacción" antes de enviar'
+    //         ], 422);
+    //     }
+    //     $employeeData = DB::table('employees')
+    //         ->where('id', Auth::id())
+    //         ->select('branch_office_id')
+    //         ->first();
+
+    //     if (!$employeeData) {
+    //         return response()->json(['success' => false, 'message' => 'Perfil no encontrado'], 404);
+    //     }
+
+    //     return DB::transaction(function () use ($request, $employeeData) {
+    //         try {
+
+    //             $queja = EmployeeComplains::create([
+    //                 'case'             => $request->descripcion,
+    //                 'subject'          => $request->asunto_texto,
+    //                 'response'         => null,
+    //                 'date'             => Carbon::now('America/Mexico_City')->format('Y-m-d'),
+    //                 'hour'             => Carbon::now('America/Mexico_City')->format('H:i:s'),
+    //                 'branch_office_id' => $employeeData->branch_office_id,
+    //                 'employee_id'      => Auth::id(),
+    //                 'path_complain'    => null,
+    //             ]);
+
+    //             if ($request->hasFile('archivos')) {
+    //                 $folderPath = "complaints/emp_" . Auth::id() . "/q_" . $queja->id;
+
+    //                 foreach ($request->file('archivos') as $file) {
+    //                     $file->storeAs($folderPath, $file->getClientOriginalName(), 'public');
+    //                 }
+
+    //                 $queja->update([
+    //                     'path_complain' => $folderPath
+    //                 ]);
+    //             }
+
+    //             // 🔹 Obtener sucursal
+    //                 $branchOffice = BranchOffice::find($queja->branch_office_id);
+
+    //                 $usersRH = is_string($branchOffice->users_rh_json)
+    //                     ? json_decode($branchOffice->users_rh_json, true)
+    //                     : $branchOffice->users_rh_json;
+
+    //                 if (!is_array($usersRH)) {
+    //                     $usersRH = [];
+    //                 }
+
+    //                 foreach ($usersRH as $userId) {
+
+    //                     EmployeeComplainsAsigments::create([
+    //                         'employee_complain_id' => $queja->id,
+    //                         'user_id'              => $userId,
+    //                         'assigment_date'       => Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s'),
+    //                         'assigment_hour'       => Carbon::now('America/Mexico_City')->format('H:i:s'),
+    //                         'type'                 => 'ASIGNACION'
+    //                     ]);
+
+    //                     $user = User::find($userId);
+    //                     $user->notify(new TicketAssignment(
+    //                         'Quejas',
+    //                         $queja->id
+    //                     ));
+    //                 }
+
+    //             return response()->json([
+    //                 'success' => true,
+    //                 'message' => 'Queja registrada con archivos correctamente',
+    //                 'data'    => $queja
+    //             ]);
+
+    //         } catch (\Exception $e) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Error: ' . $e->getMessage()
+    //             ], 500);
+    //         }
+    //     });
+        
+    // }
+
     private function validarTextoConIA($texto, $asuntoCod, $asuntoTexto)
     {
         $prompt = <<<PROMPT
-    Eres un validador de quejas laborales. Analiza el siguiente texto:
+    Eres un filtro de contenido para un sistema de quejas laborales corporativas.
 
-    CONTEXTO: $asuntoTexto
-    TEXTO A VALIDAR: "$texto"
+    📋 TU ÚNICA TAREA:
+    Detectar si el texto contiene lenguaje OFENSIVO, AGRESIVO o INAPROPIADO o FALTAS DE ORTOGRAFÍA para un entorno profesional.
 
-    Evalúa:
-    1. ¿Contiene lenguaje ofensivo, agresivo o inapropiado para un entorno corporativo?
+    🔍 CRITERIOS DE EVALUACIÓN:
+    ✅ MARCAR COMO "apto: true" SI:
+    - El texto es respetuoso
+    - La redacción es informal pero no ofensiva
+    - Hay falta de claridad o coherencia, pero sin lenguaje inapropiado
+    - El usuario expresa frustración de manera civilizada
 
-    No importa si el texto no es claro, si no tiene coherencia lógica o si podría reescribirse para ser más profesional, solo evalua si 
-    el texto contiene lenguaje ofensivo, agresivo o inapropiado para un entorno corporativo.
+    ❌ MARCAR COMO "apto: false" SOLO SI:
+    - Contiene insultos, groserías o palabras soeces
+    - Usa lenguaje discriminatorio, amenazante o hostil
+    - Incluye ataques personales hacia individuos o grupos
+    - Emplea términos sexualmente explícitos o violentos
+    - No cumple con los estándares de comunicación profesional
+    - Hay faltas de ortografía
 
-    RESPONDE EXACTAMENTE en este formato JSON:
+    ✏️ SOBRE "version_mejorada":
+    - SOLO proporciónala si apto=false PERO el mensaje central es válido y recuperable
+    - Reescribe eliminando/modificando únicamente las palabras ofensivas y corrigiendo faltas de ortografía
+    - Mantén la esencia, contexto y propósito original de la queja
+    - NO inventes detalles, NO cambies el significado, NO agregues información
+    - Si el texto es irrecuperable (ej: solo contiene insultos sin sustancia), deja "version_mejorada": null
+
+    📦 CONTEXTO DE LA QUEJA:
+    Tipo de asunto: $asuntoTexto ($asuntoCod)
+
+    📝 TEXTO A ANALIZAR:
+    "$texto"
+
+    🔐 FORMATO DE RESPUESTA (JSON PURO, SIN EXPLICACIONES ADICIONALES):
     {
-    "apto": true|false,
-    "razon": "breve explicación",
-    "version_mejorada": "texto reescrito profesionalmente (solo si apto=false pero recuperable)"
+    "apto": true,
+    "razon": "Texto respetuoso, sin lenguaje inapropiado detectado",
+    "version_mejorada": null
     }
+
+    O, si no es apto pero recuperable:
+    {
+    "apto": false,
+    "razon": "Contiene lenguaje ofensivo o faltas de ortografía: [palabra(s) detectada(s)]",
+    "version_mejorada": "Texto reescrito profesionalmente conservando el mensaje original"
+    }
+
+    O, si no es apto e irrecuperable:
+    {
+    "apto": false,
+    "razon": "Texto compuesto principalmente por lenguaje inapropiado sin contenido sustancial o faltas de ortografía",
+    "version_mejorada": null
+    }
+
+    ⚠️ IMPORTANTE: Responde ÚNICAMENTE con el objeto JSON. Sin texto antes ni después.
     PROMPT;
 
         try {
@@ -344,38 +546,45 @@ class ComplaintsModuleController
             ])->timeout(15)->post(env('AI_API_URL'), [
                 'model' => env('AI_MODEL'),
                 'messages' => [['role' => 'user', 'content' => $prompt]],
-                'temperature' => 0.3, // Más determinista para validación
-                'max_tokens' => 400,
-                'response_format' => ['type' => 'json_object'] // Si Groq lo soporta
+                'temperature' => 0.2, // Más determinista para clasificación binaria
+                'max_tokens' => 500,
+                'response_format' => ['type' => 'json_object']
             ]);
 
             if (!$response->successful()) {
                 Log::warning('Validación IA fallida: ' . $response->status());
-                return ['valid' => true, 'razon' => 'Validación omitida por error técnico']; // Fail-open por UX
+                return ['valid' => true, 'razon' => 'Validación omitida por error técnico', 'sugerencia' => null];
             }
 
             $data = $response->json();
             $contenido = $data['choices'][0]['message']['content'] ?? '';
+            
+            // Limpieza defensiva: remover posibles bloques de código markdown
+            $contenido = preg_replace('/^```(?:json)?\s*|\s*```$/', '', trim($contenido));
+            
             $analisis = json_decode($contenido, true);
+            
+            // Validación de estructura mínima
+            if (!is_array($analisis) || !isset($analisis['apto'])) {
+                Log::warning('Respuesta IA con formato inválido', ['content' => $contenido]);
+                return ['valid' => true, 'razon' => 'Análisis con formato inesperado', 'sugerencia' => null];
+            }
 
             return [
-                'valid' => $analisis['apto'] ?? true,
-                'razon' => $analisis['razon'] ?? 'Análisis no disponible',
-                'sugerencia' => $analisis['version_mejorada'] ?? null
+                'valid' => filter_var($analisis['apto'], FILTER_VALIDATE_BOOLEAN),
+                'razon' => $analisis['razon'] ?? 'Análisis completado',
+                'sugerencia' => !empty($analisis['version_mejorada']) ? trim($analisis['version_mejorada']) : null
             ];
 
         } catch (\Exception $e) {
             Log::error('Error validando texto con IA: ' . $e->getMessage());
-            // Fail-open: permitir guardar pero registrar advertencia
-            return ['valid' => true, 'razon' => 'Error técnico en validación'];
+            return ['valid' => true, 'razon' => 'Error técnico en validación', 'sugerencia' => null];
         }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
+        // 1️⃣ Validación básica de Laravel
         $validated = $request->validate([
             'asunto_texto' => 'required|string|max:100',
             'asunto_cod' => 'required|string|size:3',
@@ -383,23 +592,28 @@ class ComplaintsModuleController
             'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240',
             'descripcion' => 'nullable|required_unless:asunto_cod,CON|string|min:10|max:300',
         ]);
-        $textoOriginal = $validated['descripcion'];
+
+        $textoOriginal = $validated['descripcion'] ?? '';
+        
+        // 2️⃣ Validación con IA (no bloqueante)
         $validacionIA = $this->validarTextoConIA(
             $textoOriginal, 
             $request->input('asunto_cod'), 
             $request->input('asunto_texto')
         );
-
-        // Si la IA detecta problemas y NO hay versión mejorada → rechazar
-        if (!$validacionIA['valid']) {
-            return response()->json([
-                'success' => false,
-                'message' => 'La queja no cumple con los criterios de redacción profesional',
-                'code' => 'REDACCION_INVALIDA',
-                'detalles' => $validacionIA['razon'],
-                'accion_sugerida' => 'Usa la herramienta "Mejorar redacción" antes de enviar'
-            ], 422);
+        
+        // 3️⃣ Decidir qué texto guardar
+        $textoAGuardar = $textoOriginal;
+        $fueEditado = false;
+        
+        // Si la IA detectó problemas Y proporcionó una sugerencia → usarla
+        if (!$validacionIA['valid'] && !empty($validacionIA['sugerencia'])) {
+            $textoAGuardar = $validacionIA['sugerencia'];
+            $fueEditado = true;
         }
+        // Si no es válido pero no hay sugerencia → guardar original (fail-open)
+
+        // 4️⃣ Obtener datos del empleado
         $employeeData = DB::table('employees')
             ->where('id', Auth::id())
             ->select('branch_office_id')
@@ -409,11 +623,19 @@ class ComplaintsModuleController
             return response()->json(['success' => false, 'message' => 'Perfil no encontrado'], 404);
         }
 
-        return DB::transaction(function () use ($request, $employeeData) {
+        // 5️⃣ Guardar en transacción
+        return DB::transaction(function () use (
+            $request, 
+            $employeeData, 
+            $textoAGuardar,
+            $fueEditado,
+            $textoOriginal,
+            $validacionIA
+        ) {
             try {
-
+                // Crear queja con el texto (original o mejorado)
                 $queja = EmployeeComplains::create([
-                    'case'             => $request->descripcion,
+                    'case'             => $textoAGuardar,  // ← Texto final
                     'subject'          => $request->asunto_texto,
                     'response'         => null,
                     'date'             => Carbon::now('America/Mexico_City')->format('Y-m-d'),
@@ -423,6 +645,7 @@ class ComplaintsModuleController
                     'path_complain'    => null,
                 ]);
 
+                // 📁 Manejo de archivos (tu lógica original)
                 if ($request->hasFile('archivos')) {
                     $folderPath = "complaints/emp_" . Auth::id() . "/q_" . $queja->id;
 
@@ -430,53 +653,64 @@ class ComplaintsModuleController
                         $file->storeAs($folderPath, $file->getClientOriginalName(), 'public');
                     }
 
-                    $queja->update([
-                        'path_complain' => $folderPath
-                    ]);
+                    $queja->update(['path_complain' => $folderPath]);
                 }
 
-                // 🔹 Obtener sucursal
-                    $branchOffice = BranchOffice::find($queja->branch_office_id);
+                // 👥 Asignaciones a RRHH (tu lógica original)
+                $branchOffice = BranchOffice::find($queja->branch_office_id);
+                $usersRH = is_string($branchOffice->users_rh_json)
+                    ? json_decode($branchOffice->users_rh_json, true)
+                    : $branchOffice->users_rh_json;
 
-                    $usersRH = is_string($branchOffice->users_rh_json)
-                        ? json_decode($branchOffice->users_rh_json, true)
-                        : $branchOffice->users_rh_json;
+                if (!is_array($usersRH)) {
+                    $usersRH = [];
+                }
 
-                    if (!is_array($usersRH)) {
-                        $usersRH = [];
-                    }
+                foreach ($usersRH as $userId) {
+                    EmployeeComplainsAsigments::create([
+                        'employee_complain_id' => $queja->id,
+                        'user_id'              => $userId,
+                        'assigment_date'       => Carbon::now('America/Mexico_City')->format('Y-m-d'),
+                        'assigment_hour'       => Carbon::now('America/Mexico_City')->format('H:i:s'),
+                        'type'                 => 'ASIGNACION'
+                    ]);
 
-                    foreach ($usersRH as $userId) {
+                    $user = User::find($userId);
+                    $user->notify(new TicketAssignment('Quejas', $queja->id));
+                }
 
-                        EmployeeComplainsAsigments::create([
-                            'employee_complain_id' => $queja->id,
-                            'user_id'              => $userId,
-                            'assigment_date'       => Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s'),
-                            'assigment_hour'       => Carbon::now('America/Mexico_City')->format('H:i:s'),
-                            'type'                 => 'ASIGNACION'
-                        ]);
+                // 🔹 RESPUESTA AL USUARIO CON FEEDBACK SOBRE EDICIÓN
+                $message = 'Queja registrada correctamente';
+                
+                if ($fueEditado) {
+                    $message = 'Queja registrada. Hemos ajustado la redacción para garantizar claridad profesional.';
+                }
 
-                        $user = User::find($userId);
-                        $user->notify(new TicketAssignment(
-                            'Quejas',
-                            $queja->id
-                        ));
-                    }
-
-                return response()->json([
+                $response = [
                     'success' => true,
-                    'message' => 'Queja registrada con archivos correctamente',
+                    'message' => $message,
                     'data'    => $queja
-                ]);
+                ];
+
+                // Opcional: incluir detalles de la edición para mostrar en frontend
+                if ($fueEditado) {
+                    $response['edicion'] = [
+                        'texto_original' => $textoOriginal,
+                        'texto_mejorado' => $textoAGuardar,
+                        'razon' => $validacionIA['razon'] ?? 'Mejora de redacción automática'
+                    ];
+                }
+
+                return response()->json($response);
 
             } catch (\Exception $e) {
+                Log::error('Error en store: ' . $e->getMessage());
                 return response()->json([
                     'success' => false,
                     'message' => 'Error: ' . $e->getMessage()
                 ], 500);
             }
         });
-        
     }
 
     /**
