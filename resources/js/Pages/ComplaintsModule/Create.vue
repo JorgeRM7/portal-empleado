@@ -55,11 +55,22 @@ const options = ref([
     { name: "Despensas y Vales de despensa", code: "DVD" },
     { name: "Incentivos anuales", code: "INC" },
     {
-        name: "Constancias (Fonacot, Infonavit, Antigüedad, Visa, Escolar, Otro tipo)",
+        name: "Constancias",
         code: "CON",
     },
     { name: "Otros", code: "OTR" },
 ]);
+
+const otherOptions = ref([
+    { name: "Constancia de Fonacot", code: "Constancia de Fonacot" },
+    { name: "Constancia de Infonavit", code: "Constancia de Infonavit" },
+    { name: "Constancia de Antigüedad", code: "Constancia de Antigüedad" },
+    { name: "Constancia de Visa", code: "Constancia de Visa" },
+    { name: "Constancia Escolar", code: "Constancia Escolar" },
+    { name: "Otro", code: "CON-OTR" },
+]);
+
+const selectedConstancia = ref(null);
 
 watch(selectedOption, async (newVal, oldVal) => {
     if (isReverting.value) {
@@ -358,7 +369,11 @@ watch(selectedOption, (newVal) => {
 const enviarQueja = async () => {
     const descripcionLimpia = complaintDescription.value.trim();
 
-    if (!selectedOption.value || !complaintDescription.value.trim()) {
+    if (
+        !selectedOption.value ||
+        (!complaintDescription.value.trim() &&
+            selectedOption.value.code !== "CON")
+    ) {
         toast.add({
             severity: "warn",
             summary: "Atención",
@@ -392,6 +407,18 @@ const enviarQueja = async () => {
                 : selectedOption.value.name,
         );
         formData.append("descripcion", complaintDescription.value);
+
+        if (
+            selectedOption.value.code === "CON" &&
+            selectedConstancia.value != "CON-OTR"
+        ) {
+            formData.append("descripcion", selectedConstancia.value);
+        } else if (
+            selectedOption.value.code === "CON" &&
+            selectedConstancia.value == "CON-OTR"
+        ) {
+            formData.append("descripcion", otherSubject.value);
+        }
 
         if (files.value.length > 0) {
             files.value.forEach((file) => {
@@ -560,9 +587,29 @@ onUnmounted(() => {
                             </div>
                         </template>
                     </Dropdown>
+                    <Dropdown
+                        v-if="selectedOption && selectedOption.code === 'CON'"
+                        v-model="selectedConstancia"
+                        :options="otherOptions"
+                        filter
+                        optionLabel="name"
+                        optionValue="code"
+                        placeholder="Seleccione el tipo de constancia..."
+                        class="w-full md:w-30rem"
+                    >
+                        <template #option="slotProps">
+                            <div class="flex align-items-center">
+                                <div>{{ slotProps.option.name }}</div>
+                            </div>
+                        </template>
+                    </Dropdown>
 
                     <div
-                        v-if="selectedOption && selectedOption.code === 'OTR'"
+                        v-if="
+                            selectedOption &&
+                            (selectedOption.code === 'OTR' ||
+                                selectedConstancia === 'CON-OTR')
+                        "
                         class="mt-2"
                     >
                         <label
@@ -582,7 +629,10 @@ onUnmounted(() => {
                 <Divider />
 
                 <div class="mb-6 text-center">
-                    <div class="flex justify-end mb-1">
+                    <div
+                        class="flex justify-end mb-1"
+                        v-if="selectedOption && selectedOption.code !== 'CON'"
+                    >
                         <small :class="charCountClass">
                             {{ complaintDescription.length }} / 300
                         </small>
@@ -599,6 +649,7 @@ onUnmounted(() => {
                         spellcheck="true"
                         autocorrect="on"
                         autocomplete="on"
+                        v-if="selectedOption && selectedOption.code !== 'CON'"
                     />
 
                     <div class="flex justify-center gap-2 mt-3">
@@ -616,6 +667,9 @@ onUnmounted(() => {
                                     !otherSubject.trim())
                             "
                             @click="mejorarTexto"
+                            v-if="
+                                selectedOption && selectedOption.code !== 'CON'
+                            "
                         />
 
                         <Button

@@ -104,7 +104,7 @@ Route::middleware([
     ->name('complaints.improve');
 
     Route::resource('complaints', ComplaintsModuleController::class)->names([
-        'index' => 'complaints'
+        'index' => '/complaints'
     ]);
 });
 

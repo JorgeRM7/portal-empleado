@@ -6,21 +6,21 @@ import { useToast } from "primevue/usetoast";
 import { onMounted, ref } from "vue";
 import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
 import { useNotifications } from "@/composables/useNotifications";
-import { router } from '@inertiajs/vue3';
+import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
-    history: Array
+    history: Array,
 });
 
-const otherSubject = ref('');
+const otherSubject = ref("");
 const selectedOption = ref(null);
 const selectedOptionStatus = ref(null);
 const editDialog = ref(false);
 const editingQueja = ref(null);
 // campos
 const editSelectedOption = ref(null);
-const editComplaintDescription = ref('');
-const editOtherSubject = ref('');
+const editComplaintDescription = ref("");
+const editOtherSubject = ref("");
 // IA
 const editOpciones = ref([]);
 const editSeleccionada = ref(null);
@@ -37,80 +37,83 @@ const updating = ref(false);
 const deleting = ref(false);
 
 const dates = ref(null);
-const rows = ref([])
+const rows = ref([]);
 
 const { sendNotification } = useNotifications();
 
 const crearQueja = () => {
-    router.get('/complaints/create');
+    router.get("/complaints/create");
 };
 
 const formatFileItems = (archivos) => {
     return archivos.map((file) => ({
         label: file.name,
-        icon: 'pi pi-external-link',
+        icon: "pi pi-external-link",
         command: () => {
-            window.open(file.url, '_blank');
-        }
+            window.open(file.url, "_blank");
+        },
     }));
 };
 
 const viewFirstFile = (url) => {
-    window.open(url, '_blank');
+    window.open(url, "_blank");
 };
 
 const getStatusSeverity = (status) => {
     switch (status?.toLowerCase()) {
-        case 'pendiente':
-            return 'warn';
+        case "pendiente":
+            return "warn";
 
-        case 'escalado':
-            return 'info';
+        case "escalado":
+            return "info";
 
-        case 'resuelto':
-            return 'success';
+        case "resuelto":
+            return "success";
 
         default:
-            return 'secondary';
+            return "secondary";
     }
 };
 
 const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
-        case 'pendiente':
-            return 'pi pi-clock';
+        case "pendiente":
+            return "pi pi-clock";
 
-        case 'escalado':
-            return 'pi pi-arrow-up-right';
+        case "escalado":
+            return "pi pi-arrow-up-right";
 
-        case 'resuelto':
-            return 'pi pi-check-circle';
+        case "resuelto":
+            return "pi pi-check-circle";
 
         default:
-            return 'pi pi-info-circle';
+            return "pi pi-info-circle";
     }
 };
 
 const options = ref([
-    { name: 'Seleccione un Asunto...', code: '' },
-    { name: 'Nomina', code: 'NOM' },
-    { name: 'Compensaciones', code: 'COM' },
-    { name: 'Tiempos extra', code: 'EXT' },
-    { name: 'Aclaración de Incidencias', code: 'ACI' },
-    { name: 'Cambio de datos personales', code: 'CDP' },
-    { name: 'Cambio de datos bancarios', code: 'CDB' },
-    { name: 'Vacaciones', code: 'VAC' },
-    { name: 'Descuento de créditos y pensiones', code: 'DCP' },
-    { name: 'Despensas y Vales de despensa', code: 'DVD' },
-    { name: 'Incentivos anuales', code: 'INC' },
-    { name: 'Constancias (Fonacot, Infonavit, Antigüedad, Visa, Escolar, Otro tipo)', code: 'CON' },
-    { name: 'Otros', code: 'OTR' }
+    { name: "Seleccione un Asunto...", code: "" },
+    { name: "Nomina", code: "NOM" },
+    { name: "Compensaciones", code: "COM" },
+    { name: "Tiempos extra", code: "EXT" },
+    { name: "Aclaración de Incidencias", code: "ACI" },
+    { name: "Cambio de datos personales", code: "CDP" },
+    { name: "Cambio de datos bancarios", code: "CDB" },
+    { name: "Vacaciones", code: "VAC" },
+    { name: "Descuento de créditos y pensiones", code: "DCP" },
+    { name: "Despensas y Vales de despensa", code: "DVD" },
+    { name: "Incentivos anuales", code: "INC" },
+    {
+        name: "Constancias (Fonacot, Infonavit, Antigüedad, Visa, Escolar, Otro tipo)",
+        code: "CON",
+    },
+    { name: "Otros", code: "OTR" },
 ]);
 
 const optionsStatus = ref([
-    { name: 'Pendiente', code: 'PE' },
-    { name: 'Escalado', code: 'ES' },
-    { name: 'Resuelto', code: 'RE' },
+    { name: "Pendiente", code: "PE" },
+    { name: "Escalado", code: "ES" },
+    { name: "Resuelto", code: "RE" },
 ]);
 
 const editarQueja = (queja) => {
@@ -119,14 +122,14 @@ const editarQueja = (queja) => {
     editComplaintDescription.value = queja.case;
 
     const match = options.value.find(
-        o => o.name.toLowerCase() === queja.subject?.toLowerCase()
+        (o) => o.name.toLowerCase() === queja.subject?.toLowerCase(),
     );
 
-    if (match && match.code !== '') {
+    if (match && match.code !== "") {
         editSelectedOption.value = match;
-        editOtherSubject.value = '';
+        editOtherSubject.value = "";
     } else {
-        const otherOption = options.value.find(o => o.code === 'OTR');
+        const otherOption = options.value.find((o) => o.code === "OTR");
 
         editSelectedOption.value = otherOption;
         editOtherSubject.value = queja.subject;
@@ -149,21 +152,23 @@ const usarEdit = (op) => {
     editIsCollapsed.value = true;
 
     toast.add({
-        severity: 'success',
-        summary: 'Texto actualizado',
-        detail: 'Se aplicó la redacción sugerida.',
-        life: 2000
+        severity: "success",
+        summary: "Texto actualizado",
+        detail: "Se aplicó la redacción sugerida.",
+        life: 2000,
     });
 };
 
 const mejorarTextoEdit = async () => {
-
-    if (!editComplaintDescription.value.trim() || editComplaintDescription.value.length > 300) {
+    if (
+        !editComplaintDescription.value.trim() ||
+        editComplaintDescription.value.length > 300
+    ) {
         toast.add({
-            severity: 'warn',
-            summary: 'Atención',
-            detail: 'El texto debe tener entre 1 y 300 caracteres.',
-            life: 3000
+            severity: "warn",
+            summary: "Atención",
+            detail: "El texto debe tener entre 1 y 300 caracteres.",
+            life: 3000,
         });
         return;
     }
@@ -175,9 +180,10 @@ const mejorarTextoEdit = async () => {
         const res = await axios.post("/complaints/improve-writing", {
             texto: editComplaintDescription.value,
             asunto_cod: editSelectedOption.value?.code,
-            asunto_texto: editSelectedOption.value?.code === 'OTR'
-                ? editOtherSubject.value
-                : editSelectedOption.value?.name,
+            asunto_texto:
+                editSelectedOption.value?.code === "OTR"
+                    ? editOtherSubject.value
+                    : editSelectedOption.value?.name,
         });
 
         if (res.data.success) {
@@ -185,17 +191,16 @@ const mejorarTextoEdit = async () => {
             editSeleccionada.value = null;
             editIsCollapsed.value = false;
         }
-
     } catch (error) {
         console.error(error);
-        showError('Error con IA');
+        showError("Error con IA");
     } finally {
         editLoading.value = false;
     }
 };
 
 const removeExistingFile = (file) => {
-    editExistingFiles.value = editExistingFiles.value.filter(f => f !== file);
+    editExistingFiles.value = editExistingFiles.value.filter((f) => f !== file);
 
     editRemovedFiles.value.push(file.name);
 };
@@ -209,48 +214,46 @@ const actualizarQueja = async () => {
     try {
         const formData = new FormData();
 
-        formData.append('_method', 'PUT');
+        formData.append("_method", "PUT");
 
-        formData.append('descripcion', editComplaintDescription.value);
+        formData.append("descripcion", editComplaintDescription.value);
 
         const asuntoFinal =
-            editSelectedOption.value?.code === 'OTR'
+            editSelectedOption.value?.code === "OTR"
                 ? editOtherSubject.value
                 : editSelectedOption.value?.name;
 
-        formData.append('asunto_texto', asuntoFinal);
+        formData.append("asunto_texto", asuntoFinal);
 
         // 🔹 nuevos archivos
-        editNewFiles.value.forEach(file => {
-            formData.append('archivos[]', file);
+        editNewFiles.value.forEach((file) => {
+            formData.append("archivos[]", file);
         });
 
         // 🔹 eliminados
-        editRemovedFiles.value.forEach(id => {
-            formData.append('deleted_files[]', id);
+        editRemovedFiles.value.forEach((id) => {
+            formData.append("deleted_files[]", id);
         });
 
         await axios.post(`/complaints/${editingQueja.value.id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { "Content-Type": "multipart/form-data" },
         });
 
-        showSuccess('Queja actualizada');
+        showSuccess("Queja actualizada");
         editDialog.value = false;
 
         router.reload();
-
     } catch (error) {
         console.error(error);
-        showError('Error al actualizar');
-    }
-    finally {
+        showError("Error al actualizar");
+    } finally {
         updating.value = false;
     }
 };
 
 const truncateText = (text, length = 50) => {
-    if (!text) return '';
-    return text.length > length ? text.substring(0, length) + '...' : text;
+    if (!text) return "";
+    return text.length > length ? text.substring(0, length) + "..." : text;
 };
 
 const confirmarEliminar = (queja) => {
@@ -263,15 +266,14 @@ const eliminarQueja = async () => {
     try {
         await axios.delete(`/complaints/${quejaAEliminar.value.id}`);
 
-        showSuccess('Queja eliminada correctamente');
+        showSuccess();
 
         deleteDialog.value = false;
 
-        router.reload();
-
+        aplicarFiltros();
     } catch (error) {
         console.error(error);
-        showError('Error al eliminar la queja');
+        showError("Error al eliminar la queja");
     } finally {
         deleting.value = false;
     }
@@ -335,7 +337,7 @@ const otherFilters = ref({
     startDate: null,
     endDate: null,
     status: null,
-    subject: null
+    subject: null,
 });
 
 //Diálogo de filtros adicionales
@@ -376,7 +378,6 @@ const progress = ref(0);
 //Estado de visibilidad del toast
 const visible = ref(false);
 
-
 const toggleMostrarColumnas = (event) => {
     opMostrarColumnas.value.toggle(event);
 };
@@ -384,7 +385,6 @@ const toggleMostrarColumnas = (event) => {
 const toggleFijarColumnas = (event) => {
     opFijarColumnas.value.toggle(event);
 };
-
 
 //Filas seleccionadas
 const selected = ref([]);
@@ -394,7 +394,7 @@ const saveColumns = () => {
     columnsDialog.value = false;
 
     dt.value.exportCSV({
-        selectionOnly: true
+        selectionOnly: true,
     });
 };
 
@@ -406,13 +406,13 @@ const clearFilter = () => {
         startDate: null,
         endDate: null,
         status: null,
-        subject: null
+        subject: null,
     };
 
     dates.value = null;
     selectedOption.value = null;
     selectedOptionStatus.value = null;
-    otherSubject.value = '';
+    otherSubject.value = "";
 
     aplicarFiltros();
 };
@@ -453,12 +453,12 @@ const aplicarFiltros = async () => {
     loading.value = true;
 
     try {
-        const res = await axios.get('/complaints/filter-data', {
+        const res = await axios.get("/complaints/filter-data", {
             params: otherFilters.value,
         });
 
         rows.value = res.data.data;
-        console.log(rows.value)
+        console.log(rows.value);
     } catch (error) {
         console.error(error);
     } finally {
@@ -472,7 +472,6 @@ const removeStartDate = () => {
 
     aplicarFiltros();
 };
-
 
 onMounted(async () => {
     aplicarFiltros();
@@ -543,7 +542,15 @@ onMounted(async () => {
                 v-model:filters="filters"
                 filterDisplay="menu"
                 exportFilename="Historial_de_Quejas"
-                :globalFilterFields="['id', 'employee_id', 'subject', 'case', 'date', 'hour', 'status']"
+                :globalFilterFields="[
+                    'id',
+                    'employee_id',
+                    'subject',
+                    'case',
+                    'date',
+                    'hour',
+                    'status',
+                ]"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Quejas"
             >
@@ -684,23 +691,27 @@ onMounted(async () => {
                             v-if="otherFilters.status"
                             :label="'Estatus: ' + otherFilters.status"
                             removable
-                            @remove="() => {
-                                otherFilters.status = null;
-                                selectedOptionStatus = null;
-                                aplicarFiltros();
-                            }"
+                            @remove="
+                                () => {
+                                    otherFilters.status = null;
+                                    selectedOptionStatus = null;
+                                    aplicarFiltros();
+                                }
+                            "
                         />
 
                         <Chip
                             v-if="otherFilters.subject"
                             :label="'Asunto: ' + otherFilters.subject"
                             removable
-                            @remove="() => {
-                                otherFilters.subject = null;
-                                selectedOption = null;
-                                otherSubject = '';
-                                aplicarFiltros();
-                            }"
+                            @remove="
+                                () => {
+                                    otherFilters.subject = null;
+                                    selectedOption = null;
+                                    otherSubject = '';
+                                    aplicarFiltros();
+                                }
+                            "
                         />
 
                         <Chip
@@ -714,11 +725,13 @@ onMounted(async () => {
                             v-if="otherFilters.endDate"
                             :label="'Fin: ' + otherFilters.endDate"
                             removable
-                            @remove="() => {
-                                otherFilters.endDate = null;
-                                dates = null;
-                                aplicarFiltros();
-                            }"
+                            @remove="
+                                () => {
+                                    otherFilters.endDate = null;
+                                    dates = null;
+                                    aplicarFiltros();
+                                }
+                            "
                         />
                     </div>
                 </template>
@@ -892,7 +905,9 @@ onMounted(async () => {
                             </span>
 
                             <span
-                                v-if="data.response && data.response.length > 60"
+                                v-if="
+                                    data.response && data.response.length > 60
+                                "
                                 class="text-blue-500 ml-2 cursor-pointer"
                                 v-tooltip.bottom="data.response"
                             >
@@ -995,7 +1010,11 @@ onMounted(async () => {
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
 
-                        <div v-else-if="data.archivos && data.archivos.length > 0">
+                        <div
+                            v-else-if="
+                                data.archivos && data.archivos.length > 0
+                            "
+                        >
                             <SplitButton
                                 icon="pi pi-paperclip"
                                 severity="info"
@@ -1066,7 +1085,10 @@ onMounted(async () => {
                         class="w-full md:w-30rem"
                     >
                         <template #value="slotProps">
-                            <div v-if="slotProps.value" class="flex align-items-center">
+                            <div
+                                v-if="slotProps.value"
+                                class="flex align-items-center"
+                            >
                                 <div>{{ slotProps.value.name }}</div>
                             </div>
                             <span v-else>
@@ -1080,8 +1102,15 @@ onMounted(async () => {
                         </template>
                     </Dropdown>
 
-                    <div v-if="selectedOption && selectedOption.code === 'OTR'" class="mt-4">
-                        <label for="other_subject" class="block mb-2 font-medium">Especifique el asunto:</label>
+                    <div
+                        v-if="selectedOption && selectedOption.code === 'OTR'"
+                        class="mt-4"
+                    >
+                        <label
+                            for="other_subject"
+                            class="block mb-2 font-medium"
+                            >Especifique el asunto:</label
+                        >
                         <InputText
                             id="other_subject"
                             v-model="otherSubject"
@@ -1091,7 +1120,12 @@ onMounted(async () => {
                     </div>
                 </div>
                 <div class="flex flex-col gap-2 mt-2">
-                    <Calendar v-model="dates" selectionMode="range" :manualInput="false" placeholder="Rango de fechas"/>
+                    <Calendar
+                        v-model="dates"
+                        selectionMode="range"
+                        :manualInput="false"
+                        placeholder="Rango de fechas"
+                    />
 
                     <Dropdown
                         v-model="selectedOptionStatus"
@@ -1102,7 +1136,10 @@ onMounted(async () => {
                         class="w-full md:w-30rem"
                     >
                         <template #value="slotProps">
-                            <div v-if="slotProps.value" class="flex align-items-center">
+                            <div
+                                v-if="slotProps.value"
+                                class="flex align-items-center"
+                            >
                                 <div>{{ slotProps.value.name }}</div>
                             </div>
                             <span v-else>
@@ -1133,8 +1170,12 @@ onMounted(async () => {
                     />
                 </template>
             </Dialog>
-            <Dialog v-model:visible="editDialog" header="Editar Queja" :modal="true" :style="{ width: '600px' }">
-
+            <Dialog
+                v-model:visible="editDialog"
+                header="Editar Queja"
+                :modal="true"
+                :style="{ width: '600px' }"
+            >
                 <!-- ASUNTO -->
                 <Dropdown
                     v-model="editSelectedOption"
@@ -1154,9 +1195,10 @@ onMounted(async () => {
 
                 <!-- DESCRIPCIÓN + IA -->
                 <div class="mb-4">
-
                     <div class="flex justify-end mb-1">
-                        <small>{{ editComplaintDescription.length }} / 300</small>
+                        <small
+                            >{{ editComplaintDescription.length }} / 300</small
+                        >
                     </div>
 
                     <Textarea
@@ -1204,13 +1246,19 @@ onMounted(async () => {
                                     'p-4 border rounded-xl cursor-pointer transition-all duration-300',
                                     editSeleccionada === op
                                         ? 'shadow-md scale-[1.02] border-green-500 bg-green-50/10'
-                                        : 'hover:shadow-lg hover:border-purple-400 hover:scale-[1.01]'
+                                        : 'hover:shadow-lg hover:border-purple-400 hover:scale-[1.01]',
                                 ]"
                             >
-                                <div class="flex justify-between items-center mb-2">
+                                <div
+                                    class="flex justify-between items-center mb-2"
+                                >
                                     <Tag
                                         :value="`Opción ${i + 1}`"
-                                        :severity="editSeleccionada === op ? 'success' : 'secondary'"
+                                        :severity="
+                                            editSeleccionada === op
+                                                ? 'success'
+                                                : 'secondary'
+                                        "
                                         class="text-xs"
                                     />
                                     <i
@@ -1219,7 +1267,9 @@ onMounted(async () => {
                                     ></i>
                                 </div>
 
-                                <p class="mb-3 text-sm leading-relaxed text-gray-700">
+                                <p
+                                    class="mb-3 text-sm leading-relaxed text-gray-700"
+                                >
                                     {{ op }}
                                 </p>
 
@@ -1235,16 +1285,24 @@ onMounted(async () => {
                             </div>
                         </TransitionGroup>
                     </Fieldset>
-
                 </div>
 
                 <!-- ARCHIVOS -->
                 <div v-if="editExistingFiles.length">
                     <h5>Archivos actuales</h5>
 
-                    <div v-for="file in editExistingFiles" :key="file.id" class="flex justify-between mb-2">
+                    <div
+                        v-for="file in editExistingFiles"
+                        :key="file.id"
+                        class="flex justify-between mb-2"
+                    >
                         <span>{{ file.name }}</span>
-                        <Button icon="pi pi-times" severity="danger" text @click="removeExistingFile(file)" />
+                        <Button
+                            icon="pi pi-times"
+                            severity="danger"
+                            text
+                            @click="removeExistingFile(file)"
+                        />
                     </div>
                 </div>
 
@@ -1267,13 +1325,14 @@ onMounted(async () => {
                     />
                     <Button
                         :label="updating ? 'Actualizando...' : 'Guardar'"
-                        :icon="updating ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+                        :icon="
+                            updating ? 'pi pi-spin pi-spinner' : 'pi pi-check'
+                        "
                         severity="success"
                         :loading="updating"
                         @click="actualizarQueja"
                     />
                 </template>
-
             </Dialog>
             <Dialog
                 v-model:visible="deleteDialog"
@@ -1308,7 +1367,8 @@ onMounted(async () => {
                                     'text-sm text-red-300': isDark,
                                 }"
                             >
-                                Esta acción eliminará la queja de forma permanente.
+                                Esta acción eliminará la queja de forma
+                                permanente.
                             </p>
                         </div>
                     </div>

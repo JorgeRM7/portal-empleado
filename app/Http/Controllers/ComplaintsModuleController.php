@@ -375,11 +375,11 @@ class ComplaintsModuleController
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'descripcion' => 'required|string|min:10|max:300',
             'asunto_texto' => 'required|string|max:100',
             'asunto_cod' => 'required|string|size:3',
             'archivos' => 'nullable|array|max:5',
-            'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240'
+            'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240',
+            'descripcion' => 'nullable|required_unless:asunto_cod,CON|string|min:10|max:300',
         ]);
         $textoOriginal = $validated['descripcion'];
         $validacionIA = $this->validarTextoConIA(
