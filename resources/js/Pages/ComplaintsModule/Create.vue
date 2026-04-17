@@ -362,7 +362,7 @@ const enviarQueja = async () => {
         toast.add({
             severity: "warn",
             summary: "Atención",
-            detail: "Por favor, selecciona un asunto y describe tu queja.",
+            detail: "Por favor, selecciona un asunto y describe tu ticket.",
             life: 3000,
         });
         return;
@@ -372,7 +372,7 @@ const enviarQueja = async () => {
         toast.add({
             severity: "error",
             summary: "Lenguaje no permitido",
-            detail: "Por favor, redacta tu queja sin utilizar lenguaje ofensivo o da click en el botón de Redactar con IA.",
+            detail: "Por favor, redacta tu ticket sin utilizar lenguaje ofensivo o da click en el botón de Redactar con IA.",
             life: 4000,
         });
         return;
@@ -411,7 +411,7 @@ const enviarQueja = async () => {
             toast.add({
                 severity: "success",
                 summary: "Enviado",
-                detail: "Tu queja ha sido registrada correctamente.",
+                detail: "Tu ticket ha sido registrada correctamente.",
                 life: 3000,
             });
 
@@ -426,12 +426,12 @@ const enviarQueja = async () => {
             });
         }
     } catch (error) {
-        console.error("Error al enviar queja:", error);
+        console.error("Error al enviar el ticket:", error);
         toast.add({
             severity: "error",
             summary: "Error",
             detail:
-                error.response?.data?.message || "No se pudo enviar la queja.",
+                error.response?.data?.message || "No se pudo enviar el ticket.",
             life: 3000,
         });
     } finally {
@@ -504,7 +504,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <AppLayout :title="'Modúlo de Quejas'">
+    <AppLayout :title="'Modúlo de Tickets'">
         <ConfirmDialog />
         <div class="card">
             <!-- <pre>
@@ -528,7 +528,7 @@ onUnmounted(() => {
         </div>
         <div class="card flex flex-col lg:flex-row gap-6 p-4">
             <div class="card w-full lg:w-9/12 p-6 rounded-xl shadow-sm">
-                <h2 class="text-xl font-bold mb-4">Presentar Nueva Queja</h2>
+                <h2 class="text-xl font-bold mb-4">Presentar Nuevo Ticket</h2>
                 <p class="text-sm md:text-base text-gray-500 mt-1">
                     Complete los detalles a continuación para iniciar el proceso
                     de revisión.
@@ -595,7 +595,7 @@ onUnmounted(() => {
                         :class="{
                             'p-invalid': complaintDescription.length > 300,
                         }"
-                        placeholder="Describe tu Queja..."
+                        placeholder="Describe tu Ticket..."
                         spellcheck="true"
                         autocorrect="on"
                         autocomplete="on"
@@ -938,7 +938,7 @@ onUnmounted(() => {
                         @click="regresarIndex"
                     />
                     <Button
-                        label="Enviar Queja"
+                        label="Enviar Ticket"
                         severity="success"
                         icon="pi pi-send"
                         raised
@@ -949,78 +949,6 @@ onUnmounted(() => {
             </div>
             <!-- Segunda vista -->
             <div class="w-full lg:w-3/12 flex flex-col gap-4">
-                <!-- <div class="card p-5 rounded-3xl shadow-sm border-none bg-[#f1f4f8]">
-                    <div class="flex justify-between items-center mb-5 px-1">
-                        <h3 class="font-bold uppercase text-sm tracking-wider">
-                            Mis Reportes Recientes
-                        </h3>
-                        <Button
-                            label="Ver todo"
-                            link
-                            class="p-0 text-blue-600 font-bold text-sm"
-                            @click="regresarIndex"
-                        />
-                    </div>
-
-                    <div class="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
-                        <template v-if="actualizandoLista">
-                            <div v-for="i in 3" :key="i" class="p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex flex-col gap-2 w-full">
-                                        <Skeleton width="70%" height="1.2rem" borderRadius="8px"></Skeleton>
-                                        <div class="flex items-center gap-2">
-                                            <Skeleton shape="circle" size="0.5rem"></Skeleton>
-                                            <Skeleton width="30%" height="0.6rem"></Skeleton>
-                                        </div>
-                                    </div>
-                                    <Skeleton width="20%" height="0.8rem"></Skeleton>
-                                </div>
-                            </div>
-                        </template>
-
-                        <template v-else>
-                            <div
-                                v-for="reporte in reportesRecientes"
-                                :key="reporte.id"
-                                class="p-4 rounded-2xl shadow-sm border border-gray-50 flex flex-col gap-2 hover:shadow-md transition-shadow relative group"
-                            >
-                                <div class="flex justify-between items-start">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold text-[15px] leading-tight">
-                                            {{ reporte.titulo }}
-                                        </span>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <span
-                                                class="w-2 h-2 rounded-full"
-                                                :style="{ backgroundColor: reporte.statusColor }"
-                                            ></span>
-                                            <span class="text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                                                {{ reporte.status }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex flex-col items-end gap-2">
-                                        <span class="text-xs font-medium">
-                                            {{ reporte.fecha }}
-                                        </span>
-                                    </div>
-
-                                    <div v-if="reporte.archivos && reporte.archivos.length > 0" class="flex flex-wrap gap-2 mt-3">
-                                        <OverlayBadge :value="reporte.archivos.length" severity="info">
-                                            <i class="pi pi-images" style="font-size: 1.5rem" />
-                                        </OverlayBadge>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <p v-if="reportesRecientes.length === 0" class="text-xs italic text-center py-10 text-gray-400">
-                                No hay reportes recientes para mostrar.
-                            </p>
-                        </template>
-                    </div>
-                </div> -->
-
                 <div class="confidential-card">
                     <div class="flex flex-col gap-4">
                         <!-- Ícono y Título (siempre visibles) -->
@@ -1083,7 +1011,7 @@ onUnmounted(() => {
                                 class="text-sm text-blue-50 leading-relaxed overflow-hidden"
                                 ref="contentRef"
                             >
-                                Toda queja o denuncia registrada en este portal
+                                Todo ticket o denuncia registrada en este portal
                                 está protegida por un ecosistema de seguridad
                                 diseñado para blindar la integridad del usuario.
                                 La información proporcionada se procesa mediante

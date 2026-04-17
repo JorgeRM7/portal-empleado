@@ -542,17 +542,17 @@ onMounted(async () => {
                 tableStyle="min-width: 110rem"
                 v-model:filters="filters"
                 filterDisplay="menu"
-                exportFilename="Historial_de_Quejas"
+                exportFilename="Historial_de_Tickets"
                 :globalFilterFields="['id', 'employee_id', 'subject', 'case', 'date', 'hour', 'status']"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Quejas"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Tickets"
             >
                 <template #header>
                     <div
                         class="flex flex-wrap gap-2 items-end justify-between mb-6"
                     >
                         <div>
-                            <h4 class="m-0">Historial de Quejas</h4>
+                            <h4 class="m-0">Historial de Tickets</h4>
                             <Button
                                 icon="pi pi-filter"
                                 rounded
@@ -831,7 +831,7 @@ onMounted(async () => {
 
                 <Column
                     field="case"
-                    header="Queja"
+                    header="Ticket"
                     sortable
                     :frozen="frozenColumns.queja"
                     :style="{
@@ -865,13 +865,13 @@ onMounted(async () => {
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Queja"
+                            placeholder="Buscar por Ticket"
                         />
                     </template>
                 </Column>
                 <Column
                     field="response"
-                    header="Respuesta"
+                    header="Aclaración"
                     sortable
                     :frozen="frozenColumns.respuesta"
                     :style="{
@@ -905,7 +905,7 @@ onMounted(async () => {
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Queja"
+                            placeholder="Buscar por aclaración"
                         />
                     </template>
                 </Column>

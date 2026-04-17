@@ -43,6 +43,10 @@ Route::middleware([
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/show/{id}', [DashboardController::class, 'show'])->name('dashboard.show');
+    Route::get('/dashboard/vacaciones/{id}', [DashboardController::class, 'vacacionesDetalle'])
+    ->name('dashboard.vacaciones');
+    Route::get('/dashboard/incidencias/{id}', [DashboardController::class, 'incidenciasDetalle'])
+    ->name('dashboard.incidencias');
 
     Route::get('weekly-assistences/filter-data', [WeeklyAssistencesController::class, 'filter_data'])
         ->name('weekly-assistences.filter-data');
