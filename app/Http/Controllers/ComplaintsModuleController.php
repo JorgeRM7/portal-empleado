@@ -183,7 +183,7 @@ class ComplaintsModuleController
     1. Reescribe el texto eliminando palabras ofensivas, malsonantes o inapropiadas
     2. Corrige errores de ortografía y gramática sin cambiar el significado original
     3. Estructura la redacción de forma clara y profesional
-    4. Mantén el tono formal pero accesible (apto para un documento corporativo)
+    4. Mantén el tono informal pero accesible
     5. Asegúrate de que sea fácil de entender
     6. La redacción debe mantener la esencia del problema reportado
     7. Máximo 300 caracteres en la salida
@@ -193,6 +193,7 @@ class ComplaintsModuleController
     FORMATO DE RESPUESTA:
     Genera EXACTAMENTE 3 versiones reescritas diferentes. 
     Cada una debe tener un enfoque ligeramente distinto en la presentación.
+    La respuesta debe ser un tanto informal, como si lo escribiera un empleado para otro empleado.
     Responde SOLO con las 3 versiones, una por línea, sin numeración ni explicaciones adicionales.
     
     IMPORTANTE: Cada versión debe estar completa y ser independiente.

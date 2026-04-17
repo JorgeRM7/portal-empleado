@@ -37,7 +37,7 @@ const updating = ref(false);
 const deleting = ref(false);
 
 const dates = ref(null);
-const rows = ref([]);
+const rows = ref([{}]);
 
 const { sendNotification } = useNotifications();
 
@@ -311,8 +311,7 @@ const exportColumns = ref({
     clave_empleado: true,
     asunto: true,
     queja: true,
-    fecha: true,
-    hora: true,
+    fecha_hora: true,
     estatus: true,
     evidencia: true,
     respuesta: true,
@@ -325,8 +324,7 @@ const showColumns = ref({
     clave_empleado: true,
     asunto: true,
     queja: true,
-    fecha: true,
-    hora: true,
+    fecha_hora: true,
     estatus: true,
     evidencia: true,
     respuesta: true,
@@ -354,8 +352,7 @@ const frozenColumns = ref({
     clave_empleado: false,
     asunto: false,
     queja: false,
-    fecha: false,
-    hora: false,
+    fecha_hora: false,
     estatus: false,
     evidencia: false,
     respuesta: false,
@@ -393,9 +390,7 @@ const selected = ref([]);
 const saveColumns = () => {
     columnsDialog.value = false;
 
-    dt.value.exportCSV({
-        selectionOnly: true,
-    });
+    dt.value.exportCSV();
 };
 
 //Función para limpiar filtros
@@ -736,7 +731,7 @@ onMounted(async () => {
                     </div>
                 </template>
 
-                <Column
+                <!-- <Column
                     selectionMode="multiple"
                     style="width: 5rem"
                     :exportable="false"
@@ -771,7 +766,7 @@ onMounted(async () => {
                             />
                         </div>
                     </template>
-                </Column>
+                </Column> -->
                 <Column
                     field="id"
                     header="ID"
@@ -926,27 +921,27 @@ onMounted(async () => {
                 </Column>
                 <Column
                     field="date"
-                    header="Fecha"
+                    header="Fecha y Hora"
                     sortable
-                    :frozen="frozenColumns.fecha"
+                    :frozen="frozenColumns.fecha_hora"
                     :style="{
                         width: '20rem',
-                        display: showColumns.fecha ? '' : 'none',
+                        display: showColumns.fecha_hora ? '' : 'none',
                     }"
-                    :exportable="exportColumns.fecha"
+                    :exportable="exportColumns.fecha_hora"
                 >
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
-                        <span v-else>{{ data.date }}</span>
+                        <span v-else>{{ data.date + " " + data.hour }}</span>
                     </template>
                     <template #filter="{ filterModel }">
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Fecha"
+                            placeholder="Buscar por Fecha y Hora"
                         /> </template
                 ></Column>
-                <Column
+                <!-- <Column
                     field="hour"
                     header="Hora"
                     sortable
@@ -967,7 +962,7 @@ onMounted(async () => {
                             type="text"
                             placeholder="Buscar por Hora"
                         /> </template
-                ></Column>
+                ></Column> -->
                 <Column
                     field="status"
                     header="Estatus"
