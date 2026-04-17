@@ -21,4 +21,22 @@ class DashboardController
         $data = Dashboard::getData($id);
         return response()->json($data);
     }
+
+    public function vacacionesDetalle($id)
+    {
+        $data = Dashboard::dashboardVacaciones([
+            'empleados' => [$id]
+        ]);
+
+        return response()->json($data);
+    }
+
+    public function incidenciasDetalle($id)
+    {
+        $data = Dashboard::dashboardIncidencias([
+            'empleados' => [$id]
+        ]);
+
+        return response()->json($data);
+    }
 }

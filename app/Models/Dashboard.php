@@ -93,4 +93,82 @@ class Dashboard extends Model
             'antiguedad'            => $antiguedad
         ];
     }
+
+    public static function dashboardVacaciones($data = [])
+    {
+        $ids_empleados = $data['empleados'] ?? [];
+
+        $sql = "
+            SELECT
+                edv.id,
+                edv.employee_id,
+                TRIM(e.full_name) AS full_name,
+                edv.amount,
+                edv.seniority,
+                edv.date,
+                edv.branch_office_id
+            FROM employee_day_vacations AS edv
+            LEFT JOIN employees AS e ON edv.employee_id = e.id
+            WHERE e.deleted_at IS NULL
+            AND edv.employee_id IS NOT NULL
+            AND e.full_name IS NOT NULL
+            AND edv.deleted_at IS NULL
+        ";
+
+        if (!empty($ids_empleados)) {
+            $ids = implode(',', array_map('intval', $ids_empleados));
+            $sql .= " AND edv.employee_id IN ($ids)";
+        }
+
+        return DB::select($sql);
+    }
+
+    public static function dashboardIncidencias($data = [])
+    {
+        $ids_empleados = $data['empleados'] ?? [];
+
+        $sql = "
+            SELECT
+                ei.approved_at,
+                ei.declined_at,
+                udec.name as declined_by,
+                udel.name as deleted_by,
+                ei.before_date,
+                ei.comment,
+                ei.created_at,
+                ei.days,
+                ei.document_number,
+                ei.employee_id,
+                ei.expires_at,
+                ei.file_path,
+                ei.hours_txt,
+                ei.id,
+                ei.incidence_id,
+                ei.validity_from,
+                ei.validity_to,
+                ei.week_number,
+                ei.week_year,
+                ei.schedule_id,
+                ei.before_date,
+                ei.rest_date,
+                i.name as incidence_name,
+                i.color,
+                e.full_name,
+                u.name as approved_by
+            FROM employee_incidences ei
+            INNER JOIN incidences i ON ei.incidence_id = i.id
+            INNER JOIN employees e ON ei.employee_id = e.id
+            LEFT JOIN users u ON ei.approved_by = u.id
+            LEFT JOIN users udel ON ei.deleted_by = udel.id
+            LEFT JOIN users udec ON ei.declined_by = udec.id
+            WHERE ei.deleted_by IS NULL AND ei.deleted_at IS NULL
+        ";
+
+        if (!empty($ids_empleados)) {
+            $ids = implode(',', array_map('intval', $ids_empleados));
+            $sql .= " AND ei.employee_id IN ($ids)";
+        }
+
+        return DB::select($sql);
+    }
 }

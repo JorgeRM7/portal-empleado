@@ -8,6 +8,7 @@ import Divider from "primevue/divider";
 import Skeleton from "primevue/skeleton";
 import Calendar from "primevue/calendar";
 import Tooltip from 'primevue/tooltip';
+import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
 
 // app.directive('tooltip', Tooltip);
 const page = usePage();
@@ -22,6 +23,52 @@ const antiguedad = ref (null);
 const loading = ref(true);
 const attendanceDate = ref(new Date());
 const attendanceData = ref([]);
+
+const vacationsVisible = ref(false);
+const incidencesVisible = ref(false);
+const loadingData = ref(false);
+const vacationsHistory = ref([]);
+const incidencesHistory = ref([]);
+
+const openVacationsModal = async (id) => {
+    if (!id) return;
+    vacationsVisible.value = true;
+    loadingData.value = true;
+
+    try {
+        const { data } = await axios.get(`/dashboard/vacaciones/${id}`);
+        vacationsHistory.value = data;
+
+        vacationsHistory.value = data.map(item => ({
+            ...item,
+            date_formatted: formatDate(item.date)
+        }));
+    } catch (error) {
+        console.error("Error al cargar vacaciones", error);
+    } finally {
+        loadingData.value = false;
+    }
+};
+
+const formatDate = (date) => {
+    return new Date(date).toLocaleDateString();
+};
+
+// Lógica para Incidencias
+const openIncidencesModal = async (id) => {
+    if (!id) return;
+    incidencesVisible.value = true;
+    loadingData.value = true;
+
+    try {
+        const { data } = await axios.get(`/dashboard/incidencias/${id}`);
+        incidencesHistory.value = data;
+    } catch (error) {
+        console.error("Error al cargar incidencias", error);
+    } finally {
+        loadingData.value = false;
+    }
+};
 
 const employeePhoto = computed(() => {
     const employeeId =
@@ -126,201 +173,103 @@ function getDayTitle(rawDate) {
     return weekData[nameKey] || weekData[dayKey] || '';
 }
 
-function getTooltipOptions(rawDate) {
+// function getTooltipOptions(rawDate) {
+//     const date = normalizeDate(rawDate);
+//     const weekData = getWeekDataByDate(date);
+
+//     if (!weekData) {
+//         return {
+//             value: 'Sin registro',
+//             class: 'attendance-tooltip'
+//         };
+//     }
+
+//     const dayKey = getDayKey(date);
+//     const nameKey = `nombre_${dayKey}`;
+//     const code = weekData[dayKey] ?? 'N/A';
+//     const name = weekData[nameKey] ?? code;
+//     const color = weekData[`color_${dayKey}`] ?? '#64748b';
+
+//     return {
+//         value: `
+//             <div class="attendance-tooltip-content">
+//                 <div class="attendance-tooltip-header">
+//                     <span class="attendance-tooltip-dot" style="background:${color}"></span>
+//                     <span>${name}</span>
+//                 </div>
+//             </div>
+//         `,
+//         escape: false,
+//         class: 'attendance-tooltip'
+//     };
+// }
+
+function getDayAttendanceData(rawDate) {
     const date = normalizeDate(rawDate);
     const weekData = getWeekDataByDate(date);
 
-    if (!weekData) {
-        return {
-            value: 'Sin registro',
-            class: 'attendance-tooltip'
-        };
-    }
+    if (!weekData) return null;
 
     const dayKey = getDayKey(date);
-    const nameKey = `nombre_${dayKey}`;
-    const code = weekData[dayKey] ?? 'N/A';
-    const name = weekData[nameKey] ?? code;
-    const color = weekData[`color_${dayKey}`] ?? '#64748b';
-
     return {
-        value: `
-            <div class="attendance-tooltip-content">
-                <div class="attendance-tooltip-header">
-                    <span class="attendance-tooltip-dot" style="background:${color}"></span>
-                    <span>${name}</span>
-                </div>
-            </div>
-        `,
-        escape: false,
-        class: 'attendance-tooltip'
+        name: weekData[`nombre_${dayKey}`] || weekData[dayKey] || 'N/A',
+        color: weekData[`color_${dayKey}`] || '#64748b',
+        code: weekData[dayKey]
     };
 }
 
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+
+    incidence_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    before_date: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    rest_date: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    week_number: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    week_year: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    hours_txt: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    expires_at: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    days: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    comment: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    declined_by: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    deleted_by: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    approved_by: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    approved_at: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
+
+const filtersV = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    amount: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    seniority: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    date: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
+
+const showColumns = ref({
+    incidencia: true,
+    fecha_antes: true,
+    fecha_descanso: true,
+    semana: true,
+    anio: true,
+    horas_txt: true,
+    estado: true,
+    dias: true,
+    comentarios: true,
+    rechazado_por: true,
+    fecha_rechazo: true,
+    aprobado_por: true,
+    fecha_aprobado: true,
+});
+
+const showColumnsV = ref({
+    dias: true,
+    antiguedad: true,
+    fecha: true,
+});
 
 onMounted(() => {
     obtenerEmpleado();
 });
-
-
 </script>
 
-<style>
-.attendance-calendar-wrapper {
-    width: 100%;
-}
-
-.attendance-calendar {
-    width: 100% !important;
-}
-
-.attendance-calendar :deep(.p-datepicker) {
-    width: 100% !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-}
-
-.attendance-calendar :deep(.p-datepicker-group) {
-    width: 100%;
-}
-
-.attendance-calendar :deep(.p-datepicker table) {
-    width: 100%;
-    table-layout: fixed;
-}
-
-.attendance-calendar :deep(.p-datepicker table th) {
-    text-align: center;
-    padding: 0.85rem 0.35rem;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #475569 !important;
-}
-
-.attendance-calendar :deep(.p-datepicker table td) {
-    padding: 0.45rem 0.2rem;
-    text-align: center;
-}
-
-.attendance-calendar :deep(.p-datepicker-header) {
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
-    margin-bottom: 0.75rem;
-}
-
-.attendance-calendar :deep(.p-datepicker-title) {
-    font-size: 1rem;
-    font-weight: 700;
-    color: rgb(15 23 42);
-}
-
-.dark .attendance-calendar :deep(.p-datepicker-title) {
-    color: white;
-}
-
-.attendance-day-cell {
-    width: 2.35rem;
-    height: 2.35rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-    border-radius: 14px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    cursor: default;
-}
-
-.attendance-day-cell:hover {
-    transform: scale(1.06);
-}
-
-.attendance-day-cell.has-attendance {
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
-}
-
-.attendance-calendar :deep(.p-disabled),
-.attendance-calendar :deep(.p-datepicker-other-month) {
-    opacity: 0.35;
-}
-
-.attendance-tooltip .p-tooltip-text {
-    background: linear-gradient(135deg, #0f172a, #1e293b) !important;
-    color: #fff !important;
-    border-radius: 16px !important;
-    padding: 0.85rem 1rem !important;
-    box-shadow: 0 18px 40px rgba(2, 6, 23, 0.35) !important;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    font-size: 0.85rem;
-    min-width: 170px;
-}
-
-.attendance-tooltip-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.attendance-tooltip-header {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    font-weight: 700;
-    font-size: 0.9rem;
-}
-
-.attendance-tooltip-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    display: inline-block;
-}
-
-.attendance-tooltip-code {
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.78);
-}
-.attendance-calendar :deep(.p-datepicker table thead th span) {
-    font-size: 0 !important;
-    position: relative;
-}
-
-.attendance-calendar :deep(.p-datepicker table thead th:nth-child(1) span::after) {
-    content: "Lunes";
-    font-size: 0.85rem;
-}
-
-.attendance-calendar :deep(.p-datepicker table thead th:nth-child(2) span::after) {
-    content: "Martes";
-    font-size: 0.85rem;
-}
-
-.attendance-calendar :deep(.p-datepicker table thead th:nth-child(3) span::after) {
-    content: "Miércoles";
-    font-size: 0.85rem;
-}
-
-.attendance-calendar :deep(.p-datepicker table thead th:nth-child(4) span::after) {
-    content: "Jueves";
-    font-size: 0.85rem;
-}
-
-.attendance-calendar :deep(.p-datepicker table thead th:nth-child(5) span::after) {
-    content: "Viernes";
-    font-size: 0.85rem;
-}
-
-.attendance-calendar :deep(.p-datepicker table thead th:nth-child(6) span::after) {
-    content: "Sábado";
-    font-size: 0.85rem;
-}
-
-.attendance-calendar :deep(.p-datepicker table thead th:nth-child(7) span::after) {
-    content: "Domingo";
-    font-size: 0.85rem;
-}
-</style>
 <template>
     <AppLayout title="Dashboard">
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -344,7 +293,6 @@ onMounted(() => {
                                 </div>
                             </div>
                             <div class="flex-1">
-
 
                                 <h1 class="text-2xl md:text-3xl font-semibold">
                                     Bienvenid@, {{ employeeData?.full_name }}
@@ -384,10 +332,10 @@ onMounted(() => {
 
                                     <div class="rounded-2xl border border-slate-200 px-4 py-3">
                                         <div class="text-xs text-slate-500 dark:text-slate-400">
-                                            Planta
+                                            Fecha de entrada
                                         </div>
                                         <p class="font-semibold">
-                                            {{ employeeData?.planta }}
+                                            {{ employeeData?.entry_date }}
                                         </p>
                                     </div>
                                 </div>
@@ -396,7 +344,6 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-
 
             <div class="xl:col-span-12">
                 <div class="card border-none shadow-sm rounded-3xl">
@@ -439,7 +386,10 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                        <div
+                            @click="openVacationsModal(employee?.id)"
+                            class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer active:scale-95"
+                        >
                             <div class="flex items-start justify-between gap-4 h-full">
                                 <div class="flex flex-col justify-between h-full w-full">
                                     <div>
@@ -468,7 +418,10 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                        <div
+                            @click="openIncidencesModal(employee?.id)"
+                            class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer active:scale-95"
+                        >
                             <div class="flex items-start justify-between gap-4 h-full">
                                 <div class="flex flex-col justify-between h-full w-full">
                                     <div>
@@ -512,20 +465,29 @@ onMounted(() => {
                         <Tag value="Mes actual" severity="info" rounded />
                     </div>
 
-                    <div class="attendance-calendar-wrapper">
+                    <div class="border border-gray-300 w-full">
                         <Calendar
                             v-model="attendanceDate"
                             inline
-                            class="w-full attendance-calendar"
+                            class="w-full custom-calendar"
                         >
                             <template #date="slotProps">
-                                <div
-                                    class="attendance-day-cell"
-                                    :class="{ 'has-attendance': !!getWeekDataByDate(normalizeDate(slotProps.date)) }"
-                                    :style="getDayStyle(slotProps.date)"
-                                    v-tooltip.top="getTooltipOptions(slotProps.date)"
-                                >
-                                    {{ slotProps.date.day }}
+                                <div class="attendance-day-cell">
+                                    <span class="day-number">{{ slotProps.date.day }}</span>
+
+                                    <template v-if="getDayAttendanceData(slotProps.date)">
+                                        <div
+                                            v-if="getDayAttendanceData(slotProps.date).code"
+                                            class="attendance-tag"
+                                            :style="{ backgroundColor: getDayAttendanceData(slotProps.date).color }"
+                                        >
+                                            <span class="text-full">{{ getDayAttendanceData(slotProps.date).name }}</span>
+                                            <span class="text-short">{{ getDayAttendanceData(slotProps.date).code }}</span>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <div class="attendance-tag empty-cell">-</div>
+                                    </template>
                                 </div>
                             </template>
                         </Calendar>
@@ -533,5 +495,612 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+        <Dialog
+            v-model:visible="vacationsVisible"
+            header="Historial de Vacaciones"
+            modal
+            :style="{ width: '60vw' }"
+            :breakpoints="{
+                '768px': '90vw',
+                '640px': '100vw'
+            }"
+            :pt="{
+                root: { class: 'm-0' }
+            }"
+            class="p-fluid"
+        >
+            <div v-if="loadingData">
+                <Skeleton width="100%" height="150px"></Skeleton>
+            </div>
+            <div v-else>
+                <DataTable
+                    :value="vacationsHistory"
+                    dataKey="id"
+                    paginator
+                    :rows="5"
+                    stripedRows
+                    showGridlines
+                    size="small"
+                    v-model:filters="filtersV"
+                    filterDisplay="menu"
+                    :globalFilterFields="['amount', 'seniority', 'date_formatted']"
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} vacaciones"
+                >
+
+                    <template #header>
+                        <div
+                            class="flex flex-wrap gap-2 items-end justify-between mb-6"
+                        >
+                            <div>
+                                <h4 class="m-0">Tabla de Vacaciones</h4>
+                                <Tag
+                                    :value="'Total: ' + employeeVacations?.vacaciones_disponibles + ' Días'"
+                                    icon="pi pi-sun"
+                                    severity="info"
+                                />
+                            </div>
+                            <div class="flex">
+                                <IconField>
+                                    <InputIcon>
+                                        <i class="pi pi-search" />
+                                    </InputIcon>
+                                    <InputText
+                                        v-model="filtersV['global'].value"
+                                        placeholder="Buscar..."
+                                    />
+                                </IconField>
+                            </div>
+                        </div>
+                    </template>
+
+                    <Column
+                        field="amount"
+                        header="Días"
+                        :filter="true"
+                        :style="{
+                            width: '20rem',
+                            display: showColumnsV.dias ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <Tag v-else :value="data.amount + ' días'" severity="success" />
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Días"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="seniority"
+                        header="Antigüedad"
+                        :filter="true"
+                        :style="{
+                            width: '20rem',
+                            display: showColumnsV.antiguedad ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.seniority }} años</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Antigüedad"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="date_formatted"
+                        header="Fecha"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumnsV.fecha ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+
+                            <template v-else>
+                                <i class="pi pi-calendar mr-2"></i>
+                                {{ data.date_formatted }}
+                            </template>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Fecha"
+                            />
+                        </template>
+                    </Column>
+                </DataTable>
+            </div>
+        </Dialog>
+
+        <Dialog
+            v-model:visible="incidencesVisible"
+            header="Registro de Incidencias"
+            modal
+            :style="{ width: '60vw' }"
+            :breakpoints="{
+                '768px': '90vw',
+                '640px': '100vw'
+            }"
+            :pt="{
+                root: { class: 'm-0' }
+            }"
+            class="p-fluid"
+        >
+            <div v-if="loadingData">
+                <Skeleton width="100%" height="150px"></Skeleton>
+            </div>
+            <div v-else>
+                <DataTable
+                    ref="dt"
+                    v-model:selection="selected"
+                    :value="incidencesHistory"
+                    dataKey="id"
+                    :paginator="true"
+                    :rows="10"
+                    scrollable
+                    scrollHeight="400px"
+                    tableStyle="min-width: 110rem"
+                    v-model:filters="filters"
+                    filterDisplay="menu"
+                    :globalFilterFields="[
+                        'incidence_name',
+                        'before_date',
+                        'rest_date',
+                        'week_number',
+                        'week_year',
+                        'hours_txt',
+                        'expires_at',
+                        'days',
+                        'comment',
+                        'declined_by',
+                        'deleted_by',
+                        'approved_by',
+                        'approved_at'
+                    ]"
+                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Incidencias"
+                >
+                    <template #header>
+                        <div
+                            class="flex flex-wrap gap-2 items-end justify-between mb-6"
+                        >
+                            <div>
+                                <h4 class="m-0">Tabla de Incidencias</h4>
+                            </div>
+                            <div class="flex">
+                                <IconField>
+                                    <InputIcon>
+                                        <i class="pi pi-search" />
+                                    </InputIcon>
+                                    <InputText
+                                        v-model="filters['global'].value"
+                                        placeholder="Buscar..."
+                                    />
+                                </IconField>
+                            </div>
+                        </div>
+                    </template>
+
+                    <Column
+                        field="incidence_name"
+                        header="Incidencia"
+                        :filter="true"
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.incidencia ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.incidence_name }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Incidencia"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="before_date"
+                        header="Fecha antes"
+                        :filter="true"
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.fecha_antes ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.before_date }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Fecha antes"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="rest_date"
+                        header="Fecha descanso"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.fecha_descanso ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.rest_date }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Fecha descanso"
+                            />
+                        </template>
+                    </Column>
+
+                    <Column
+                        field="week_number"
+                        header="Semana"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.semana ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.week_number }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Semana"
+                            /> </template
+                    ></Column>
+                    <Column
+                        field="week_year"
+                        header="Año"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.anio ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.week_year }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Año"
+                            /> </template
+                    ></Column>
+                    <Column
+                        field="hours_txt"
+                        header="Horas TXT"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.horas_txt ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.hours_txt }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Horas TXT"
+                            /> </template
+                    ></Column>
+                    <Column
+                        field="expires_at"
+                        header="Estado"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.estado ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <Tag
+                                v-else
+                                :value="data.expires_at ? 'Expirada' : 'Activa'"
+                                :severity="data.expires_at ? 'danger' : 'success'"
+                            />
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Estado"
+                            /> </template
+                    ></Column>
+                    <Column
+                        field="days"
+                        header="Días"
+                        :filter="true"
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.dias ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.days }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Días"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="comment"
+                        header="Comentarios"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.comentarios ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.comment }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por comentarios"
+                            />
+                        </template>
+                    </Column>
+
+                    <Column
+                        field="declined_by"
+                        header="Rechazado por"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.rechazado_por ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.declined_by }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por rechazado por"
+                            /> </template
+                    ></Column>
+                    <Column
+                        field="deleted_by"
+                        header="Fecha de rechazo"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.fecha_rechazo ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.deleted_by }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por fecha de rechazo"
+                            /> </template
+                    ></Column>
+                    <Column
+                        field="approved_by"
+                        header="Aprobado por"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.aprobado_por ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.approved_by }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por aprobado por"
+                            /> </template
+                    ></Column>
+                    <Column
+                        field="approved_at"
+                        header="Fecha de aprobado"
+                        sortable
+                        :style="{
+                            width: '20rem',
+                            display: showColumns.fecha_aprobado ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.approved_at }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por fecha de aprobación"
+                            /> </template
+                    ></Column>
+                </DataTable>
+            </div>
+        </Dialog>
     </AppLayout>
 </template>
+<style>
+.custom-calendar.p-calendar,
+.custom-calendar .p-datepicker-calendar-container,
+.custom-calendar table {
+    width: 100% !important;
+}
+
+.custom-calendar .p-datepicker-calendar th,
+.custom-calendar .p-datepicker-calendar td {
+    text-align: center;
+    padding: 0.5rem;
+}
+
+.custom-calendar .p-datepicker-calendar td > span,
+.custom-calendar .p-datepicker-calendar td > div {
+    margin: 0 auto;
+}
+
+.attendance-day-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 4px 0;
+    min-height: 50px;
+    width: 100%;
+}
+
+.day-number {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+/* Estilo del Tag/Etiqueta debajo del día */
+/* 1. Forzar a que todas las columnas midan lo mismo */
+.custom-calendar table {
+    width: 100% !important;
+    table-layout: fixed !important; /* Esto garantiza anchos idénticos por columna */
+    border-collapse: collapse;
+}
+
+/* 2. Ajustar el contenedor de PrimeVue para que no limite la altura */
+.custom-calendar .p-datepicker-calendar td > span {
+    height: auto !important;
+    min-height: 60px; /* Ajusta este valor según qué tan largas sean tus incidencias */
+    width: 100% !important;
+    display: block !important;
+    padding: 4px !important;
+    border-radius: 4px !important;
+}
+
+/* 3. El contenedor interno que ya tienes */
+.attendance-day-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.day-number {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+/* 4. El Tag que ahora permite saltos de línea */
+.attendance-tag {
+    font-size: 0.7rem;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: 100%;
+
+    /* Magia para el texto: */
+    white-space: normal !important; /* Permite saltos de línea */
+    word-wrap: break-word;         /* Rompe palabras si son muy largas */
+    line-height: 1.1;              /* Espaciado compacto entre líneas */
+    text-align: center;
+}
+
+/* Estilos Base del Tag */
+.attendance-tag {
+    font-size: 0.75rem;
+    color: white;
+    padding: 2px 4px;
+    border-radius: 4px;
+    width: 100%;
+    text-align: center;
+    font-weight: 500;
+    min-height: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Control de visibilidad */
+.text-short { display: none; } /* Oculto por defecto */
+.text-full { display: inline; }
+
+/* --- MÓVIL (Pantallas menores a 768px) --- */
+@media (max-width: 768px) {
+    .text-full {
+        display: none; /* Escondemos el nombre largo */
+    }
+    .text-short {
+        display: inline; /* Mostramos la abreviación (A, L, V, etc) */
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+
+    .attendance-tag {
+        /* Hacemos el tag más cuadradito o circular en móvil para que se vea limpio */
+        width: 24px;
+        height: 24px;
+        border-radius: 50%; /* Opcional: círculos para las letras en móvil */
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    .custom-calendar .p-datepicker-calendar td {
+        padding: 5px 2px !important; /* Reducimos espacio entre celdas */
+    }
+}
+
+/* Mantener el ancho de tabla igualado */
+.custom-calendar table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+
+.empty-cell {
+    background: transparent;
+    color: transparent;
+}
+</style>
