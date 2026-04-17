@@ -20,7 +20,8 @@ class EmployeeComplains extends Model
         'hour',
         'branch_office_id',
         'employee_id',
-        'path_complain'
+        'path_complain',
+        'rate'
     ];
 
     public static function filterComplaints($filtros = [])
@@ -52,7 +53,8 @@ class EmployeeComplains extends Model
                 hour,
                 branch_office_id,
                 status,
-                path_complain
+                path_complain,
+                rate
             FROM employee_complains
             WHERE deleted_at IS NULL
         ";

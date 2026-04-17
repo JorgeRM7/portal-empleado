@@ -806,5 +806,31 @@ class ComplaintsModuleController
         ]);
     }
 
+    public function rateResponse(Request $request)
+    {
+        $request->validate([
+            'id_complaint' => 'required|exists:employee_complains,id',
+            'rating' => 'required|integer|min:1|max:5',
+        ]);
+
+        $complaint = EmployeeComplains::findOrFail($request->id_complaint);
+
+        if ($complaint->response === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede calificar una respuesta que no existe',
+            ], 400);
+        }
+
+        $complaint->update([
+            'rate' => $request->rating,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Respuesta calificada correctamente',
+        ]);
+    }
+
 
 }

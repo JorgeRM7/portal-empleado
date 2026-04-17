@@ -3,7 +3,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { useToastService } from "@/Stores/toastService";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
 import { useNotifications } from "@/composables/useNotifications";
 import { router } from "@inertiajs/vue3";
@@ -17,6 +17,7 @@ const selectedOption = ref(null);
 const selectedOptionStatus = ref(null);
 const editDialog = ref(false);
 const editingQueja = ref(null);
+const selectedTicket = ref(null);
 // campos
 const editSelectedOption = ref(null);
 const editComplaintDescription = ref("");
@@ -315,6 +316,7 @@ const exportColumns = ref({
     estatus: true,
     evidencia: true,
     respuesta: true,
+    calificacion: true,
 });
 
 //Columnas visibles
@@ -328,6 +330,7 @@ const showColumns = ref({
     estatus: true,
     evidencia: true,
     respuesta: true,
+    calificacion: true,
 });
 
 //Filtros adicionales
@@ -356,6 +359,7 @@ const frozenColumns = ref({
     estatus: false,
     evidencia: false,
     respuesta: false,
+    calificacion: false,
 });
 
 //Diálogo de selección de columnas
@@ -412,6 +416,10 @@ const clearFilter = () => {
     aplicarFiltros();
 };
 
+const rating = ref(0);
+
+const califcarDialog = ref(false);
+
 const applyFilters = () => {
     otherFilterDialog.value = false;
 
@@ -466,6 +474,41 @@ const removeStartDate = () => {
     dates.value = null;
 
     aplicarFiltros();
+};
+
+const ratingText = computed(() => {
+    const texts = {
+        0: "Selecciona una calificación",
+        1: "Muy malo",
+        2: "Malo",
+        3: "Normal",
+        4: "Bueno",
+        5: "Excelente",
+    };
+    return texts[rating.value];
+});
+
+const submitRating = async () => {
+    if (rating.value === 0) return;
+
+    deleting.value = true;
+    try {
+        await axios.post("/complaints/rate-response", {
+            id_complaint: selectedTicket.value.id,
+            rating: rating.value,
+        });
+
+        rating.value = 0;
+        califcarDialog.value = false;
+
+        showSuccess();
+    } catch (error) {
+        console.error("Error al enviar calificación:", error);
+        showError();
+    } finally {
+        deleting.value = false;
+        aplicarFiltros();
+    }
 };
 
 onMounted(async () => {
@@ -736,6 +779,7 @@ onMounted(async () => {
                     style="width: 5rem"
                     :exportable="false"
                 ></Column>
+                 -->
                 <Column
                     :exportable="false"
                     :style="{
@@ -749,24 +793,23 @@ onMounted(async () => {
                         <Skeleton v-if="loading"></Skeleton>
                         <div v-else>
                             <Button
-                                icon="pi pi-pencil"
+                                icon="pi pi-check"
                                 class="mr-2"
-                                rounded
-                                v-tooltip.top="'Editar'"
-                                severity="warn"
-                                @click="editarQueja(slotProps.data)"
-                            />
-                            <Button
-                                icon="pi pi-trash"
-                                severity="danger"
-                                v-tooltip.top="'Eliminar'"
-                                class="mr-2"
-                                rounded
-                                @click="confirmarEliminar(slotProps.data)"
+                                label="Calificar resp."
+                                v-tooltip.top="'Calificar respuesta'"
+                                severity="success"
+                                v-if="
+                                    slotProps.data.response !== null &&
+                                    slotProps.data.rate === null
+                                "
+                                @click="
+                                    califcarDialog = true;
+                                    selectedTicket = slotProps.data;
+                                "
                             />
                         </div>
                     </template>
-                </Column> -->
+                </Column>
                 <Column
                     field="id"
                     header="ID"
@@ -1022,6 +1065,39 @@ onMounted(async () => {
                         <span v-else class="text-muted-color text-sm">
                             Sin evidencias
                         </span>
+                    </template>
+                </Column>
+                <Column
+                    field="rate"
+                    header="Calificación"
+                    :frozen="frozenColumns.calificacion"
+                    :style="{
+                        width: '20rem',
+                        display: showColumns.calificacion ? '' : 'none',
+                    }"
+                >
+                    <template #body="{ data }">
+                        <Skeleton v-if="loading"></Skeleton>
+
+                        <div v-else>
+                            <span v-if="data.rate === null"
+                                >Sin calificación</span
+                            >
+                            <span v-else>
+                                <div class="flex align-items-center gap-2">
+                                    <i
+                                        v-for="star in 5"
+                                        :key="star"
+                                        :class="{
+                                            'pi pi-star-fill text-yellow-500':
+                                                star <= data.rate,
+                                            'pi pi-star text-gray-500':
+                                                star > data.rate,
+                                        }"
+                                    ></i>
+                                </div>
+                            </span>
+                        </div>
                     </template>
                 </Column>
             </DataTable>
@@ -1383,6 +1459,73 @@ onMounted(async () => {
                         @click="eliminarQueja"
                         severity="danger"
                         :loading="deleting"
+                    />
+                </template>
+            </Dialog>
+
+            <Dialog
+                v-model:visible="califcarDialog"
+                :style="{ width: '600px' }"
+                header="Calificar respuesta"
+                :modal="true"
+            >
+                <template #default>
+                    <div class="flex flex-col gap-6 py-4">
+                        <p class="text-gray-700 dark:text-gray-300">
+                            ¿Cuál es tu puntuación para esta respuesta?
+                        </p>
+
+                        <!-- Rating Stars -->
+                        <div class="flex justify-center gap-4">
+                            <button
+                                v-for="star in 5"
+                                :key="star"
+                                @click="rating = star"
+                                class="transition-transform duration-200 hover:scale-125"
+                                :class="
+                                    star <= rating
+                                        ? 'text-yellow-400'
+                                        : 'text-gray-300 dark:text-gray-600'
+                                "
+                            >
+                                <i
+                                    :class="
+                                        star <= rating
+                                            ? 'pi pi-star-fill'
+                                            : 'pi pi-star'
+                                    "
+                                    style="font-size: 2.5rem"
+                                ></i>
+                            </button>
+                        </div>
+
+                        <!-- Rating Text -->
+                        <div class="text-center">
+                            <p
+                                class="text-sm font-semibold text-gray-600 dark:text-gray-400"
+                            >
+                                {{ ratingText }}
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
+                <template #footer>
+                    <Button
+                        label="Cancelar"
+                        icon="pi pi-times"
+                        text
+                        @click="califcarDialog = false"
+                        severity="secondary"
+                        variant="text"
+                    />
+                    <Button
+                        label="Enviar calificación"
+                        icon="pi pi-check"
+                        @click="submitRating"
+                        severity="success"
+                        :loading="deleting"
+                        :disabled="rating === 0"
                     />
                 </template>
             </Dialog>

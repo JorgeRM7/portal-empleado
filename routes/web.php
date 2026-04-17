@@ -107,6 +107,9 @@ Route::middleware([
     Route::post('complaints/improve-writing', [ComplaintsModuleController::class, 'improveWriting'])
     ->name('complaints.improve');
 
+    Route::post('complaints/rate-response', [ComplaintsModuleController::class, 'rateResponse'])
+    ->name('complaints.rate');
+
     Route::resource('complaints', ComplaintsModuleController::class)->names([
         'index' => '/complaints'
     ]);
