@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Notifications\TicketAssignment;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\BranchOffice;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -453,6 +455,12 @@ class ComplaintsModuleController
                             'assigment_hour'       => Carbon::now('America/Mexico_City')->format('H:i:s'),
                             'type'                 => 'ASIGNACION'
                         ]);
+
+                        $user = User::find($userId);
+                        $user->notify(new TicketAssignment(
+                            'Quejas',
+                            $queja->id
+                        ));
                     }
 
                 return response()->json([
