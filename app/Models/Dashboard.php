@@ -11,14 +11,14 @@ class Dashboard extends Model
     public static function getData($id)
     {
         $employee = DB::selectOne("
-            SELECT 
-                employees.id, 
-                employees.email, 
-                employees.status, 
-                employees.dni, 
-                employees.profile_photo_path, 
-                branch_offices.code AS planta, 
-                employees.entry_date, 
+            SELECT
+                employees.id,
+                employees.email,
+                employees.status,
+                employees.dni,
+                employees.profile_photo_path,
+                branch_offices.code AS planta,
+                employees.entry_date,
                 employees.full_name,
                 employees.birthday,
                 users.username,
@@ -33,7 +33,7 @@ class Dashboard extends Model
             INNER JOIN genders ON genders.id = employees.gender_id
             INNER JOIN branch_offices ON branch_offices.id = employees.branch_office_id
             INNER JOIN users ON users.id = employees.user_id
-            INNER JOIN positions ON positions.id = employees.position_id 
+            INNER JOIN positions ON positions.id = employees.position_id
             INNER JOIN departments ON departments.id = employees.department_id
             WHERE employees.id = ?
         ", [$id]);
@@ -44,7 +44,7 @@ class Dashboard extends Model
 
 
         $asistencia = DB::select("
-            SELECT 
+            SELECT
             	(SELECT code FROM incidences WHERE id = weekly_assistances.monday_status) AS lunes,
                 (SELECT code FROM incidences WHERE id = weekly_assistances.tuesday_status) AS martes,
                 (SELECT code FROM incidences WHERE id = weekly_assistances.wednesday_status) AS miercoles,
@@ -52,7 +52,7 @@ class Dashboard extends Model
                 (SELECT code FROM incidences WHERE id = weekly_assistances.friday_status) AS viernes,
                 (SELECT code FROM incidences WHERE id = weekly_assistances.saturday_status) AS sabado,
                 (SELECT code FROM incidences WHERE id = weekly_assistances.sunday_status) AS domingo,
-                
+
                 (SELECT color FROM incidences WHERE id = weekly_assistances.monday_status) AS color_lunes,
                 (SELECT color FROM incidences WHERE id = weekly_assistances.tuesday_status) AS color_martes,
                 (SELECT color FROM incidences WHERE id = weekly_assistances.wednesday_status) AS color_miercoles,
@@ -60,20 +60,20 @@ class Dashboard extends Model
                 (SELECT color FROM incidences WHERE id = weekly_assistances.friday_status) AS color_viernes,
                 (SELECT color FROM incidences WHERE id = weekly_assistances.saturday_status) AS color_sabado,
                 (SELECT color FROM incidences WHERE id = weekly_assistances.sunday_status) AS color_domingo,
-                
+
                 (SELECT name FROM incidences WHERE id = weekly_assistances.monday_status) AS nombre_lunes,
                 (SELECT name FROM incidences WHERE id = weekly_assistances.tuesday_status) AS nombre_martes,
                 (SELECT name FROM incidences WHERE id = weekly_assistances.wednesday_status) AS nombre_miercoles,
-                (SELECT name FROM incidences WHERE id = weekly_assistances.thursday_status) AS nombre_domingo,
-                (SELECT name FROM incidences WHERE id = weekly_assistances.friday_status) AS nombre_domingo,
-                (SELECT name FROM incidences WHERE id = weekly_assistances.saturday_status) AS nombre_domingo,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.thursday_status) AS nombre_jueves,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.friday_status) AS nombre_viernes,
+                (SELECT name FROM incidences WHERE id = weekly_assistances.saturday_status) AS nombre_sabado,
                 (SELECT name FROM incidences WHERE id = weekly_assistances.sunday_status) AS nombre_domingo,
-                
+
                 weekly_assistances.week_number,
                 weekly_assistances.week_year
-                
+
             FROM `weekly_assistances`
-            WHERE weekly_assistances.employee_id =? AND weekly_assistances.deleted_at IS NULL 
+            WHERE weekly_assistances.employee_id =? AND weekly_assistances.deleted_at IS NULL
             GROUP BY  weekly_assistances.week_number, weekly_assistances.week_year
             ORDER BY weekly_assistances.id DESC
         ",[$id]);
