@@ -69,12 +69,19 @@ class Dashboard extends Model
                 (SELECT name FROM incidences WHERE id = weekly_assistances.saturday_status) AS nombre_sabado,
                 (SELECT name FROM incidences WHERE id = weekly_assistances.sunday_status) AS nombre_domingo,
 
+                weekly_assistances.monday_data,
+                weekly_assistances.tuesday_data,
+                weekly_assistances.wednesday_data,
+                weekly_assistances.thursday_data,
+                weekly_assistances.friday_data,
+                weekly_assistances.saturday_data,
+                weekly_assistances.sunday_data,
+
                 weekly_assistances.week_number,
                 weekly_assistances.week_year
-
             FROM `weekly_assistances`
-            WHERE weekly_assistances.employee_id =? AND weekly_assistances.deleted_at IS NULL
-            GROUP BY  weekly_assistances.week_number, weekly_assistances.week_year
+            WHERE weekly_assistances.employee_id = ? AND weekly_assistances.deleted_at IS NULL
+            GROUP BY weekly_assistances.week_number, weekly_assistances.week_year
             ORDER BY weekly_assistances.id DESC
         ",[$id]);
 
