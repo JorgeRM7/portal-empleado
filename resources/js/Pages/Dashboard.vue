@@ -30,6 +30,63 @@ const loadingData = ref(false);
 const vacationsHistory = ref([]);
 const incidencesHistory = ref([]);
 
+const modalDetails = ref(false);
+const details = ref(null);
+
+const openDetailsModal = (rawDate) => {
+    // 1. Normalizar fecha y buscar la semana
+    const date = normalizeDate(rawDate);
+    const weekData = getWeekDataByDate(date);
+
+    if (!weekData) return;
+
+    // 2. Obtener la llave del día (lunes, martes...)
+    const dayKey = getDayKey(date);
+
+    // Mapa para convertir español a la llave de los datos JSON (english)
+    const englishDayMap = {
+        'domingo': 'sunday', 'lunes': 'monday', 'martes': 'tuesday',
+        'miercoles': 'wednesday', 'jueves': 'thursday', 'viernes': 'friday', 'sabado': 'saturday'
+    };
+    const englishKey = englishDayMap[dayKey];
+
+    // 3. Extraer el string JSON del día (ej: weekData['monday_data'])
+    const rawDayData = weekData[`${englishKey}_data`];
+    let parsedInfo = { Turno: 'N/A', Horario: 'N/A', Entrada: null, Salida: null, Checadas: [] };
+
+    if (rawDayData) {
+        try {
+            parsedInfo = JSON.parse(rawDayData);
+        } catch (e) {
+            console.error("Error al parsear horario del día", e);
+        }
+    }
+
+    // 4. Llenar el objeto details que usa el Dialog
+    details.value = {
+        employee_id: employeeData.value?.id || employee.value?.id,
+        employee_name: employeeData.value?.name || 'Empleado',
+        department_name: employeeData.value?.department?.name || 'General',
+        week_number: weekData.week_number,
+        week_year: weekData.week_year,
+        incidencia: weekData[`nombre_${dayKey}`] || 'SIN REGISTRO',
+        color: weekData[`color_${dayKey}`] || '#64748b',
+        descripcion_incidencia: `Registro correspondiente al día ${dayKey} de la semana ${weekData.week_number}.`,
+        // Pasamos los datos parseados al objeto horario
+        horario: {
+            Turno: parsedInfo.Turno,
+            Horario: parsedInfo.Horario,
+            Entrada: parsedInfo.Entrada,
+            Salida: parsedInfo.Salida,
+            Checadas: parsedInfo.Checadas || [] // Esto llenará tu historial de checadas
+        }
+    };
+
+    // 5. Abrir el modal
+    modalDetails.value = true;
+};
+
+
 const openVacationsModal = async (id) => {
     if (!id) return;
     vacationsVisible.value = true;
@@ -173,37 +230,6 @@ function getDayTitle(rawDate) {
     return weekData[nameKey] || weekData[dayKey] || '';
 }
 
-// function getTooltipOptions(rawDate) {
-//     const date = normalizeDate(rawDate);
-//     const weekData = getWeekDataByDate(date);
-
-//     if (!weekData) {
-//         return {
-//             value: 'Sin registro',
-//             class: 'attendance-tooltip'
-//         };
-//     }
-
-//     const dayKey = getDayKey(date);
-//     const nameKey = `nombre_${dayKey}`;
-//     const code = weekData[dayKey] ?? 'N/A';
-//     const name = weekData[nameKey] ?? code;
-//     const color = weekData[`color_${dayKey}`] ?? '#64748b';
-
-//     return {
-//         value: `
-//             <div class="attendance-tooltip-content">
-//                 <div class="attendance-tooltip-header">
-//                     <span class="attendance-tooltip-dot" style="background:${color}"></span>
-//                     <span>${name}</span>
-//                 </div>
-//             </div>
-//         `,
-//         escape: false,
-//         class: 'attendance-tooltip'
-//     };
-// }
-
 function getDayAttendanceData(rawDate) {
     const date = normalizeDate(rawDate);
     const weekData = getWeekDataByDate(date);
@@ -211,10 +237,43 @@ function getDayAttendanceData(rawDate) {
     if (!weekData) return null;
 
     const dayKey = getDayKey(date);
+
+    const englishDayMap = {
+        'domingo': 'sunday',
+        'lunes': 'monday',
+        'martes': 'tuesday',
+        'miercoles': 'wednesday',
+        'jueves': 'thursday',
+        'viernes': 'friday',
+        'sabado': 'saturday'
+    };
+
+    const englishKey = englishDayMap[dayKey];
+    const rawDayData = weekData[`${englishKey}_data`];
+    let extraDetails = {
+        horas_dobles: 0,
+        horas_triples: 0,
+        sunday_premium: 0
+    };
+
+    if (rawDayData) {
+        try {
+            const parsed = JSON.parse(rawDayData);
+            extraDetails.horas_dobles = Number(parsed['Horas dobles']) || 0;
+            extraDetails.horas_triples = Number(parsed['Horas triples']) || 0;
+            extraDetails.sunday_premium = Number(parsed['sunday_premium']) || 0;
+        } catch (e) {
+            extraDetails.horas_dobles = 0;
+            extraDetails.horas_triples = 0;
+            extraDetails.sunday_premium = 0;
+        }
+    }
+
     return {
         name: weekData[`nombre_${dayKey}`] || weekData[dayKey] || 'N/A',
         color: weekData[`color_${dayKey}`] || '#64748b',
-        code: weekData[dayKey]
+        code: weekData[dayKey],
+        ...extraDetails
     };
 }
 
@@ -469,24 +528,35 @@ onMounted(() => {
                         <Calendar
                             v-model="attendanceDate"
                             inline
+                            @date-select="openDetailsModal"
                             class="w-full custom-calendar"
                         >
-                            <template #date="slotProps">
+                            <template #date="{ date }">
                                 <div class="attendance-day-cell">
-                                    <span class="day-number">{{ slotProps.date.day }}</span>
+                                    <span class="day-number">{{ date.day }}</span>
 
-                                    <template v-if="getDayAttendanceData(slotProps.date)">
+                                    <template v-if="getDayAttendanceData(date)">
                                         <div
-                                            v-if="getDayAttendanceData(slotProps.date).code"
                                             class="attendance-tag"
-                                            :style="{ backgroundColor: getDayAttendanceData(slotProps.date).color }"
+                                            :style="{ backgroundColor: getDayAttendanceData(date)?.color || '#64748b' }"
                                         >
-                                            <span class="text-full">{{ getDayAttendanceData(slotProps.date).name }}</span>
-                                            <span class="text-short">{{ getDayAttendanceData(slotProps.date).code }}</span>
+                                            <span class="text-full">{{ getDayAttendanceData(date)?.name }}</span>
+                                            <span class="text-short">{{ getDayAttendanceData(date)?.code || getDayAttendanceData(date)?.name?.substring(0, 2) }}</span>
                                         </div>
-                                    </template>
-                                    <template v-else>
-                                        <div class="attendance-tag empty-cell">-</div>
+
+                                        <div class="extra-columns-container">
+                                            <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_dobles || 0) > 0 }">
+                                                <span class="label">Dob:</span> {{ getDayAttendanceData(date)?.horas_dobles || 0 }}
+                                            </div>
+
+                                            <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_triples || 0) > 0 }">
+                                                <span class="label">Tri:</span> {{ getDayAttendanceData(date)?.horas_triples || 0 }}
+                                            </div>
+
+                                            <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.sunday_premium || 0) > 0 }">
+                                                <span class="label">PVac:</span> {{ getDayAttendanceData(date)?.sunday_premium || 0 }}
+                                            </div>
+                                        </div>
                                     </template>
                                 </div>
                             </template>
@@ -967,6 +1037,245 @@ onMounted(() => {
                 </DataTable>
             </div>
         </Dialog>
+        <Dialog
+            v-model:visible="modalDetails"
+            modal
+            header="Detalle de asistencia"
+            :style="{ width: '70rem', maxWidth: '95vw' }"
+            dismissableMask
+            class="p-dialog-custom"
+        >
+            <template v-if="details">
+                <div class="grid grid-cols-2 gap-4 text-gray-700">
+                    <div class="flex flex-col gap-4">
+                        <div class="rounded-xl shadow-sm border p-4">
+                            <div
+                                class="flex flex-col items-center text-center gap-3"
+                            >
+                                <img
+                                    :src="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${details?.employee_id}.jpg`"
+                                    alt="Foto"
+                                    class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+                                />
+
+                                <div>
+                                    <h3
+                                        class="text-lg font-bold text-gray-900 uppercase tracking-wide"
+                                    >
+                                        ({{ details?.employee_id }})
+                                        {{ details?.employee_name }}
+                                    </h3>
+                                    <p class="text-sm text-gray-500">
+                                        {{ details?.department_name }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="grid grid-cols-3 text-sm text-gray-600 mt-3"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-gray-400"
+                                    >
+                                        Fecha
+                                    </p>
+                                    <p>
+                                        {{
+                                            details?.horario?.Checadas?.[0]?.access_date ?? "SIN REGISTRO"
+                                        }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-gray-400"
+                                    >
+                                        Semana
+                                    </p>
+                                    <p>
+                                        {{
+                                            details?.week_number ??
+                                            "SIN REGISTRO"
+                                        }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-gray-400"
+                                    >
+                                        Año
+                                    </p>
+                                    <p>
+                                        {{
+                                            details?.week_year ??
+                                            "SIN REGISTRO"
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-xl shadow-sm border p-4">
+                            <div class="grid grid-cols-2 text-sm">
+                                <div>
+                                    <p
+                                        class="font-semibold text-gray-500 mb-1"
+                                    >
+                                        Turno
+                                    </p>
+                                    <p class="text-gray-800">
+                                        {{
+                                            details?.horario?.Turno || "N/A"
+                                        }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p
+                                        class="font-semibold text-gray-500 mb-1"
+                                    >
+                                        Horario
+                                    </p>
+                                    <p class="text-gray-800">
+                                        {{
+                                            details?.horario?.Horario ||
+                                            "N/A"
+                                        }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p
+                                        class="font-semibold text-gray-500 mb-1"
+                                    >
+                                        Entrada
+                                    </p>
+                                    <p class="text-green-500 font-semibold">
+                                        {{
+                                            details?.horario?.Entrada ||
+                                            "N/A"
+                                        }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p
+                                        class="font-semibold text-gray-500 mb-1"
+                                    >
+                                        Salida
+                                    </p>
+                                    <p class="text-red-500 font-semibold">
+                                        {{
+                                            details.horario?.Salida || "N/A"
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <Badge
+                                    value="Turno diurno"
+                                    severity="secondary"
+                                    style="
+                                        background: #ccc;
+                                        color: #333;
+                                        font-size: 0.7rem;
+                                    "
+                                />
+                            </div>
+                        </div>
+                        <div class="rounded-xl shadow-sm border p-4">
+                            <div
+                                class="flex items-center justify-between mb-2"
+                            >
+                                <h4
+                                    class="font-semibold text-gray-700 text-sm"
+                                >
+                                    Incidencia
+                                </h4>
+                                <Badge
+                                    :value="details?.incidencia"
+                                    :style="{
+                                        backgroundColor: details?.color,
+                                        color: '#fff',
+                                    }"
+                                />
+                            </div>
+                            <p class="text-sm text-gray-600 leading-snug">
+                                {{ details?.descripcion_incidencia }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="rounded-xl shadow-sm border p-4">
+                        <div
+                            class="rounded-t-lg px-4 py-2 border-b text-gray-600 font-semibold"
+                        >
+                            Historial de checadas
+                        </div>
+
+                        <div class="p-4 rounded-lg shadow-sm">
+                            <div class="space-y-3">
+                                <div v-for="(item, index) in details?.horario?.Checadas || []" :key="index" class="flex items-start gap-3 relative">
+                                    <div
+                                        class="absolute left-4 top-6 bottom-0 w-px"
+                                        v-if="
+                                            index <
+                                            details.horario.length - 1
+                                        "
+                                    ></div>
+                                    <div
+                                        class="w-8 h-8 flex items-center justify-center rounded-full border-purple-200 z-10"
+                                    >
+                                        <i
+                                            class="pi pi-clock text-purple-500 text-xs"
+                                        ></i>
+                                    </div>
+                                    <div
+                                        class="flex-1 rounded-md p-3 border border-gray-200"
+                                    >
+                                        <div
+                                            class="flex justify-between items-center mb-1"
+                                        >
+                                            <!-- <p
+                                                class="text-sm font-semibold text-gray-700"
+                                            >
+                                                {{ item?.device_name }}
+                                            </p> -->
+                                            <span
+                                                class="text-xs text-gray-400"
+                                            >
+                                                Checada {{ index + 1 }}
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            class="flex gap-4 text-sm text-gray-600"
+                                        >
+                                            <div>
+                                                📅
+                                                <b>{{
+                                                    item?.access_date
+                                                }}</b>
+                                            </div>
+                                            <div>
+                                                ⏰
+                                                <b>{{
+                                                    item?.access_time
+                                                }}</b>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template #footer>
+                <Button
+                    label="Cerrar"
+                    icon="pi pi-times"
+                    class="p-button-sm p-button-secondary"
+                    @click="modalDetails = false"
+                />
+            </template>
+        </Dialog>
     </AppLayout>
 </template>
 <style>
@@ -1002,25 +1311,21 @@ onMounted(() => {
     margin-bottom: 4px;
 }
 
-/* Estilo del Tag/Etiqueta debajo del día */
-/* 1. Forzar a que todas las columnas midan lo mismo */
 .custom-calendar table {
     width: 100% !important;
-    table-layout: fixed !important; /* Esto garantiza anchos idénticos por columna */
+    table-layout: fixed !important;
     border-collapse: collapse;
 }
 
-/* 2. Ajustar el contenedor de PrimeVue para que no limite la altura */
 .custom-calendar .p-datepicker-calendar td > span {
     height: auto !important;
-    min-height: 60px; /* Ajusta este valor según qué tan largas sean tus incidencias */
+    min-height: 60px;
     width: 100% !important;
     display: block !important;
     padding: 4px !important;
     border-radius: 4px !important;
 }
 
-/* 3. El contenedor interno que ya tienes */
 .attendance-day-cell {
     display: flex;
     flex-direction: column;
@@ -1034,18 +1339,15 @@ onMounted(() => {
     margin-bottom: 4px;
 }
 
-/* 4. El Tag que ahora permite saltos de línea */
 .attendance-tag {
     font-size: 0.7rem;
     color: white;
     padding: 2px 6px;
     border-radius: 4px;
     width: 100%;
-
-    /* Magia para el texto: */
-    white-space: normal !important; /* Permite saltos de línea */
-    word-wrap: break-word;         /* Rompe palabras si son muy largas */
-    line-height: 1.1;              /* Espaciado compacto entre líneas */
+    white-space: normal !important;
+    word-wrap: break-word;
+    line-height: 1.1;
     text-align: center;
 }
 
@@ -1065,35 +1367,32 @@ onMounted(() => {
 }
 
 /* Control de visibilidad */
-.text-short { display: none; } /* Oculto por defecto */
+.text-short { display: none; }
 .text-full { display: inline; }
 
-/* --- MÓVIL (Pantallas menores a 768px) --- */
 @media (max-width: 768px) {
     .text-full {
-        display: none; /* Escondemos el nombre largo */
+        display: none;
     }
     .text-short {
-        display: inline; /* Mostramos la abreviación (A, L, V, etc) */
+        display: inline;
         font-weight: bold;
         font-size: 0.8rem;
     }
 
     .attendance-tag {
-        /* Hacemos el tag más cuadradito o circular en móvil para que se vea limpio */
         width: 24px;
         height: 24px;
-        border-radius: 50%; /* Opcional: círculos para las letras en móvil */
+        border-radius: 50%;
         margin: 0 auto;
         padding: 0;
     }
 
     .custom-calendar .p-datepicker-calendar td {
-        padding: 5px 2px !important; /* Reducimos espacio entre celdas */
+        padding: 5px 2px !important;
     }
 }
 
-/* Mantener el ancho de tabla igualado */
 .custom-calendar table {
     table-layout: fixed !important;
     width: 100% !important;
@@ -1103,4 +1402,74 @@ onMounted(() => {
     background: transparent;
     color: transparent;
 }
+
+.extra-columns-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 5px;
+    border-top: 1px solid #eee;
+    padding-top: 2px;
+}
+
+.col-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    color: #94a3b8;
+    border-bottom: 1px idotted #f1f5f9;
+}
+
+.col-item.has-value {
+    color: #1e293b;
+    font-weight: bold;
+}
+
+.col-item .label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.col-item.has-value:nth-child(1) { color: #f59e0b; }
+.col-item.has-value:nth-child(2) { color: #ef4444; }
+.col-item.has-value:nth-child(3) { color: #8b5cf6; }
+
+.attendance-day-cell {
+    min-height: 100px;
+    justify-content: flex-start;
+}
+
+/* 1. PONER GRIS LIGERO (MODO CLARO) */
+.custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-datepicker-day-selected,
+.custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-highlight,
+.custom-calendar.p-datepicker .p-datepicker-calendar td > span[aria-selected="true"] {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+}
+
+/* 2. AJUSTE PARA MODO OSCURO */
+.dark .custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-datepicker-day-selected,
+.dark .custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-highlight {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #f8fafc !important;
+}
+
+/* 3. REPARAR EL TEXTO DE LAS ETIQUETAS EN MODO OSCURO */
+.dark .custom-calendar .col-item,
+.dark .custom-calendar .col-item .label,
+.dark .custom-calendar .day-number {
+    color: #f8fafc !important;
+}
+
+/* 4. LÍNEA DIVISORIA */
+.dark .custom-calendar .extra-columns-container {
+    border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 </style>
