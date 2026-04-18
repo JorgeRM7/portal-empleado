@@ -119,7 +119,17 @@ const openIncidencesModal = async (id) => {
 
     try {
         const { data } = await axios.get(`/dashboard/incidencias/${id}`);
-        incidencesHistory.value = data;
+
+        incidencesHistory.value = data.map((incidence) => {
+            const statusInfo = getStatus(incidence);
+            return {
+                ...incidence,
+                status: statusInfo.text,
+                status_color: statusInfo.color
+            };
+        });
+
+        console.log(incidencesHistory.value);
     } catch (error) {
         console.error("Error al cargar incidencias", error);
     } finally {
@@ -303,19 +313,24 @@ const filtersV = ref({
 });
 
 const showColumns = ref({
-    incidencia: true,
-    fecha_antes: true,
-    fecha_descanso: true,
-    semana: true,
-    anio: true,
-    horas_txt: true,
-    estado: true,
+    tipo_incidencia: true,
+    fecha_inicio: true,
+    fecha_fin: true,
     dias: true,
-    comentarios: true,
-    rechazado_por: true,
-    fecha_rechazo: true,
+    semana: false,
+    año: false,
+    horas_txt: false,
     aprobado_por: true,
     fecha_aprobado: true,
+    fecha_creado: false,
+    eliminado_por: false,
+    status: true,
+    numero_documento: false,
+    fecha_adelanto: false,
+    fecha_descanso: false,
+    observaciones: false,
+    fecha_rechazado: true,
+    rechazado_por: true,
 });
 
 const showColumnsV = ref({
@@ -323,6 +338,19 @@ const showColumnsV = ref({
     antiguedad: true,
     fecha: true,
 });
+
+const getStatus = (data) => {
+    if (data.approved_at == null && data.declined_at == null && data.deleted_by == null) {
+        return { color: "primary", text: "Pendiente" };
+    } else if (data.approved_at != null) {
+        return { color: "success", text: "Aprobado" };
+    } else if (data.declined_at != null) {
+        return { color: "danger", text: "Rechazado" };
+    } else if (data.deleted_by != null) {
+        return { color: "secondary", text: "Eliminado" };
+    }
+    return { color: "info", text: "Desconocido" };
+};
 
 onMounted(() => {
     obtenerEmpleado();
@@ -764,12 +792,44 @@ onMounted(() => {
                     </template>
 
                     <Column
+                        field="status"
+                        header="Estatus"
+                        :filter="true"
+                        columnKey="status"
+                        style="width: 5rem"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loadingData"></Skeleton>
+                            <Tag
+                                v-else
+                                :value="data.status"
+                                :severity="data.status_color"
+                            />
+                        </template>
+
+                        <template #filter="{ filterModel }">
+                            <Select
+                                v-model="filterModel.value"
+                                :options="[
+                                    { label: 'Pendiente', value: 'Pendiente' },
+                                    { label: 'Aprobado', value: 'Aprobado' },
+                                    { label: 'Rechazado', value: 'Rechazado' },
+                                    { label: 'Eliminado', value: 'Eliminado' }
+                                ]"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Buscar por Estatus"
+                            />
+                        </template>
+                    </Column>
+                    <Column
                         field="incidence_name"
                         header="Incidencia"
                         :filter="true"
+                        columnKey="incidence_name"
                         :style="{
-                            width: '20rem',
-                            display: showColumns.incidencia ? '' : 'none',
+                            width: '5rem',
+                            display: showColumns.tipo_incidencia ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
@@ -784,13 +844,186 @@ onMounted(() => {
                             />
                         </template>
                     </Column>
+
+                    <Column
+                        field="validity_from"
+                        header="Fecha de inicio"
+                        :filter="true"
+                        filterMatchMode="equals"
+                        columnKey="validity_from"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.fecha_inicio ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.validity_from }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Fecha de Inicio"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="validity_to"
+                        header="Fecha de fin"
+                        :filter="true"
+                        columnKey="validity_to"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.fecha_fin ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.validity_to }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Fecha de Fin"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="days"
+                        header="Días"
+                        :filter="true"
+                        columnKey="days"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.dias ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.days }}</span>
+                        </template>
+                    </Column>
+                    <Column
+                        field="approved_at"
+                        header="Fecha de aprobación"
+                        :filter="true"
+                        columnKey="approved_at"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.fecha_aprobado ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ formatDate(data.approved_at) }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Fecha de aprobación"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="approved_by"
+                        header="Aprobado por"
+                        :filter="true"
+                        columnKey="approved_by"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.aprobado_por ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.approved_by }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Aprobado por"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="declined_at"
+                        header="Fecha de rechazo"
+                        :filter="true"
+                        columnKey="declined_at"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.fecha_rechazado ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ formatDate(data.declined_at) }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Fecha de rechazo"
+                            />
+                        </template>
+                    </Column>
+                    <Column
+                        field="declined_by"
+                        header="Rechazado por"
+                        :filter="true"
+                        columnKey="declined_by"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.rechazado_por ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.declined_by }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Rechazado por"
+                            />
+                        </template>
+                    </Column>
+
+                    <Column
+                        field="document_number"
+                        header="Número de documento"
+                        :filter="true"
+                        columnKey="document_number"
+                        :style="{
+                            width: '5rem',
+                            display: showColumns.numero_documento ? '' : 'none',
+                        }"
+                    >
+                        <template #body="{ data }">
+                            <Skeleton v-if="loading"></Skeleton>
+                            <span v-else>{{ data.document_number }}</span>
+                        </template>
+                        <template #filter="{ filterModel }">
+                            <InputText
+                                v-model="filterModel.value"
+                                type="text"
+                                placeholder="Buscar por Número de documento"
+                            />
+                        </template>
+                    </Column>
                     <Column
                         field="before_date"
-                        header="Fecha antes"
+                        header="Fecha de adelanto"
                         :filter="true"
+                        columnKey="before_date"
                         :style="{
-                            width: '20rem',
-                            display: showColumns.fecha_antes ? '' : 'none',
+                            width: '5rem',
+                            display: showColumns.fecha_adelanto ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
@@ -801,16 +1034,17 @@ onMounted(() => {
                             <InputText
                                 v-model="filterModel.value"
                                 type="text"
-                                placeholder="Buscar por Fecha antes"
+                                placeholder="Buscar por Fecha de adelanto"
                             />
                         </template>
                     </Column>
                     <Column
                         field="rest_date"
-                        header="Fecha descanso"
-                        sortable
+                        header="Fecha de descanso"
+                        :filter="true"
+                        columnKey="rest_date"
                         :style="{
-                            width: '20rem',
+                            width: '5rem',
                             display: showColumns.fecha_descanso ? '' : 'none',
                         }"
                     >
@@ -822,57 +1056,39 @@ onMounted(() => {
                             <InputText
                                 v-model="filterModel.value"
                                 type="text"
-                                placeholder="Buscar por Fecha descanso"
+                                placeholder="Buscar por Fecha de descanso"
                             />
                         </template>
                     </Column>
-
                     <Column
-                        field="week_number"
-                        header="Semana"
-                        sortable
+                        field="created_at"
+                        header="Fecha de creación"
+                        :filter="true"
+                        columnKey="created_at"
                         :style="{
-                            width: '20rem',
-                            display: showColumns.semana ? '' : 'none',
+                            width: '5rem',
+                            display: showColumns.fecha_creado ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
                             <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.week_number }}</span>
+                            <span v-else>{{ data.created_at }}</span>
                         </template>
                         <template #filter="{ filterModel }">
                             <InputText
                                 v-model="filterModel.value"
                                 type="text"
-                                placeholder="Buscar por Semana"
-                            /> </template
-                    ></Column>
-                    <Column
-                        field="week_year"
-                        header="Año"
-                        sortable
-                        :style="{
-                            width: '20rem',
-                            display: showColumns.anio ? '' : 'none',
-                        }"
-                    >
-                        <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.week_year }}</span>
+                                placeholder="Buscar por Fecha de creación"
+                            />
                         </template>
-                        <template #filter="{ filterModel }">
-                            <InputText
-                                v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Año"
-                            /> </template
-                    ></Column>
+                    </Column>
                     <Column
                         field="hours_txt"
                         header="Horas TXT"
-                        sortable
+                        :filter="true"
+                        columnKey="hours_txt"
                         :style="{
-                            width: '20rem',
+                            width: '5rem',
                             display: showColumns.horas_txt ? '' : 'none',
                         }"
                     >
@@ -885,103 +1101,63 @@ onMounted(() => {
                                 v-model="filterModel.value"
                                 type="text"
                                 placeholder="Buscar por Horas TXT"
-                            /> </template
-                    ></Column>
-                    <Column
-                        field="expires_at"
-                        header="Estado"
-                        sortable
-                        :style="{
-                            width: '20rem',
-                            display: showColumns.estado ? '' : 'none',
-                        }"
-                    >
-                        <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <Tag
-                                v-else
-                                :value="data.expires_at ? 'Expirada' : 'Activa'"
-                                :severity="data.expires_at ? 'danger' : 'success'"
                             />
                         </template>
-                        <template #filter="{ filterModel }">
-                            <InputText
-                                v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Estado"
-                            /> </template
-                    ></Column>
+                    </Column>
                     <Column
-                        field="days"
-                        header="Días"
+                        field="week_year"
+                        header="Año"
                         :filter="true"
+                        columnKey="week_year"
                         :style="{
-                            width: '20rem',
-                            display: showColumns.dias ? '' : 'none',
+                            width: '5rem',
+                            display: showColumns.año ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
                             <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.days }}</span>
+                            <span v-else>{{ data.week_year }}</span>
                         </template>
                         <template #filter="{ filterModel }">
                             <InputText
                                 v-model="filterModel.value"
                                 type="text"
-                                placeholder="Buscar por Días"
+                                placeholder="Buscar por Año"
                             />
                         </template>
                     </Column>
                     <Column
-                        field="comment"
-                        header="Comentarios"
-                        sortable
+                        field="week_number"
+                        header="Semana"
+                        :filter="true"
+                        columnKey="week_number"
                         :style="{
-                            width: '20rem',
-                            display: showColumns.comentarios ? '' : 'none',
+                            width: '5rem',
+                            display: showColumns.semana ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
                             <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.comment }}</span>
+                            <span v-else>{{ data.week_number }}</span>
                         </template>
                         <template #filter="{ filterModel }">
                             <InputText
                                 v-model="filterModel.value"
                                 type="text"
-                                placeholder="Buscar por comentarios"
+                                placeholder="Buscar por Semana"
                             />
                         </template>
                     </Column>
-
-                    <Column
-                        field="declined_by"
-                        header="Rechazado por"
-                        sortable
-                        :style="{
-                            width: '20rem',
-                            display: showColumns.rechazado_por ? '' : 'none',
-                        }"
-                    >
-                        <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.declined_by }}</span>
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <InputText
-                                v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por rechazado por"
-                            /> </template
-                    ></Column>
                     <Column
                         field="deleted_by"
-                        header="Fecha de rechazo"
-                        sortable
+                        header="Eliminado por"
+                        :filter="true"
+                        columnKey="comment"
                         :style="{
-                            width: '20rem',
-                            display: showColumns.fecha_rechazo ? '' : 'none',
+                            width: '5rem',
+                            display: showColumns.eliminado_por ? '' : 'none',
                         }"
+                        sortable
                     >
                         <template #body="{ data }">
                             <Skeleton v-if="loading"></Skeleton>
@@ -991,49 +1167,26 @@ onMounted(() => {
                             <InputText
                                 v-model="filterModel.value"
                                 type="text"
-                                placeholder="Buscar por fecha de rechazo"
-                            /> </template
-                    ></Column>
+                                placeholder="Buscar por Eliminado por"
+                            />
+                        </template>
+                    </Column>
                     <Column
-                        field="approved_by"
-                        header="Aprobado por"
-                        sortable
+                        field="comment"
+                        header="Observaciones"
+                        :filter="true"
+                        columnKey="comment"
                         :style="{
-                            width: '20rem',
-                            display: showColumns.aprobado_por ? '' : 'none',
+                            width: '5rem',
+                            display: showColumns.observaciones ? '' : 'none',
                         }"
+                        sortable
                     >
                         <template #body="{ data }">
                             <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.approved_by }}</span>
+                            <span v-else>{{ data.comment }}</span>
                         </template>
-                        <template #filter="{ filterModel }">
-                            <InputText
-                                v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por aprobado por"
-                            /> </template
-                    ></Column>
-                    <Column
-                        field="approved_at"
-                        header="Fecha de aprobado"
-                        sortable
-                        :style="{
-                            width: '20rem',
-                            display: showColumns.fecha_aprobado ? '' : 'none',
-                        }"
-                    >
-                        <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.approved_at }}</span>
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <InputText
-                                v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por fecha de aprobación"
-                            /> </template
-                    ></Column>
+                    </Column>
                 </DataTable>
             </div>
         </Dialog>

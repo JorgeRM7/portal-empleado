@@ -339,7 +339,6 @@ const applyFilters = () => {
             },
         })
         .then((response) => {
-            console.log(response);
             incidences.value = response.data.incidences;
             lastWeekNumber.value = response.data.lastWeekNumber[0].week;
             incidences.value = incidences.value.map((incidence) => {
