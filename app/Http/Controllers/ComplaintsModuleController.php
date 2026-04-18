@@ -171,7 +171,7 @@ class ComplaintsModuleController
         
         return <<<PROMPT
     Eres un especialista en redacción corporativa y compliance laboral. 
-    Tu tarea es reescribir quejas o denuncias laborales de manera profesional, clara, objetiva y respetuosa.
+    Tu tarea es reescribir quejas o denuncias laborales de manera clara, objetiva y respetuosa.
     
     CONTEXTO DEL ASUNTO: $asuntoTexto
     TIPO DE REPORTE: $contexto
@@ -182,7 +182,7 @@ class ComplaintsModuleController
     INSTRUCCIONES:
     1. Reescribe el texto eliminando palabras ofensivas, malsonantes o inapropiadas
     2. Corrige errores de ortografía y gramática sin cambiar el significado original
-    3. Estructura la redacción de forma clara y profesional
+    3. Estructura la redacción de forma clara y un enfoque mas coloquial, como si lo escribiera un empleado para otro empleado.
     4. Mantén el tono informal pero accesible
     5. Asegúrate de que sea fácil de entender
     6. La redacción debe mantener la esencia del problema reportado
@@ -486,7 +486,8 @@ class ComplaintsModuleController
     Eres un filtro de contenido para un sistema de quejas laborales corporativas.
 
     📋 TU ÚNICA TAREA:
-    Detectar si el texto contiene lenguaje OFENSIVO, AGRESIVO o INAPROPIADO o FALTAS DE ORTOGRAFÍA para un entorno profesional.
+    Detectar si el texto contiene lenguaje OFENSIVO, AGRESIVO o INAPROPIADO o FALTAS DE ORTOGRAFÍA para un entorno profesional. No seas tan estricto, si hay comentarios que no son del todo correctos pero no son ofensivos, marcalos como apto, hay que dejar
+    que el empleado se sienta comodo al momento de redactar, no es necesario que tenga una redaccion perfecta.
 
     🔍 CRITERIOS DE EVALUACIÓN:
     ✅ MARCAR COMO "apto: true" SI:
@@ -494,6 +495,7 @@ class ComplaintsModuleController
     - La redacción es informal pero no ofensiva
     - Hay falta de claridad o coherencia, pero sin lenguaje inapropiado
     - El usuario expresa frustración de manera civilizada
+    
 
     ❌ MARCAR COMO "apto: false" SOLO SI:
     - Contiene insultos, groserías o palabras soeces
@@ -583,6 +585,153 @@ class ComplaintsModuleController
         }
     }
 
+    private function validarImagenConIA($file, $asuntoCod, $asuntoTexto)
+    {
+        // 🔍 Validación preliminar del archivo
+        $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        $maxSizeMB = 4; // GPT-4o-mini recomienda <4MB para mejor procesamiento
+        
+        if (!in_array($file->getMimeType(), $allowedMimes)) {
+            return [
+                'valid' => false,
+                'razon' => 'Formato de imagen no soportado para análisis. Usa JPG, PNG o WebP.',
+                'sugerencia' => null
+            ];
+        }
+        
+        if ($file->getSize() > $maxSizeMB * 1024 * 1024) {
+            return [
+                'valid' => false,
+                'razon' => "La imagen excede el tamaño máximo de {$maxSizeMB}MB para análisis.",
+                'sugerencia' => null
+            ];
+        }
+
+        // 🔄 Convertir imagen a base64 para la API
+        $imageBase64 = 'data:' . $file->getMimeType() . ';base64,' . 
+                    base64_encode(file_get_contents($file->getRealPath()));
+
+        $prompt = <<<PROMPT
+    Eres un filtro de contenido visual para un sistema corporativo de quejas laborales.
+
+    📋 TU ÚNICA TAREA:
+    Analizar si una imagen adjunta a una queja es APROPIADA para un entorno profesional corporativo.
+
+    🔍 CRITERIOS DE EVALUACIÓN:
+
+    ✅ MARCAR COMO "apto: true" SI la imagen:
+    - Muestra capturas de pantalla de errores del sistema, interfaces o mensajes de error
+    - Contiene documentos laborales legítimos (nóminas, formatos, reportes - con datos sensibles pixelados)
+    - Es una foto de evidencia relacionada con el entorno laboral (equipo dañado, instalaciones, etc.)
+    - Muestra gráficos, tablas o datos relevantes para la queja
+    - Es un screenshot de correos, chats o comunicaciones laborales pertinentes
+
+    ❌ MARCAR COMO "apto: false" SI la imagen:
+    - Contiene lenguaje ofensivo, memes inapropiados o contenido humorístico no profesional
+    - Muestra contenido sexual, violento, discriminatorio o políticamente sensible
+    - Incluye información personal sensible visible sin pixelar (RFC, CURP, cuentas bancarias, firmas)
+    - Es irrelevante para el contexto laboral (selfies, mascotas, paisajes, comida, etc.)
+    - Contiene logos o contenido de competidores con intención difamatoria
+    - Muestra pantallas con datos de otros empleados sin autorización
+    - Es de baja calidad, borrosa o ilegible al punto de no aportar valor
+
+    📦 CONTEXTO DE LA QUEJA:
+    Tipo de asunto: $asuntoTexto (Código: $asuntoCod)
+
+    🔐 FORMATO DE RESPUESTA (JSON PURO, SIN EXPLICACIONES):
+    {
+    "apto": true,
+    "razon": "Imagen relevante y profesional: muestra [descripción breve]",
+    "tipo_detectado": "screenshot_error|documento_laboral|evidencia_fisica|otro",
+    "advertencias": []
+    }
+
+    O, si no es apto:
+    {
+    "apto": false,
+    "razon": "[Motivo específico: contenido inapropiado, datos sensibles visibles, irrelevante, etc.]",
+    "tipo_detectado": "inapropiado|sensibilidad_datos|irrelevante|calidad_baja",
+    "advertencias": ["Lista de problemas específicos detectados"]
+    }
+
+    ⚠️ IMPORTANTE:
+    - Responde ÚNICAMENTE con el objeto JSON válido
+    - Sé específico en "razon" pero conciso (<150 caracteres)
+    - "tipo_detectado" debe ser uno de los valores enumerados
+    - "advertencias" es un array, puede estar vacío
+    PROMPT;
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('AI_API_KEY'),
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post(env('AI_API_URL'), [
+                'model' => env('AI_MODEL'), // gpt-4o-mini
+                'messages' => [[
+                    'role' => 'user', 
+                    'content' => [
+                        ['type' => 'text', 'text' => $prompt],
+                        ['type' => 'image_url', 'image_url' => ['url' => $imageBase64]]
+                    ]
+                ]],
+                'temperature' => 0.1, // Muy determinista para clasificación
+                'max_tokens' => 300,
+                'response_format' => ['type' => 'json_object']
+            ]);
+
+            if (!$response->successful()) {
+                $error = $response->json('error.message') ?? 'Error desconocido';
+                Log::warning('Validación de imagen IA fallida: ' . $error);
+                
+                // Fail-open: si la IA falla, permitimos la imagen pero logueamos
+                return [
+                    'valid' => true, 
+                    'razon' => 'Análisis de imagen omitido por error técnico', 
+                    'sugerencia' => null,
+                    'tipo_detectado' => 'no_analizado'
+                ];
+            }
+
+            $data = $response->json();
+            $contenido = $data['choices'][0]['message']['content'] ?? '';
+            
+            // Limpieza defensiva de markdown
+            $contenido = preg_replace('/^```(?:json)?\s*|\s*```$/', '', trim($contenido));
+            
+            $analisis = json_decode($contenido, true);
+            
+            // Validación de estructura
+            if (!is_array($analisis) || !isset($analisis['apto'])) {
+                Log::warning('Respuesta IA de imagen con formato inválido', [
+                    'content' => substr($contenido, 0, 200)
+                ]);
+                return [
+                    'valid' => true, 
+                    'razon' => 'Análisis con formato inesperado', 
+                    'sugerencia' => null,
+                    'tipo_detectado' => 'formato_invalido'
+                ];
+            }
+
+            return [
+                'valid' => filter_var($analisis['apto'], FILTER_VALIDATE_BOOLEAN),
+                'razon' => $analisis['razon'] ?? 'Análisis completado',
+                'tipo_detectado' => $analisis['tipo_detectado'] ?? 'desconocido',
+                'advertencias' => $analisis['advertencias'] ?? [],
+                'sugerencia' => null // No aplicable para imágenes
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error validando imagen con IA: ' . $e->getMessage());
+            return [
+                'valid' => true, 
+                'razon' => 'Error técnico en validación de imagen', 
+                'sugerencia' => null,
+                'tipo_detectado' => 'error_tecnico'
+            ];
+        }
+    }
+
     public function store(Request $request)
     {
         // 1️⃣ Validación básica de Laravel
@@ -594,25 +743,59 @@ class ComplaintsModuleController
             'descripcion' => 'nullable|required_unless:asunto_cod,CON|string|min:10|max:300',
         ]);
 
+        $asuntoCod = $validated['asunto_cod'];
+        $asuntoTexto = $validated['asunto_texto'];
         $textoOriginal = $validated['descripcion'] ?? '';
         
-        // 2️⃣ Validación con IA (no bloqueante)
-        $validacionIA = $this->validarTextoConIA(
-            $textoOriginal, 
-            $request->input('asunto_cod'), 
-            $request->input('asunto_texto')
-        );
+        // 2️⃣ Validación de TEXTO con IA (no bloqueante)
+        $validacionTexto = $this->validarTextoConIA($textoOriginal, $asuntoCod, $asuntoTexto);
         
-        // 3️⃣ Decidir qué texto guardar
+        // Decidir texto a guardar
         $textoAGuardar = $textoOriginal;
-        $fueEditado = false;
+        $textoFueEditado = false;
         
-        // Si la IA detectó problemas Y proporcionó una sugerencia → usarla
-        if (!$validacionIA['valid'] && !empty($validacionIA['sugerencia'])) {
-            $textoAGuardar = $validacionIA['sugerencia'];
-            $fueEditado = true;
+        if (!$validacionTexto['valid'] && !empty($validacionTexto['sugerencia'])) {
+            $textoAGuardar = $validacionTexto['sugerencia'];
+            $textoFueEditado = true;
         }
-        // Si no es válido pero no hay sugerencia → guardar original (fail-open)
+
+        // 3️⃣ Procesar archivos: validar con IA pero subir TODOS
+        $archivosParaSubir = [];
+        $sensitiveContent = false;
+        $archivosFlagged = []; // Para logging/auditoría
+        
+        if ($request->hasFile('archivos')) {
+            foreach ($request->file('archivos') as $file) {
+                // Validar imágenes con IA para detectar contenido sensible
+                if (str_starts_with($file->getMimeType(), 'image/')) {
+                    $validacionImagen = $this->validarImagenConIA($file, $asuntoCod, $asuntoTexto);
+                    
+                    // Si la IA marca la imagen como no apta, activar flag de contenido sensible
+                    if (!$validacionImagen['valid']) {
+                        $sensitiveContent = true;
+                        $archivosFlagged[] = [
+                            'nombre' => $file->getClientOriginalName(),
+                            'razon' => $validacionImagen['razon'],
+                            'tipo' => $validacionImagen['tipo_detectado']
+                        ];
+                        
+                        Log::warning('Imagen marcada como sensible por IA', [
+                            'user_id' => Auth::id(),
+                            'archivo' => $file->getClientOriginalName(),
+                            'razon' => $validacionImagen['razon']
+                        ]);
+                    }
+                }
+                
+                // ✅ AGREGAR TODOS LOS ARCHIVOS PARA SUBIR (válidos o no)
+                $archivosParaSubir[] = [
+                    'file' => $file,
+                    'analisis' => str_starts_with($file->getMimeType(), 'image/') 
+                        ? $validacionImagen ?? ['tipo_detectado' => 'documento_no_analizado']
+                        : ['tipo_detectado' => 'documento_no_analizado']
+                ];
+            }
+        }
 
         // 4️⃣ Obtener datos del empleado
         $employeeData = DB::table('employees')
@@ -629,14 +812,18 @@ class ComplaintsModuleController
             $request, 
             $employeeData, 
             $textoAGuardar,
-            $fueEditado,
+            $textoFueEditado,
             $textoOriginal,
-            $validacionIA
+            $validacionTexto,
+            $archivosParaSubir,
+            $archivosFlagged,
+            $asuntoCod,
+            $sensitiveContent
         ) {
             try {
-                // Crear queja con el texto (original o mejorado)
+                // Crear queja con el flag de contenido sensible
                 $queja = EmployeeComplains::create([
-                    'case'             => $textoAGuardar,  // ← Texto final
+                    'case'             => $textoAGuardar,
                     'subject'          => $request->asunto_texto,
                     'response'         => null,
                     'date'             => Carbon::now('America/Mexico_City')->format('Y-m-d'),
@@ -644,20 +831,65 @@ class ComplaintsModuleController
                     'branch_office_id' => $employeeData->branch_office_id,
                     'employee_id'      => Auth::id(),
                     'path_complain'    => null,
+                    'sensitive_content' => $sensitiveContent,
                 ]);
 
-                // 📁 Manejo de archivos (tu lógica original)
-                if ($request->hasFile('archivos')) {
+                if (!empty($archivosParaSubir)) {
                     $folderPath = "complaints/emp_" . Auth::id() . "/q_" . $queja->id;
-
-                    foreach ($request->file('archivos') as $file) {
-                        $file->storeAs($folderPath, $file->getClientOriginalName(), 'public');
+                    $disk = Storage::disk('remote_sftp');
+                    
+                    $disk->makeDirectory($folderPath);
+                    
+                    foreach ($archivosParaSubir as $archivoInfo) {
+                        $file = $archivoInfo['file'];
+                        
+                        $originalName = $file->getClientOriginalName();
+                        $filename = pathinfo($originalName, PATHINFO_FILENAME);
+                        $extension = $file->getClientOriginalExtension();
+                        $safeFilename = preg_replace('/[^\w\.\-]/', '_', $filename) . '.' . $extension;
+                        
+                        $remotePath = $folderPath . '/' . $safeFilename;
+                        
+                        try {
+                            $contenido = file_get_contents($file->getRealPath());
+                            
+                            if ($contenido === false) {
+                                throw new \Exception("No se pudo leer el archivo local: {$file->getRealPath()}");
+                            }
+                            
+                            $uploaded = $disk->put($remotePath, $contenido);
+                            
+                            if (!$uploaded) {
+                                throw new \Exception("SFTP put() retornó false");
+                            }
+                            
+                            if (!$disk->exists($remotePath)) {
+                                throw new \Exception("El archivo no existe después de subir: {$remotePath}");
+                            }
+                            
+                            Log::info('✅ Archivo subido a SFTP', [
+                                'user_id' => Auth::id(),
+                                'queja_id' => $queja->id,
+                                'archivo_original' => $originalName,
+                                'archivo_remoto' => $safeFilename,
+                                'ruta_remota' => $remotePath,
+                                'tamaño' => strlen($contenido) . ' bytes',
+                                'sensitive_flag' => $sensitiveContent ? 'YES' : 'NO'
+                            ]);
+                            
+                        } catch (\Exception $e) {
+                            Log::error('❌ Error subiendo archivo a SFTP', [
+                                'archivo' => $originalName,
+                                'ruta_remota' => $remotePath,
+                                'error' => $e->getMessage()
+                            ]);
+                            continue;
+                        }
                     }
 
                     $queja->update(['path_complain' => $folderPath]);
                 }
 
-                // 👥 Asignaciones a RRHH (tu lógica original)
                 $branchOffice = BranchOffice::find($queja->branch_office_id);
                 $usersRH = is_string($branchOffice->users_rh_json)
                     ? json_decode($branchOffice->users_rh_json, true)
@@ -680,11 +912,23 @@ class ComplaintsModuleController
                     $user->notify(new TicketAssignment('Quejas', $queja->id));
                 }
 
-                // 🔹 RESPUESTA AL USUARIO CON FEEDBACK SOBRE EDICIÓN
+                // 🔹 CONSTRUIR RESPUESTA CON FEEDBACK
                 $message = 'Queja registrada correctamente';
+                $warnings = [];
                 
-                if ($fueEditado) {
-                    $message = 'Queja registrada. Hemos ajustado la redacción para garantizar claridad profesional.';
+                // Feedback sobre edición de texto
+                if ($textoFueEditado) {
+                    $warnings[] = 'Hemos ajustado la redacción para garantizar claridad profesional.';
+                }
+                
+                // Feedback sobre archivos marcados como sensibles (solo informativo)
+                if (!empty($archivosFlagged)) {
+                    $nombres = collect($archivosFlagged)->pluck('nombre')->join(', ');
+                    $warnings[] = "Se detectó contenido sensible en: {$nombres}. El equipo de RRHH revisará el caso.";
+                }
+                
+                if (!empty($warnings)) {
+                    $message .= ' - ' . implode(' ', $warnings);
                 }
 
                 $response = [
@@ -692,15 +936,6 @@ class ComplaintsModuleController
                     'message' => $message,
                     'data'    => $queja
                 ];
-
-                // Opcional: incluir detalles de la edición para mostrar en frontend
-                if ($fueEditado) {
-                    $response['edicion'] = [
-                        'texto_original' => $textoOriginal,
-                        'texto_mejorado' => $textoAGuardar,
-                        'razon' => $validacionIA['razon'] ?? 'Mejora de redacción automática'
-                    ];
-                }
 
                 return response()->json($response);
 

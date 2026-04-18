@@ -21,7 +21,8 @@ class EmployeeComplains extends Model
         'branch_office_id',
         'employee_id',
         'path_complain',
-        'rate'
+        'rate',
+        'sensitive_content'
     ];
 
     public static function filterComplaints($filtros = [])
