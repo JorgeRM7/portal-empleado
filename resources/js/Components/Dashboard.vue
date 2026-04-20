@@ -81,7 +81,7 @@ onUnmounted(() => {
                             Bienvenid@ {{ $page.props.auth.user?.name }}
                         </h1>
                         <h2
-                            class="text-sm text-gray-600 font-normal ml-5 mt-0 mb-0"
+                            class="text-sm font-normal ml-5 mt-0 mb-0"
                         >
                             {{ props.user[0] }}
                         </h2>

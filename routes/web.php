@@ -45,6 +45,10 @@ Route::middleware([
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/show/{id}', [DashboardController::class, 'show'])->name('dashboard.show');
+    Route::get('/dashboard/vacaciones/{id}', [DashboardController::class, 'vacacionesDetalle'])
+    ->name('dashboard.vacaciones');
+    Route::get('/dashboard/incidencias/{id}', [DashboardController::class, 'incidenciasDetalle'])
+    ->name('dashboard.incidencias');
 
     Route::get('weekly-assistences/filter-data', [WeeklyAssistencesController::class, 'filter_data'])
         ->name('weekly-assistences.filter-data');
@@ -105,9 +109,15 @@ Route::middleware([
     Route::post('complaints/improve-writing', [ComplaintsModuleController::class, 'improveWriting'])
     ->name('complaints.improve');
 
+    Route::post('complaints/rate-response', [ComplaintsModuleController::class, 'rateResponse'])
+    ->name('complaints.rate');
+
     Route::resource('complaints', ComplaintsModuleController::class)->names([
-        'index' => 'complaints'
+        'index' => '/complaints'
     ]);
+
+    Route::get('/complaints/{complaint_id}/files/{filename}', [ComplaintsModuleController::class, 'downloadFile'])
+    ->name('complaints.files.download');
 
     Route::resource('term-conditions', TermConditionController::class)->names([
         'index' => 'term-conditions'

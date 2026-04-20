@@ -423,12 +423,12 @@ watch(
     <AppLayout :title="'Editar Incidencia'">
         <div class="p-4 lg:p-6">
             <div class="grid gap-4">
-                <Card>
+                <!-- <Card>
                     <template #title>Editar Incidencia</template>
                     <template #content>
                         <div class="flex flex-col gap-3">
                             <div class="flex flex-col gap-2 w-full">
-                                <!-- <label class="text-sm font-medium"
+                                <label class="text-sm font-medium"
                                     >Empleado</label
                                 >
                                 <Select
@@ -444,12 +444,12 @@ watch(
                                     :loading="loading"
                                     :disabled="true"
                                     @change="getData()"
-                                /> -->
+                                />
                             </div>
                         </div>
                     </template>
-                </Card>
-                <div class="grid gap-4 lg:grid-cols-2">
+                </Card> -->
+                <!-- <div class="grid gap-4 lg:grid-cols-2">
                     <Card>
                         <template #title>Fechas no disponibles</template>
                         <template #content>
@@ -562,7 +562,7 @@ watch(
                             </DataTable>
                         </template>
                     </Card>
-                </div>
+                </div> -->
 
                 <Card v-if="employeeId && !loading">
                     <template #title>Editar incidencia</template>
@@ -581,6 +581,8 @@ watch(
                                         filter
                                         placeholder="Selecciona una incidencia"
                                         class="w-full"
+                                        :loading="loading"
+                                        :disabled="loading"
                                     />
                                     <small class="text-gray-500">
                                         Los campos se ajustan según la

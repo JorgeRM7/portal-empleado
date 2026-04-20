@@ -3,24 +3,25 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { useToastService } from "@/Stores/toastService";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
 import { useNotifications } from "@/composables/useNotifications";
-import { router } from '@inertiajs/vue3';
+import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
-    history: Array
+    history: Array,
 });
 
-const otherSubject = ref('');
+const otherSubject = ref("");
 const selectedOption = ref(null);
 const selectedOptionStatus = ref(null);
 const editDialog = ref(false);
 const editingQueja = ref(null);
+const selectedTicket = ref(null);
 // campos
 const editSelectedOption = ref(null);
-const editComplaintDescription = ref('');
-const editOtherSubject = ref('');
+const editComplaintDescription = ref("");
+const editOtherSubject = ref("");
 // IA
 const editOpciones = ref([]);
 const editSeleccionada = ref(null);
@@ -37,80 +38,73 @@ const updating = ref(false);
 const deleting = ref(false);
 
 const dates = ref(null);
-const rows = ref([])
+const rows = ref([{}]);
 
 const { sendNotification } = useNotifications();
 
 const crearQueja = () => {
-    router.get('/complaints/create');
-};
-
-const formatFileItems = (archivos) => {
-    return archivos.map((file) => ({
-        label: file.name,
-        icon: 'pi pi-external-link',
-        command: () => {
-            window.open(file.url, '_blank');
-        }
-    }));
+    router.get("/complaints/create");
 };
 
 const viewFirstFile = (url) => {
-    window.open(url, '_blank');
+    window.open(url, "_blank");
 };
 
 const getStatusSeverity = (status) => {
     switch (status?.toLowerCase()) {
-        case 'pendiente':
-            return 'warn';
+        case "pendiente":
+            return "warn";
 
-        case 'escalado':
-            return 'info';
+        case "escalado":
+            return "info";
 
-        case 'resuelto':
-            return 'success';
+        case "resuelto":
+            return "success";
 
         default:
-            return 'secondary';
+            return "secondary";
     }
 };
 
 const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
-        case 'pendiente':
-            return 'pi pi-clock';
+        case "pendiente":
+            return "pi pi-clock";
 
-        case 'escalado':
-            return 'pi pi-arrow-up-right';
+        case "escalado":
+            return "pi pi-arrow-up-right";
 
-        case 'resuelto':
-            return 'pi pi-check-circle';
+        case "resuelto":
+            return "pi pi-check-circle";
 
         default:
-            return 'pi pi-info-circle';
+            return "pi pi-info-circle";
     }
 };
 
 const options = ref([
-    { name: 'Seleccione un Asunto...', code: '' },
-    { name: 'Nomina', code: 'NOM' },
-    { name: 'Compensaciones', code: 'COM' },
-    { name: 'Tiempos extra', code: 'EXT' },
-    { name: 'Aclaración de Incidencias', code: 'ACI' },
-    { name: 'Cambio de datos personales', code: 'CDP' },
-    { name: 'Cambio de datos bancarios', code: 'CDB' },
-    { name: 'Vacaciones', code: 'VAC' },
-    { name: 'Descuento de créditos y pensiones', code: 'DCP' },
-    { name: 'Despensas y Vales de despensa', code: 'DVD' },
-    { name: 'Incentivos anuales', code: 'INC' },
-    { name: 'Constancias (Fonacot, Infonavit, Antigüedad, Visa, Escolar, Otro tipo)', code: 'CON' },
-    { name: 'Otros', code: 'OTR' }
+    { name: "Seleccione un Asunto...", code: "" },
+    { name: "Nomina", code: "NOM" },
+    { name: "Compensaciones", code: "COM" },
+    { name: "Tiempos extra", code: "EXT" },
+    { name: "Aclaración de Incidencias", code: "ACI" },
+    { name: "Cambio de datos personales", code: "CDP" },
+    { name: "Cambio de datos bancarios", code: "CDB" },
+    { name: "Vacaciones", code: "VAC" },
+    { name: "Descuento de créditos y pensiones", code: "DCP" },
+    { name: "Despensas y Vales de despensa", code: "DVD" },
+    { name: "Incentivos anuales", code: "INC" },
+    {
+        name: "Constancias (Fonacot, Infonavit, Antigüedad, Visa, Escolar, Otro tipo)",
+        code: "CON",
+    },
+    { name: "Otros", code: "OTR" },
 ]);
 
 const optionsStatus = ref([
-    { name: 'Pendiente', code: 'PE' },
-    { name: 'Escalado', code: 'ES' },
-    { name: 'Resuelto', code: 'RE' },
+    { name: "Pendiente", code: "PE" },
+    { name: "Escalado", code: "ES" },
+    { name: "Resuelto", code: "RE" },
 ]);
 
 const editarQueja = (queja) => {
@@ -119,14 +113,14 @@ const editarQueja = (queja) => {
     editComplaintDescription.value = queja.case;
 
     const match = options.value.find(
-        o => o.name.toLowerCase() === queja.subject?.toLowerCase()
+        (o) => o.name.toLowerCase() === queja.subject?.toLowerCase(),
     );
 
-    if (match && match.code !== '') {
+    if (match && match.code !== "") {
         editSelectedOption.value = match;
-        editOtherSubject.value = '';
+        editOtherSubject.value = "";
     } else {
-        const otherOption = options.value.find(o => o.code === 'OTR');
+        const otherOption = options.value.find((o) => o.code === "OTR");
 
         editSelectedOption.value = otherOption;
         editOtherSubject.value = queja.subject;
@@ -149,21 +143,23 @@ const usarEdit = (op) => {
     editIsCollapsed.value = true;
 
     toast.add({
-        severity: 'success',
-        summary: 'Texto actualizado',
-        detail: 'Se aplicó la redacción sugerida.',
-        life: 2000
+        severity: "success",
+        summary: "Texto actualizado",
+        detail: "Se aplicó la redacción sugerida.",
+        life: 2000,
     });
 };
 
 const mejorarTextoEdit = async () => {
-
-    if (!editComplaintDescription.value.trim() || editComplaintDescription.value.length > 300) {
+    if (
+        !editComplaintDescription.value.trim() ||
+        editComplaintDescription.value.length > 300
+    ) {
         toast.add({
-            severity: 'warn',
-            summary: 'Atención',
-            detail: 'El texto debe tener entre 1 y 300 caracteres.',
-            life: 3000
+            severity: "warn",
+            summary: "Atención",
+            detail: "El texto debe tener entre 1 y 300 caracteres.",
+            life: 3000,
         });
         return;
     }
@@ -175,9 +171,10 @@ const mejorarTextoEdit = async () => {
         const res = await axios.post("/complaints/improve-writing", {
             texto: editComplaintDescription.value,
             asunto_cod: editSelectedOption.value?.code,
-            asunto_texto: editSelectedOption.value?.code === 'OTR'
-                ? editOtherSubject.value
-                : editSelectedOption.value?.name,
+            asunto_texto:
+                editSelectedOption.value?.code === "OTR"
+                    ? editOtherSubject.value
+                    : editSelectedOption.value?.name,
         });
 
         if (res.data.success) {
@@ -185,17 +182,16 @@ const mejorarTextoEdit = async () => {
             editSeleccionada.value = null;
             editIsCollapsed.value = false;
         }
-
     } catch (error) {
         console.error(error);
-        showError('Error con IA');
+        showError("Error con IA");
     } finally {
         editLoading.value = false;
     }
 };
 
 const removeExistingFile = (file) => {
-    editExistingFiles.value = editExistingFiles.value.filter(f => f !== file);
+    editExistingFiles.value = editExistingFiles.value.filter((f) => f !== file);
 
     editRemovedFiles.value.push(file.name);
 };
@@ -209,48 +205,46 @@ const actualizarQueja = async () => {
     try {
         const formData = new FormData();
 
-        formData.append('_method', 'PUT');
+        formData.append("_method", "PUT");
 
-        formData.append('descripcion', editComplaintDescription.value);
+        formData.append("descripcion", editComplaintDescription.value);
 
         const asuntoFinal =
-            editSelectedOption.value?.code === 'OTR'
+            editSelectedOption.value?.code === "OTR"
                 ? editOtherSubject.value
                 : editSelectedOption.value?.name;
 
-        formData.append('asunto_texto', asuntoFinal);
+        formData.append("asunto_texto", asuntoFinal);
 
         // 🔹 nuevos archivos
-        editNewFiles.value.forEach(file => {
-            formData.append('archivos[]', file);
+        editNewFiles.value.forEach((file) => {
+            formData.append("archivos[]", file);
         });
 
         // 🔹 eliminados
-        editRemovedFiles.value.forEach(id => {
-            formData.append('deleted_files[]', id);
+        editRemovedFiles.value.forEach((id) => {
+            formData.append("deleted_files[]", id);
         });
 
         await axios.post(`/complaints/${editingQueja.value.id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { "Content-Type": "multipart/form-data" },
         });
 
-        showSuccess('Queja actualizada');
+        showSuccess("Queja actualizada");
         editDialog.value = false;
 
         router.reload();
-
     } catch (error) {
         console.error(error);
-        showError('Error al actualizar');
-    }
-    finally {
+        showError("Error al actualizar");
+    } finally {
         updating.value = false;
     }
 };
 
 const truncateText = (text, length = 50) => {
-    if (!text) return '';
-    return text.length > length ? text.substring(0, length) + '...' : text;
+    if (!text) return "";
+    return text.length > length ? text.substring(0, length) + "..." : text;
 };
 
 const confirmarEliminar = (queja) => {
@@ -263,15 +257,14 @@ const eliminarQueja = async () => {
     try {
         await axios.delete(`/complaints/${quejaAEliminar.value.id}`);
 
-        showSuccess('Queja eliminada correctamente');
+        showSuccess();
 
         deleteDialog.value = false;
 
-        router.reload();
-
+        aplicarFiltros();
     } catch (error) {
         console.error(error);
-        showError('Error al eliminar la queja');
+        showError("Error al eliminar la queja");
     } finally {
         deleting.value = false;
     }
@@ -309,11 +302,11 @@ const exportColumns = ref({
     clave_empleado: true,
     asunto: true,
     queja: true,
-    fecha: true,
-    hora: true,
+    fecha_hora: true,
     estatus: true,
     evidencia: true,
     respuesta: true,
+    calificacion: true,
 });
 
 //Columnas visibles
@@ -323,11 +316,11 @@ const showColumns = ref({
     clave_empleado: true,
     asunto: true,
     queja: true,
-    fecha: true,
-    hora: true,
+    fecha_hora: true,
     estatus: true,
     evidencia: true,
     respuesta: true,
+    calificacion: true,
 });
 
 //Filtros adicionales
@@ -335,7 +328,7 @@ const otherFilters = ref({
     startDate: null,
     endDate: null,
     status: null,
-    subject: null
+    subject: null,
 });
 
 //Diálogo de filtros adicionales
@@ -352,11 +345,11 @@ const frozenColumns = ref({
     clave_empleado: false,
     asunto: false,
     queja: false,
-    fecha: false,
-    hora: false,
+    fecha_hora: false,
     estatus: false,
     evidencia: false,
     respuesta: false,
+    calificacion: false,
 });
 
 //Diálogo de selección de columnas
@@ -376,7 +369,6 @@ const progress = ref(0);
 //Estado de visibilidad del toast
 const visible = ref(false);
 
-
 const toggleMostrarColumnas = (event) => {
     opMostrarColumnas.value.toggle(event);
 };
@@ -385,7 +377,6 @@ const toggleFijarColumnas = (event) => {
     opFijarColumnas.value.toggle(event);
 };
 
-
 //Filas seleccionadas
 const selected = ref([]);
 
@@ -393,9 +384,7 @@ const selected = ref([]);
 const saveColumns = () => {
     columnsDialog.value = false;
 
-    dt.value.exportCSV({
-        selectionOnly: true
-    });
+    dt.value.exportCSV();
 };
 
 //Función para limpiar filtros
@@ -406,16 +395,20 @@ const clearFilter = () => {
         startDate: null,
         endDate: null,
         status: null,
-        subject: null
+        subject: null,
     };
 
     dates.value = null;
     selectedOption.value = null;
     selectedOptionStatus.value = null;
-    otherSubject.value = '';
+    otherSubject.value = "";
 
     aplicarFiltros();
 };
+
+const rating = ref(0);
+
+const califcarDialog = ref(false);
 
 const applyFilters = () => {
     otherFilterDialog.value = false;
@@ -453,12 +446,12 @@ const aplicarFiltros = async () => {
     loading.value = true;
 
     try {
-        const res = await axios.get('/complaints/filter-data', {
+        const res = await axios.get("/complaints/filter-data", {
             params: otherFilters.value,
         });
 
         rows.value = res.data.data;
-        console.log(rows.value)
+        console.log(rows.value);
     } catch (error) {
         console.error(error);
     } finally {
@@ -473,6 +466,73 @@ const removeStartDate = () => {
     aplicarFiltros();
 };
 
+const ratingText = computed(() => {
+    const texts = {
+        0: "Selecciona una calificación",
+        1: "Muy malo",
+        2: "Malo",
+        3: "Normal",
+        4: "Bueno",
+        5: "Excelente",
+    };
+    return texts[rating.value];
+});
+
+const submitRating = async () => {
+    if (rating.value === 0) return;
+
+    deleting.value = true;
+    try {
+        await axios.post("/complaints/rate-response", {
+            id_complaint: selectedTicket.value.id,
+            rating: rating.value,
+        });
+
+        rating.value = 0;
+        califcarDialog.value = false;
+
+        showSuccess();
+    } catch (error) {
+        console.error("Error al enviar calificación:", error);
+        showError();
+    } finally {
+        deleting.value = false;
+        aplicarFiltros();
+    }
+};
+
+const formatFileItems = (archivos) => {
+    if (!archivos || archivos.length === 0) return [];
+
+    return archivos.map((file) => {
+        // Ícono según tipo de archivo
+        const iconMap = {
+            pdf: "pi pi-file-pdf",
+            image: "pi pi-image",
+            word: "pi pi-file-word",
+            excel: "pi pi-file-excel",
+            zip: "pi pi-file",
+            file: "pi pi-file",
+        };
+
+        return {
+            label: file.name,
+            icon: iconMap[file.type] || "pi pi-file",
+            // 🔹 Acción principal: descargar
+            command: () => {
+                // Abrir en nueva pestaña o forzar descarga
+                window.open(file.url, "_blank");
+            },
+        };
+    });
+};
+
+// 🔹 Función para vista previa (opcional)
+const previewFile = (url, filename) => {
+    // Implementar modal con iframe para PDF o img para imágenes
+    // Ejemplo simple:
+    window.open(url, "_blank");
+};
 
 onMounted(async () => {
     aplicarFiltros();
@@ -480,7 +540,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <AppLayout :title="'Prueba'">
+    <AppLayout :title="'Tickets'">
         <Toast position="top-center" group="headless" @close="visible = false">
             <template #container="{ message, closeCallback }">
                 <section
@@ -542,17 +602,25 @@ onMounted(async () => {
                 tableStyle="min-width: 110rem"
                 v-model:filters="filters"
                 filterDisplay="menu"
-                exportFilename="Historial_de_Quejas"
-                :globalFilterFields="['id', 'employee_id', 'subject', 'case', 'date', 'hour', 'status']"
+                exportFilename="Historial_de_Tickets"
+                :globalFilterFields="[
+                    'id',
+                    'employee_id',
+                    'subject',
+                    'case',
+                    'date',
+                    'hour',
+                    'status',
+                ]"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Quejas"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Tickets"
             >
                 <template #header>
                     <div
                         class="flex flex-wrap gap-2 items-end justify-between mb-6"
                     >
                         <div>
-                            <h4 class="m-0">Historial de Quejas</h4>
+                            <h4 class="m-0">Historial de Tickets</h4>
                             <Button
                                 icon="pi pi-filter"
                                 rounded
@@ -684,23 +752,27 @@ onMounted(async () => {
                             v-if="otherFilters.status"
                             :label="'Estatus: ' + otherFilters.status"
                             removable
-                            @remove="() => {
-                                otherFilters.status = null;
-                                selectedOptionStatus = null;
-                                aplicarFiltros();
-                            }"
+                            @remove="
+                                () => {
+                                    otherFilters.status = null;
+                                    selectedOptionStatus = null;
+                                    aplicarFiltros();
+                                }
+                            "
                         />
 
                         <Chip
                             v-if="otherFilters.subject"
                             :label="'Asunto: ' + otherFilters.subject"
                             removable
-                            @remove="() => {
-                                otherFilters.subject = null;
-                                selectedOption = null;
-                                otherSubject = '';
-                                aplicarFiltros();
-                            }"
+                            @remove="
+                                () => {
+                                    otherFilters.subject = null;
+                                    selectedOption = null;
+                                    otherSubject = '';
+                                    aplicarFiltros();
+                                }
+                            "
                         />
 
                         <Chip
@@ -714,20 +786,23 @@ onMounted(async () => {
                             v-if="otherFilters.endDate"
                             :label="'Fin: ' + otherFilters.endDate"
                             removable
-                            @remove="() => {
-                                otherFilters.endDate = null;
-                                dates = null;
-                                aplicarFiltros();
-                            }"
+                            @remove="
+                                () => {
+                                    otherFilters.endDate = null;
+                                    dates = null;
+                                    aplicarFiltros();
+                                }
+                            "
                         />
                     </div>
                 </template>
 
-                <Column
+                <!-- <Column
                     selectionMode="multiple"
                     style="width: 5rem"
                     :exportable="false"
                 ></Column>
+                 -->
                 <Column
                     :exportable="false"
                     :style="{
@@ -741,20 +816,19 @@ onMounted(async () => {
                         <Skeleton v-if="loading"></Skeleton>
                         <div v-else>
                             <Button
-                                icon="pi pi-pencil"
+                                icon="pi pi-check"
                                 class="mr-2"
-                                rounded
-                                v-tooltip.top="'Editar'"
-                                severity="warn"
-                                @click="editarQueja(slotProps.data)"
-                            />
-                            <Button
-                                icon="pi pi-trash"
-                                severity="danger"
-                                v-tooltip.top="'Eliminar'"
-                                class="mr-2"
-                                rounded
-                                @click="confirmarEliminar(slotProps.data)"
+                                label="Calificar resp."
+                                v-tooltip.top="'Calificar respuesta'"
+                                severity="success"
+                                v-if="
+                                    slotProps.data.response !== null &&
+                                    slotProps.data.rate === null
+                                "
+                                @click="
+                                    califcarDialog = true;
+                                    selectedTicket = slotProps.data;
+                                "
                             />
                         </div>
                     </template>
@@ -831,7 +905,7 @@ onMounted(async () => {
 
                 <Column
                     field="case"
-                    header="Queja"
+                    header="Ticket"
                     sortable
                     :frozen="frozenColumns.queja"
                     :style="{
@@ -865,13 +939,13 @@ onMounted(async () => {
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Queja"
+                            placeholder="Buscar por Ticket"
                         />
                     </template>
                 </Column>
                 <Column
                     field="response"
-                    header="Respuesta"
+                    header="Aclaración"
                     sortable
                     :frozen="frozenColumns.respuesta"
                     :style="{
@@ -892,7 +966,9 @@ onMounted(async () => {
                             </span>
 
                             <span
-                                v-if="data.response && data.response.length > 60"
+                                v-if="
+                                    data.response && data.response.length > 60
+                                "
                                 class="text-blue-500 ml-2 cursor-pointer"
                                 v-tooltip.bottom="data.response"
                             >
@@ -905,33 +981,33 @@ onMounted(async () => {
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Queja"
+                            placeholder="Buscar por aclaración"
                         />
                     </template>
                 </Column>
                 <Column
                     field="date"
-                    header="Fecha"
+                    header="Fecha y Hora"
                     sortable
-                    :frozen="frozenColumns.fecha"
+                    :frozen="frozenColumns.fecha_hora"
                     :style="{
                         width: '20rem',
-                        display: showColumns.fecha ? '' : 'none',
+                        display: showColumns.fecha_hora ? '' : 'none',
                     }"
-                    :exportable="exportColumns.fecha"
+                    :exportable="exportColumns.fecha_hora"
                 >
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
-                        <span v-else>{{ data.date }}</span>
+                        <span v-else>{{ data.date + " " + data.hour }}</span>
                     </template>
                     <template #filter="{ filterModel }">
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Fecha"
+                            placeholder="Buscar por Fecha y Hora"
                         /> </template
                 ></Column>
-                <Column
+                <!-- <Column
                     field="hour"
                     header="Hora"
                     sortable
@@ -952,7 +1028,7 @@ onMounted(async () => {
                             type="text"
                             placeholder="Buscar por Hora"
                         /> </template
-                ></Column>
+                ></Column> -->
                 <Column
                     field="status"
                     header="Estatus"
@@ -987,27 +1063,64 @@ onMounted(async () => {
                     field="archivos"
                     header="Evidencia"
                     :frozen="frozenColumns.evidencia"
-                    :style="{
-                        width: '20rem',
-                        display: showColumns.evidencia ? '' : 'none',
-                    }"
                 >
                     <template #body="{ data }">
-                        <Skeleton v-if="loading"></Skeleton>
+                        <Skeleton v-if="loading" />
 
-                        <div v-else-if="data.archivos && data.archivos.length > 0">
+                        <div
+                            v-else-if="data.archivos?.length > 0"
+                            class="flex items-center gap-2"
+                        >
+                            <!-- SplitButton con lista de archivos -->
                             <SplitButton
                                 icon="pi pi-paperclip"
                                 severity="info"
-                                text
+                                outlined
                                 size="small"
                                 :model="formatFileItems(data.archivos)"
+                                :pt="{
+                                    root: { class: 'max-w-[18rem]' },
+                                    label: { class: 'truncate' },
+                                }"
                             />
                         </div>
 
                         <span v-else class="text-muted-color text-sm">
                             Sin evidencias
                         </span>
+                    </template>
+                </Column>
+                <Column
+                    field="rate"
+                    header="Calificación"
+                    :frozen="frozenColumns.calificacion"
+                    :style="{
+                        width: '20rem',
+                        display: showColumns.calificacion ? '' : 'none',
+                    }"
+                >
+                    <template #body="{ data }">
+                        <Skeleton v-if="loading"></Skeleton>
+
+                        <div v-else>
+                            <span v-if="data.rate === null"
+                                >Sin calificación</span
+                            >
+                            <span v-else>
+                                <div class="flex align-items-center gap-2">
+                                    <i
+                                        v-for="star in 5"
+                                        :key="star"
+                                        :class="{
+                                            'pi pi-star-fill text-yellow-500':
+                                                star <= data.rate,
+                                            'pi pi-star text-gray-500':
+                                                star > data.rate,
+                                        }"
+                                    ></i>
+                                </div>
+                            </span>
+                        </div>
                     </template>
                 </Column>
             </DataTable>
@@ -1066,7 +1179,10 @@ onMounted(async () => {
                         class="w-full md:w-30rem"
                     >
                         <template #value="slotProps">
-                            <div v-if="slotProps.value" class="flex align-items-center">
+                            <div
+                                v-if="slotProps.value"
+                                class="flex align-items-center"
+                            >
                                 <div>{{ slotProps.value.name }}</div>
                             </div>
                             <span v-else>
@@ -1080,8 +1196,15 @@ onMounted(async () => {
                         </template>
                     </Dropdown>
 
-                    <div v-if="selectedOption && selectedOption.code === 'OTR'" class="mt-4">
-                        <label for="other_subject" class="block mb-2 font-medium">Especifique el asunto:</label>
+                    <div
+                        v-if="selectedOption && selectedOption.code === 'OTR'"
+                        class="mt-4"
+                    >
+                        <label
+                            for="other_subject"
+                            class="block mb-2 font-medium"
+                            >Especifique el asunto:</label
+                        >
                         <InputText
                             id="other_subject"
                             v-model="otherSubject"
@@ -1091,7 +1214,12 @@ onMounted(async () => {
                     </div>
                 </div>
                 <div class="flex flex-col gap-2 mt-2">
-                    <Calendar v-model="dates" selectionMode="range" :manualInput="false" placeholder="Rango de fechas"/>
+                    <Calendar
+                        v-model="dates"
+                        selectionMode="range"
+                        :manualInput="false"
+                        placeholder="Rango de fechas"
+                    />
 
                     <Dropdown
                         v-model="selectedOptionStatus"
@@ -1102,7 +1230,10 @@ onMounted(async () => {
                         class="w-full md:w-30rem"
                     >
                         <template #value="slotProps">
-                            <div v-if="slotProps.value" class="flex align-items-center">
+                            <div
+                                v-if="slotProps.value"
+                                class="flex align-items-center"
+                            >
                                 <div>{{ slotProps.value.name }}</div>
                             </div>
                             <span v-else>
@@ -1133,8 +1264,12 @@ onMounted(async () => {
                     />
                 </template>
             </Dialog>
-            <Dialog v-model:visible="editDialog" header="Editar Queja" :modal="true" :style="{ width: '600px' }">
-
+            <Dialog
+                v-model:visible="editDialog"
+                header="Editar Queja"
+                :modal="true"
+                :style="{ width: '600px' }"
+            >
                 <!-- ASUNTO -->
                 <Dropdown
                     v-model="editSelectedOption"
@@ -1154,9 +1289,10 @@ onMounted(async () => {
 
                 <!-- DESCRIPCIÓN + IA -->
                 <div class="mb-4">
-
                     <div class="flex justify-end mb-1">
-                        <small>{{ editComplaintDescription.length }} / 300</small>
+                        <small
+                            >{{ editComplaintDescription.length }} / 300</small
+                        >
                     </div>
 
                     <Textarea
@@ -1204,13 +1340,19 @@ onMounted(async () => {
                                     'p-4 border rounded-xl cursor-pointer transition-all duration-300',
                                     editSeleccionada === op
                                         ? 'shadow-md scale-[1.02] border-green-500 bg-green-50/10'
-                                        : 'hover:shadow-lg hover:border-purple-400 hover:scale-[1.01]'
+                                        : 'hover:shadow-lg hover:border-purple-400 hover:scale-[1.01]',
                                 ]"
                             >
-                                <div class="flex justify-between items-center mb-2">
+                                <div
+                                    class="flex justify-between items-center mb-2"
+                                >
                                     <Tag
                                         :value="`Opción ${i + 1}`"
-                                        :severity="editSeleccionada === op ? 'success' : 'secondary'"
+                                        :severity="
+                                            editSeleccionada === op
+                                                ? 'success'
+                                                : 'secondary'
+                                        "
                                         class="text-xs"
                                     />
                                     <i
@@ -1219,7 +1361,9 @@ onMounted(async () => {
                                     ></i>
                                 </div>
 
-                                <p class="mb-3 text-sm leading-relaxed text-gray-700">
+                                <p
+                                    class="mb-3 text-sm leading-relaxed text-gray-700"
+                                >
                                     {{ op }}
                                 </p>
 
@@ -1235,16 +1379,24 @@ onMounted(async () => {
                             </div>
                         </TransitionGroup>
                     </Fieldset>
-
                 </div>
 
                 <!-- ARCHIVOS -->
                 <div v-if="editExistingFiles.length">
                     <h5>Archivos actuales</h5>
 
-                    <div v-for="file in editExistingFiles" :key="file.id" class="flex justify-between mb-2">
+                    <div
+                        v-for="file in editExistingFiles"
+                        :key="file.id"
+                        class="flex justify-between mb-2"
+                    >
                         <span>{{ file.name }}</span>
-                        <Button icon="pi pi-times" severity="danger" text @click="removeExistingFile(file)" />
+                        <Button
+                            icon="pi pi-times"
+                            severity="danger"
+                            text
+                            @click="removeExistingFile(file)"
+                        />
                     </div>
                 </div>
 
@@ -1267,13 +1419,14 @@ onMounted(async () => {
                     />
                     <Button
                         :label="updating ? 'Actualizando...' : 'Guardar'"
-                        :icon="updating ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+                        :icon="
+                            updating ? 'pi pi-spin pi-spinner' : 'pi pi-check'
+                        "
                         severity="success"
                         :loading="updating"
                         @click="actualizarQueja"
                     />
                 </template>
-
             </Dialog>
             <Dialog
                 v-model:visible="deleteDialog"
@@ -1308,7 +1461,8 @@ onMounted(async () => {
                                     'text-sm text-red-300': isDark,
                                 }"
                             >
-                                Esta acción eliminará la queja de forma permanente.
+                                Esta acción eliminará la queja de forma
+                                permanente.
                             </p>
                         </div>
                     </div>
@@ -1328,6 +1482,73 @@ onMounted(async () => {
                         @click="eliminarQueja"
                         severity="danger"
                         :loading="deleting"
+                    />
+                </template>
+            </Dialog>
+
+            <Dialog
+                v-model:visible="califcarDialog"
+                :style="{ width: '600px' }"
+                header="Calificar respuesta"
+                :modal="true"
+            >
+                <template #default>
+                    <div class="flex flex-col gap-6 py-4">
+                        <p class="text-gray-700 dark:text-gray-300">
+                            ¿Cuál es tu puntuación para esta respuesta?
+                        </p>
+
+                        <!-- Rating Stars -->
+                        <div class="flex justify-center gap-4">
+                            <button
+                                v-for="star in 5"
+                                :key="star"
+                                @click="rating = star"
+                                class="transition-transform duration-200 hover:scale-125"
+                                :class="
+                                    star <= rating
+                                        ? 'text-yellow-400'
+                                        : 'text-gray-300 dark:text-gray-600'
+                                "
+                            >
+                                <i
+                                    :class="
+                                        star <= rating
+                                            ? 'pi pi-star-fill'
+                                            : 'pi pi-star'
+                                    "
+                                    style="font-size: 2.5rem"
+                                ></i>
+                            </button>
+                        </div>
+
+                        <!-- Rating Text -->
+                        <div class="text-center">
+                            <p
+                                class="text-sm font-semibold text-gray-600 dark:text-gray-400"
+                            >
+                                {{ ratingText }}
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
+                <template #footer>
+                    <Button
+                        label="Cancelar"
+                        icon="pi pi-times"
+                        text
+                        @click="califcarDialog = false"
+                        severity="secondary"
+                        variant="text"
+                    />
+                    <Button
+                        label="Enviar calificación"
+                        icon="pi pi-check"
+                        @click="submitRating"
+                        severity="success"
+                        :loading="deleting"
+                        :disabled="rating === 0"
                     />
                 </template>
             </Dialog>

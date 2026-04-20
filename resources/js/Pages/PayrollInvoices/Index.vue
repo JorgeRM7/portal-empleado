@@ -773,102 +773,7 @@ initFilters();
                         </div>
                     </template>
                 </Column>
-                <Column
-                    field="id"
-                    header="#"
-                    :filter="true"
-                    columnKey="id"
-                    :frozen="frozenColumns.id"
-                    :style="{
-                        width: '5rem',
-                        display: showColumns.id ? '' : 'none',
-                    }"
-                    :exportable="exportColumns.id"
-                >
-                    <template #body="{ data }">
-                        <Skeleton v-if="loading"></Skeleton>
-                        <span v-else>{{ data.id }}</span>
-                    </template>
-                    <template #filter="{ filterModel }">
-                        <InputText
-                            v-model="filterModel.value"
-                            type="text"
-                            placeholder="Buscar por ID"
-                        />
-                    </template>
-                </Column>
-                <Column
-                    field="branch_office"
-                    header="Planta"
-                    :filter="true"
-                    columnKey="id"
-                    :frozen="frozenColumns.planta"
-                    :style="{
-                        width: '5rem',
-                        display: showColumns.planta ? '' : 'none',
-                    }"
-                    :exportable="exportColumns.planta"
-                >
-                    <template #body="{ data }">
-                        <Skeleton v-if="loading"></Skeleton>
-                        <span v-else>{{ data.planta }}</span>
-                    </template>
-                    <template #filter="{ filterModel }">
-                        <InputText
-                            v-model="filterModel.value"
-                            type="text"
-                            placeholder="Buscar por Planta"
-                        />
-                    </template>
-                </Column>
-                <Column
-                    field="employee_id"
-                    header="Numero de Nómina"
-                    :filter="true"
-                    columnKey="id"
-                    :frozen="frozenColumns.num_empleado"
-                    :style="{
-                        width: '5rem',
-                        display: showColumns.num_empleado ? '' : 'none',
-                    }"
-                    :exportable="exportColumns.num_empleado"
-                >
-                    <template #body="{ data }">
-                        <Skeleton v-if="loading"></Skeleton>
-                        <span v-else>{{ data.numero_nomina }}</span>
-                    </template>
-                    <template #filter="{ filterModel }">
-                        <InputText
-                            v-model="filterModel.value"
-                            type="text"
-                            placeholder="Buscar por Numero de Nomina"
-                        />
-                    </template>
-                </Column>
-                <Column
-                    field="employee"
-                    header="Empleado"
-                    :filter="true"
-                    columnKey="id"
-                    :frozen="frozenColumns.empleado"
-                    :style="{
-                        width: '10rem',
-                        display: showColumns.empleado ? '' : 'none',
-                    }"
-                    :exportable="exportColumns.empleado"
-                >
-                    <template #body="{ data }">
-                        <Skeleton v-if="loading"></Skeleton>
-                        <span v-else>{{ data.nombre_empleado }}</span>
-                    </template>
-                    <template #filter="{ filterModel }">
-                        <InputText
-                            v-model="filterModel.value"
-                            type="text"
-                            placeholder="Buscar por Empleado"
-                        />
-                    </template>
-                </Column>
+
                 <Column
                     field="week"
                     header="Semana"
@@ -938,45 +843,6 @@ initFilters();
                             v-model="filterModel.value"
                             type="text"
                             placeholder="Buscar por Tipo de Recibo"
-                        />
-                    </template>
-                </Column>
-                <Column
-                    field="status"
-                    header="Estatus Correo"
-                    :filter="true"
-                    columnKey="id"
-                    :frozen="frozenColumns.estatus_correo"
-                    :style="{
-                        width: '5rem',
-                        display: showColumns.estatus_correo ? '' : 'none',
-                    }"
-                    :exportable="exportColumns.estatus_correo"
-                >
-                    <template #body="{ data }">
-                        <Skeleton v-if="loading"></Skeleton>
-                        <span v-else>
-                            <Tag
-                                :severity="
-                                    getSeverity(
-                                        data.estatus_correo,
-                                        data.send_correo,
-                                    )
-                                "
-                                :value="
-                                    getLabel(
-                                        data.estatus_correo,
-                                        data.send_correo,
-                                    )
-                                "
-                            />
-                        </span>
-                    </template>
-                    <template #filter="{ filterModel }">
-                        <InputText
-                            v-model="filterModel.value"
-                            type="text"
-                            placeholder="Buscar por Estatus Correo"
                         />
                     </template>
                 </Column>
