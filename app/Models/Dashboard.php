@@ -27,6 +27,7 @@ class Dashboard extends Model
                 employees.name,
                 employees.surname,
                 employees.mother_surname,
+                employees.terms_condition,
                 departments.name AS departamento,
                 JSON_UNQUOTE(JSON_EXTRACT(employees.additional_info, '$.profession')) AS level_study
             FROM employees

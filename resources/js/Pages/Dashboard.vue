@@ -9,8 +9,11 @@ import Skeleton from "primevue/skeleton";
 import Calendar from "primevue/calendar";
 import Tooltip from 'primevue/tooltip';
 import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
+import { router } from '@inertiajs/vue3';
+import { useToast } from "primevue/usetoast";
 
 // app.directive('tooltip', Tooltip);
+const toast = useToast();
 const page = usePage();
 const props = defineProps({});
 
@@ -32,6 +35,9 @@ const incidencesHistory = ref([]);
 
 const modalDetails = ref(false);
 const details = ref(null);
+
+const showTermsModal = ref(false);
+const loadingTerms = ref(false);
 
 const openDetailsModal = (rawDate) => {
     const date = normalizeDate(rawDate);
@@ -162,6 +168,9 @@ function obtenerEmpleado() {
         .then(response => {
             console.log('Datos del empleado:', response.data);
             employeeData.value = response.data.employee;
+            if (!employeeData.value.terms_condition) {
+                showTermsModal.value = true;
+            }
             employeeVacations.value = response.data.vacaciones;
             employeeIncidences.value = response.data.incidencias_empleado;
             antiguedad.value = response.data.antiguedad;
@@ -391,6 +400,56 @@ const weeklyTotals = computed(() => {
 
     return totals;
 });
+
+const acceptTerms = () => {
+    const employeeId = employeeData.value?.id || employee.value?.id;
+
+    if (!employeeId) {
+        console.error("No se encontró el ID del empleado");
+        return;
+    }
+
+    router.put(route('term-conditions.update', { term_condition: employeeId }), {}, {
+        onBefore: () => {
+            loadingTerms.value = true;
+        },
+        onSuccess: () => {
+            showTermsModal.value = false;
+
+            toast.add({
+                severity: 'success',
+                summary: '¡Éxito!',
+                detail: 'Has aceptado los términos. Ya puedes navegar.',
+                life: 4000
+            });
+        },
+        onError: (errors) => {
+            console.error(errors);
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'No se pudieron aceptar los términos.',
+                life: 4000
+            });
+        },
+        onFinish: () => {
+            loadingTerms.value = false;
+        },
+        preserveScroll: true
+    });
+
+};
+
+const logout = () => {
+    router.post(route('logout'), {}, {
+        onBefore: () => {
+            loadingTerms.value = true;
+        },
+        onSuccess: () => {
+            console.log("Sesión cerrada.");
+        }
+    });
+};
 
 onMounted(() => {
     obtenerEmpleado();
@@ -1470,6 +1529,90 @@ onMounted(() => {
                 />
             </template>
         </Dialog>
+        <Dialog
+            v-model:visible="showTermsModal"
+            header="Términos y Condiciones de Uso"
+            :modal="true"
+            :closable="false"
+            :closeOnEscape="false"
+            :draggable="false"
+            class="mx-4 w-full md:w-[650px]"
+        >
+            <div class="flex flex-col gap-4">
+                <div class="p-4 rounded-2xl flex items-start gap-3">
+                    <InlineMessage severity="info">Para continuar utilizando el <strong>Mi Portal RH</strong>, es necesario que leas y aceptes los términos de confidencialidad y uso de datos.</InlineMessage>
+                </div>
+
+                <!-- <div class="flex-grow w-full bg-gray-200 dark:bg-gray-900">
+                    <iframe
+                        src="/path-to-your-pdf.pdf#toolbar=0"
+                        class="w-full h-full border-none"
+                        type="application/pdf"
+                    >
+                        <div class="p-10 text-center">
+                            <p>Tu navegador no puede mostrar el PDF directamente.</p>
+                            <a href="/path-to-your-pdf.pdf" target="_blank" class="text-blue-500 underline">Haz clic aquí para descargar el documento.</a>
+                        </div>
+                    </iframe>
+                </div> -->
+
+                <div class="p-6 rounded-xl border border-gray-100 dark:border-gray-700 max-h-[350px] overflow-y-auto text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+                    <h3 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                        <i class="pi pi-shield text-emerald-500"></i>
+                        Aviso de Privacidad y Confidencialidad
+                    </h3>
+
+                    <ul class="flex flex-col gap-4 list-none p-0">
+                        <li class="flex gap-3">
+                            <i class="pi pi-user-focus mt-1 text-blue-500"></i>
+                            <span><strong>Propiedad de la Información:</strong> Reconoces que los datos personales y laborales mostrados en este portal te pertenecen. La plataforma actúa únicamente como un medio informativo para facilitar tu acceso a ellos.</span>
+                        </li>
+
+                        <li class="flex gap-3">
+                            <i class="pi pi-eye-slash mt-1 text-orange-500"></i>
+                            <span><strong>Finalidad No Lucrativa:</strong> Este portal tiene fines estrictamente informativos y administrativos. Se prohíbe el uso de la información aquí contenida para cualquier fin comercial o de lucro ajeno a la relación laboral.</span>
+                        </li>
+
+                        <li class="flex gap-3">
+                            <i class="pi pi-comments mt-1 text-purple-500"></i>
+                            <span><strong>Canales de Quejas:</strong> Contamos con un sistema de quejas y sugerencias. Te garantizamos que el proceso de reporte es <strong>completamente anónimo</strong>, diseñado para proteger tu integridad y fomentar un ambiente laboral seguro.</span>
+                        </li>
+
+                        <li class="flex gap-3">
+                            <i class="pi pi-lock mt-1 text-emerald-500"></i>
+                            <span><strong>Protección de Datos:</strong> Nos comprometemos a no compartir, vender ni utilizar tu información personal para fines distintos a los informativos internos de la organización.</span>
+                        </li>
+                    </ul>
+
+                    <div class="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs border border-blue-100 dark:border-blue-800 italic">
+                        Al hacer clic en "Aceptar y continuar", confirmas que has leído y estás de acuerdo con el manejo de tus datos bajo los lineamientos anteriormente descritos.
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center justify-end gap-3 mt-2">
+                    <Button
+                        label="No acepto"
+                        icon="pi pi-sign-out"
+                        :icon="loadingTerms ? 'pi pi-spin pi-spinner' : 'pi pi-sign-out'"
+                        :loading="loadingTerms"
+                        severity="danger"
+                        text
+                        @click="logout"
+                        class="w-full sm:w-auto"
+                    />
+                    <Button
+                        label="Aceptar y continuar"
+                        icon="pi pi-check"
+                        :icon="loadingTerms ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+                        :loading="loadingTerms"
+                        severity="success"
+                        @click="acceptTerms"
+                        class="w-full sm:w-auto shadow-lg shadow-emerald-500/20"
+                        raised
+                    />
+                </div>
+            </div>
+        </Dialog>
     </AppLayout>
 </template>
 <style>
@@ -1661,79 +1804,5 @@ onMounted(() => {
 .dark .custom-calendar .extra-columns-container {
     border-top-color: rgba(255, 255, 255, 0.1) !important;
 }
-
-
-
-
-
-
-
-/* .weekly-totals-column {
-    display: flex;
-    flex-direction: column;
-    width: 180px;
-    background-color: white;
-}
-
-.totals-header {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    height: 45px;
-    border-bottom: 2px solid #6d6d6d;
-    align-items: center;
-    text-align: center;
-    font-weight: bold;
-    font-size: 0.75rem;
-}
-
-.totals-body {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-}
-
-.week-total-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    height: 115px;
-    border-bottom: 1px solid #eee;
-    align-items: center;
-    text-align: center;
-}
-
-.total-cell {
-    font-size: 1.2rem;
-}
-
-.no-border-calendar.p-datepicker {
-    border: none !important;
-}
-
-.custom-calendar :deep(.p-datepicker-calendar td) {
-    height: 115px;
-    padding: 0 !important;
-}
-
-.attendance-day-cell {
-    height: 100%;
-    padding: 5px;
-    display: flex;
-    flex-direction: column;
-}
-
-.week-total-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    height: 115px;
-    border-bottom: 1px solid #e2e8f0;
-    align-items: center;
-    background-color: #f8fafc;
-}
-
-.total-cell {
-    font-weight: bold;
-    color: #1e293b;
-    font-size: 0.9rem;
-} */
 
 </style>
