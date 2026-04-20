@@ -34,24 +34,22 @@ const modalDetails = ref(false);
 const details = ref(null);
 
 const openDetailsModal = (rawDate) => {
-    // 1. Normalizar fecha y buscar la semana
     const date = normalizeDate(rawDate);
     const weekData = getWeekDataByDate(date);
 
     if (!weekData) return;
 
-    // 2. Obtener la llave del día (lunes, martes...)
     const dayKey = getDayKey(date);
 
-    // Mapa para convertir español a la llave de los datos JSON (english)
     const englishDayMap = {
         'domingo': 'sunday', 'lunes': 'monday', 'martes': 'tuesday',
         'miercoles': 'wednesday', 'jueves': 'thursday', 'viernes': 'friday', 'sabado': 'saturday'
     };
+
     const englishKey = englishDayMap[dayKey];
 
-    // 3. Extraer el string JSON del día (ej: weekData['monday_data'])
     const rawDayData = weekData[`${englishKey}_data`];
+
     let parsedInfo = { Turno: 'N/A', Horario: 'N/A', Entrada: null, Salida: null, Checadas: [] };
 
     if (rawDayData) {
@@ -62,7 +60,8 @@ const openDetailsModal = (rawDate) => {
         }
     }
 
-    // 4. Llenar el objeto details que usa el Dialog
+    const attendanceExtras = getDayAttendanceData(date);
+
     details.value = {
         employee_id: employeeData.value?.id || employee.value?.id,
         employee_name: employeeData.value?.name || 'Empleado',
@@ -72,17 +71,20 @@ const openDetailsModal = (rawDate) => {
         incidencia: weekData[`nombre_${dayKey}`] || 'SIN REGISTRO',
         color: weekData[`color_${dayKey}`] || '#64748b',
         descripcion_incidencia: `Registro correspondiente al día ${dayKey} de la semana ${weekData.week_number}.`,
-        // Pasamos los datos parseados al objeto horario
+
         horario: {
             Turno: parsedInfo.Turno,
             Horario: parsedInfo.Horario,
             Entrada: parsedInfo.Entrada,
             Salida: parsedInfo.Salida,
-            Checadas: parsedInfo.Checadas || [] // Esto llenará tu historial de checadas
-        }
+            Checadas: parsedInfo.Checadas || []
+        },
+
+        horas_dobles: attendanceExtras?.horas_dobles || 0,
+        horas_triples: attendanceExtras?.horas_triples || 0,
+        sunday_premium: attendanceExtras?.sunday_premium || 0,
     };
 
-    // 5. Abrir el modal
     modalDetails.value = true;
 };
 
@@ -106,6 +108,11 @@ const openVacationsModal = async (id) => {
         loadingData.value = false;
     }
 };
+
+const filteredVacationsHistory = computed(() => {
+    if (!vacationsHistory.value) return [];
+    return vacationsHistory.value.filter(item => item.amount !== 0);
+});
 
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString();
@@ -280,8 +287,8 @@ function getDayAttendanceData(rawDate) {
     }
 
     return {
-        name: weekData[`nombre_${dayKey}`] || weekData[dayKey] || 'N/A',
-        color: weekData[`color_${dayKey}`] || '#64748b',
+        name: weekData[`nombre_${dayKey}`],
+        color: weekData[`color_${dayKey}`],
         code: weekData[dayKey],
         ...extraDetails
     };
@@ -353,6 +360,37 @@ const getStatus = (data) => {
     }
     return { color: "info", text: "Desconocido" };
 };
+
+const weeklyTotals = computed(() => {
+    const year = attendanceDate.value.getFullYear();
+    const month = attendanceDate.value.getMonth();
+
+    const firstDayOfMonth = new Date(year, month, 1);
+    const startOffset = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
+    const startDate = new Date(firstDayOfMonth);
+    startDate.setDate(firstDayOfMonth.getDate() - startOffset);
+
+    const totals = [];
+    let currentDay = new Date(startDate);
+
+    for (let week = 0; week < 6; week++) {
+        let weekSum = { dob: 0, tri: 0, pvac: 0 };
+
+        for (let day = 0; day < 7; day++) {
+            const dayData = getDayAttendanceData(new Date(currentDay));
+
+            if (dayData) {
+                weekSum.dob += dayData.horas_dobles || 0;
+                weekSum.tri += dayData.horas_triples || 0;
+                weekSum.pvac += dayData.sunday_premium || 0;
+            }
+            currentDay.setDate(currentDay.getDate() + 1);
+        }
+        totals.push(weekSum);
+    }
+
+    return totals;
+});
 
 onMounted(() => {
     obtenerEmpleado();
@@ -568,13 +606,14 @@ onMounted(() => {
                                     <template v-if="getDayAttendanceData(date)">
                                         <div
                                             class="attendance-tag"
-                                            :style="{ backgroundColor: getDayAttendanceData(date)?.color || '#64748b' }"
+                                            :style="{ backgroundColor: getDayAttendanceData(date)?.color}"
+                                            v-tooltip.top="getDayAttendanceData(date)?.name"
                                         >
-                                            <span class="text-full">{{ getDayAttendanceData(date)?.name }}</span>
+                                            <span class="text-full">{{ getDayAttendanceData(date)?.code }}</span>
                                             <span class="text-short">{{ getDayAttendanceData(date)?.code || getDayAttendanceData(date)?.name?.substring(0, 2) }}</span>
                                         </div>
 
-                                        <div class="extra-columns-container">
+                                        <!-- <div class="extra-columns-container">
                                             <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_dobles || 0) > 0 }">
                                                 <span class="label">Dob:</span> {{ getDayAttendanceData(date)?.horas_dobles || 0 }}
                                             </div>
@@ -586,69 +625,12 @@ onMounted(() => {
                                             <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.sunday_premium || 0) > 0 }">
                                                 <span class="label">PVac:</span> {{ getDayAttendanceData(date)?.sunday_premium || 0 }}
                                             </div>
-                                        </div>
+                                        </div> -->
                                     </template>
                                 </div>
                             </template>
                         </Calendar>
                     </div>
-
-                    <!-- <div class="flex border border-gray-300 w-full overflow-hidden">
-                        <div class="flex-grow">
-                            <Calendar
-                                v-model="attendanceDate"
-                                inline
-                                @date-select="openDetailsModal"
-                                class="w-full custom-calendar"
-                            >
-                                <template #date="{ date }">
-                                    <div class="attendance-day-cell">
-                                        <span class="day-number">{{ date.day }}</span>
-
-                                        <template v-if="getDayAttendanceData(date)">
-                                            <div
-                                                class="attendance-tag"
-                                                :style="{ backgroundColor: getDayAttendanceData(date)?.color || '#64748b' }"
-                                            >
-                                                <span class="text-full">{{ getDayAttendanceData(date)?.name }}</span>
-                                                <span class="text-short">{{ getDayAttendanceData(date)?.code || getDayAttendanceData(date)?.name?.substring(0, 2) }}</span>
-                                            </div>
-
-                                            <div class="extra-columns-container">
-                                                <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_dobles || 0) > 0 }">
-                                                    <span class="label">Dob:</span> {{ getDayAttendanceData(date)?.horas_dobles || 0 }}
-                                                </div>
-
-                                                <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_triples || 0) > 0 }">
-                                                    <span class="label">Tri:</span> {{ getDayAttendanceData(date)?.horas_triples || 0 }}
-                                                </div>
-
-                                                <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.sunday_premium || 0) > 0 }">
-                                                    <span class="label">PVac:</span> {{ getDayAttendanceData(date)?.sunday_premium || 0 }}
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </template>
-                            </Calendar>
-                        </div>
-
-                        <div class="weekly-totals-column">
-                            <div class="totals-header">
-                                <div>DOB</div>
-                                <div>TRIP</div>
-                                <div>PRIMVAC</div>
-                            </div>
-
-                            <div class="totals-body">
-                                <div v-for="(total, index) in weeklyTotals" :key="index" class="week-total-row">
-                                    <div class="total-cell">{{ total.dob }}</div>
-                                    <div class="total-cell">{{ total.tri }}</div>
-                                    <div class="total-cell">{{ total.pvac }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> -->
                 </div>
             </div>
         </div>
@@ -671,7 +653,7 @@ onMounted(() => {
             </div>
             <div v-else>
                 <DataTable
-                    :value="vacationsHistory"
+                    :value="filteredVacationsHistory"
                     dataKey="id"
                     paginator
                     :rows="5"
@@ -731,7 +713,7 @@ onMounted(() => {
                             />
                         </template>
                     </Column>
-                    <Column
+                    <!-- <Column
                         field="seniority"
                         header="Antigüedad"
                         :filter="true"
@@ -751,7 +733,7 @@ onMounted(() => {
                                 placeholder="Buscar por Antigüedad"
                             />
                         </template>
-                    </Column>
+                    </Column> -->
                     <Column
                         field="date_formatted"
                         header="Fecha"
@@ -1393,19 +1375,24 @@ onMounted(() => {
                             </div>
                         </div>
                         <div class="rounded-xl shadow-sm border p-4">
-                            <div
-                                class="flex items-center justify-between mb-2"
-                            >
-                                <h4
-                                    class="font-semibold text-gray-700 text-sm"
-                                >
+                            <div class="mb-2">
+                                <h4 class="font-semibold text-gray-700 text-sm mb-2">
                                     Incidencia
                                 </h4>
+
                                 <Badge
                                     :value="details?.incidencia"
+                                    class="text-[10px] sm:text-xs md:text-sm px-2 py-2"
                                     :style="{
                                         backgroundColor: details?.color,
                                         color: '#fff',
+                                        whiteSpace: 'normal',
+                                        wordBreak: 'break-word',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        height: 'auto',
+                                        minHeight: '1.5rem',
+                                        lineHeight: '1.2'
                                     }"
                                 />
                             </div>
@@ -1414,68 +1401,62 @@ onMounted(() => {
                             </p>
                         </div>
                     </div>
-                    <div class="rounded-xl shadow-sm border p-4">
-                        <div
-                            class="rounded-t-lg px-4 py-2 border-b text-gray-600 font-semibold"
-                        >
-                            Historial de checadas
-                        </div>
+                    <div class="flex flex-col gap-4">
 
-                        <div class="p-4 rounded-lg shadow-sm">
-                            <div class="space-y-3">
-                                <div v-for="(item, index) in details?.horario?.Checadas || []" :key="index" class="flex items-start gap-3 relative">
+                        <div class="rounded-xl shadow-sm border p-4 flex flex-col h-full">
+
+                            <div class="rounded-t-lg px-4 py-2 border-b text-gray-600 font-semibold">
+                                Historial de checadas
+                            </div>
+
+                            <div class="p-4 flex-1 overflow-y-auto max-h-[400px]">
+                                <div class="space-y-3">
                                     <div
-                                        class="absolute left-4 top-6 bottom-0 w-px"
-                                        v-if="
-                                            index <
-                                            details.horario.length - 1
-                                        "
-                                    ></div>
-                                    <div
-                                        class="w-8 h-8 flex items-center justify-center rounded-full border-purple-200 z-10"
-                                    >
-                                        <i
-                                            class="pi pi-clock text-purple-500 text-xs"
-                                        ></i>
-                                    </div>
-                                    <div
-                                        class="flex-1 rounded-md p-3 border border-gray-200"
+                                        v-for="(item, index) in details?.horario?.Checadas || []"
+                                        :key="index"
+                                        class="flex items-start gap-3 relative"
                                     >
                                         <div
-                                            class="flex justify-between items-center mb-1"
-                                        >
-                                            <!-- <p
-                                                class="text-sm font-semibold text-gray-700"
-                                            >
-                                                {{ item?.device_name }}
-                                            </p> -->
-                                            <span
-                                                class="text-xs text-gray-400"
-                                            >
-                                                Checada {{ index + 1 }}
-                                            </span>
+                                            class="absolute left-4 top-6 bottom-0 w-px bg-gray-200"
+                                            v-if="index < (details?.horario?.Checadas?.length - 1)"
+                                        ></div>
+
+                                        <div class="w-8 h-8 flex items-center justify-center rounded-full border-purple-200 z-10">
+                                            <i class="pi pi-clock text-purple-500 text-xs"></i>
                                         </div>
 
-                                        <div
-                                            class="flex gap-4 text-sm text-gray-600"
-                                        >
-                                            <div>
-                                                📅
-                                                <b>{{
-                                                    item?.access_date
-                                                }}</b>
+                                        <div class="flex-1 rounded-md p-3 border border-gray-200">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <span class="text-xs text-gray-400">
+                                                    Checada {{ index + 1 }}
+                                                </span>
                                             </div>
-                                            <div>
-                                                ⏰
-                                                <b>{{
-                                                    item?.access_time
-                                                }}</b>
+
+                                            <div class="flex gap-4 text-sm text-gray-600">
+                                                <div>📅 <b>{{ item?.access_date }}</b></div>
+                                                <div>⏰ <b>{{ item?.access_time }}</b></div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="border-t pt-3  flex gap-2 flex-wrap">
+                                <InlineMessage severity="info">
+                                    Dobles: <b>{{ details?.horas_dobles || 0 }}</b>
+                                </InlineMessage>
+
+                                <InlineMessage severity="warn">
+                                    Triples: <b>{{ details?.horas_triples || 0 }}</b>
+                                </InlineMessage>
+
+                                <InlineMessage severity="success">
+                                    Prima Vacacional: <b>{{ details?.sunday_premium || 0 }}</b>
+                                </InlineMessage>
+                            </div>
+
                         </div>
+
                     </div>
                 </div>
             </template>
@@ -1552,25 +1533,13 @@ onMounted(() => {
     margin-bottom: 4px;
 }
 
-.attendance-tag {
-    font-size: 0.7rem;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    width: 100%;
-    white-space: normal !important;
-    word-wrap: break-word;
-    line-height: 1.1;
-    text-align: center;
-}
-
 /* Estilos Base del Tag */
 .attendance-tag {
     font-size: 0.75rem;
     color: white;
     padding: 2px 4px;
-    border-radius: 4px;
-    width: 100%;
+    border-radius: 5px;
+    width: 20%;
     text-align: center;
     font-weight: 500;
     min-height: 1.2rem;
@@ -1582,6 +1551,14 @@ onMounted(() => {
 /* Control de visibilidad */
 .text-short { display: none; }
 .text-full { display: inline; }
+
+.text-full {
+    display: inline-block;
+    font-weight: bold;
+    font-size: 0.8rem;
+    width: 24px;
+    text-align: center;
+}
 
 @media (max-width: 768px) {
     .text-full {
@@ -1695,7 +1672,6 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     width: 180px;
-    border-left: 2px solid #333;
     background-color: white;
 }
 
@@ -1703,7 +1679,7 @@ onMounted(() => {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     height: 45px;
-    border-bottom: 2px solid #333;
+    border-bottom: 2px solid #6d6d6d;
     align-items: center;
     text-align: center;
     font-weight: bold;
@@ -1731,6 +1707,33 @@ onMounted(() => {
 
 .no-border-calendar.p-datepicker {
     border: none !important;
+}
+
+.custom-calendar :deep(.p-datepicker-calendar td) {
+    height: 115px;
+    padding: 0 !important;
+}
+
+.attendance-day-cell {
+    height: 100%;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+}
+
+.week-total-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    height: 115px;
+    border-bottom: 1px solid #e2e8f0;
+    align-items: center;
+    background-color: #f8fafc;
+}
+
+.total-cell {
+    font-weight: bold;
+    color: #1e293b;
+    font-size: 0.9rem;
 } */
 
 </style>
