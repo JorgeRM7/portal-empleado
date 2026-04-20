@@ -210,7 +210,7 @@ class ComplaintsModuleController
     7. Máximo 300 caracteres en la salida
     8. No agregues información que no esté en el texto original
     9. Habla en primera persona, como si tu estuvieras reportando el problema
-    10. No uses emojis y no uses mas de 300 caracteres
+    10. No uses emojis y no uses mas de 300 caracteres en total.
 
     FORMATO DE RESPUESTA:
     Genera EXACTAMENTE 3 versiones reescritas diferentes.
