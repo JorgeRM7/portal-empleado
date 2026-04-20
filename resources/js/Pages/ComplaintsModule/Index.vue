@@ -46,16 +46,6 @@ const crearQueja = () => {
     router.get("/complaints/create");
 };
 
-const formatFileItems = (archivos) => {
-    return archivos.map((file) => ({
-        label: file.name,
-        icon: "pi pi-external-link",
-        command: () => {
-            window.open(file.url, "_blank");
-        },
-    }));
-};
-
 const viewFirstFile = (url) => {
     window.open(url, "_blank");
 };
@@ -511,13 +501,46 @@ const submitRating = async () => {
     }
 };
 
+const formatFileItems = (archivos) => {
+    if (!archivos || archivos.length === 0) return [];
+
+    return archivos.map((file) => {
+        // Ícono según tipo de archivo
+        const iconMap = {
+            pdf: "pi pi-file-pdf",
+            image: "pi pi-image",
+            word: "pi pi-file-word",
+            excel: "pi pi-file-excel",
+            zip: "pi pi-file",
+            file: "pi pi-file",
+        };
+
+        return {
+            label: file.name,
+            icon: iconMap[file.type] || "pi pi-file",
+            // 🔹 Acción principal: descargar
+            command: () => {
+                // Abrir en nueva pestaña o forzar descarga
+                window.open(file.url, "_blank");
+            },
+        };
+    });
+};
+
+// 🔹 Función para vista previa (opcional)
+const previewFile = (url, filename) => {
+    // Implementar modal con iframe para PDF o img para imágenes
+    // Ejemplo simple:
+    window.open(url, "_blank");
+};
+
 onMounted(async () => {
     aplicarFiltros();
 });
 </script>
 
 <template>
-    <AppLayout :title="'Prueba'">
+    <AppLayout :title="'Tickets'">
         <Toast position="top-center" group="headless" @close="visible = false">
             <template #container="{ message, closeCallback }">
                 <section
@@ -1040,25 +1063,25 @@ onMounted(async () => {
                     field="archivos"
                     header="Evidencia"
                     :frozen="frozenColumns.evidencia"
-                    :style="{
-                        width: '20rem',
-                        display: showColumns.evidencia ? '' : 'none',
-                    }"
                 >
                     <template #body="{ data }">
-                        <Skeleton v-if="loading"></Skeleton>
+                        <Skeleton v-if="loading" />
 
                         <div
-                            v-else-if="
-                                data.archivos && data.archivos.length > 0
-                            "
+                            v-else-if="data.archivos?.length > 0"
+                            class="flex items-center gap-2"
                         >
+                            <!-- SplitButton con lista de archivos -->
                             <SplitButton
                                 icon="pi pi-paperclip"
                                 severity="info"
-                                text
+                                outlined
                                 size="small"
                                 :model="formatFileItems(data.archivos)"
+                                :pt="{
+                                    root: { class: 'max-w-[18rem]' },
+                                    label: { class: 'truncate' },
+                                }"
                             />
                         </div>
 

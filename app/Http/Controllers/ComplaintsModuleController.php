@@ -30,7 +30,7 @@ class ComplaintsModuleController
             return redirect()->route('login');
         }
 
-        // 1. Traemos el historial
+        // 1. Traer historial de quejas
         $history = EmployeeComplains::where('employee_id', $userId)
             ->orderBy('date', 'desc')
             ->orderBy('hour', 'desc')
@@ -39,15 +39,21 @@ class ComplaintsModuleController
         $history->transform(function ($queja) {
             $files = [];
 
-            if ($queja->path_complain && Storage::disk('public')->exists($queja->path_complain)) {
-                $allFiles = Storage::disk('public')->files($queja->path_complain);
-                $files = array_map(function ($file) {
+            if ($queja->path_complain && Storage::disk('remote_sftp')->exists($queja->path_complain)) {
+                
+                $allFiles = Storage::disk('remote_sftp')->files($queja->path_complain);
+                
+                $files = array_map(function ($file) use ($queja) {
                     return [
                         'name' => basename($file),
-                        'url'  => asset('storage/' . $file)
+                        'path' => $file,
+                        'download_url' => 'complaints/'.$queja->id.'/files/'.basename($file),
+                        'type' => $this->getFileType(basename($file)),
+                        'size' => @Storage::disk('remote_sftp')->size($file)
                     ];
                 }, $allFiles);
             }
+            
             $queja->archivos = $files;
             return $queja;
         });
@@ -55,6 +61,22 @@ class ComplaintsModuleController
         return Inertia::render('ComplaintsModule/Index', [
             'history' => $history
         ]);
+    }
+
+    private function getFileType($filename)
+    {
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        $types = [
+            'pdf' => 'pdf',
+            'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image', 'gif' => 'image',
+            'doc' => 'word', 'docx' => 'word',
+            'xls' => 'excel', 'xlsx' => 'excel',
+            'txt' => 'text',
+            'zip' => 'zip', 'rar' => 'zip',
+        ];
+        
+        return $types[$extension] ?? 'file';
     }
 
     public function filter_data(Request $request)
@@ -83,15 +105,14 @@ class ComplaintsModuleController
                 $files = [];
 
                 if (
-                    $queja->path_complain &&
-                    Storage::disk('public')->exists($queja->path_complain)
+                    $queja->path_complain && Storage::disk('remote_sftp')->exists($queja->path_complain)
                 ) {
-                    $allFiles = Storage::disk('public')->files($queja->path_complain);
+                    $allFiles = Storage::disk('remote_sftp')->files($queja->path_complain);
 
-                    $files = array_map(function ($file) {
+                    $files = array_map(function ($file) use ($queja) {
                         return [
                             'name' => basename($file),
-                            'url'  => asset('storage/' . $file)
+                            'url'  => 'complaints/'.$queja->id.'/files/'.basename($file)
                         ];
                     }, $allFiles);
                 }
@@ -1067,5 +1088,25 @@ class ComplaintsModuleController
         ]);
     }
 
+    public function downloadFile($complaintId, $filename)
+    {
+        $complaint = EmployeeComplains::findOrFail($complaintId);
+
+        if (!$complaint->path_complain) {
+            abort(404, 'No existe ruta de archivos');
+        }
+
+        $filePath = $complaint->path_complain . '/' . $filename;
+
+        if (!Storage::disk('remote_sftp')->exists($filePath)) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        return Storage::disk('remote_sftp')->response($filePath);
+    }
+
 
 }
+
+
+

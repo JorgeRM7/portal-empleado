@@ -113,6 +113,9 @@ Route::middleware([
     Route::resource('complaints', ComplaintsModuleController::class)->names([
         'index' => '/complaints'
     ]);
+
+    Route::get('/complaints/{complaint_id}/files/{filename}', [ComplaintsModuleController::class, 'downloadFile'])
+    ->name('complaints.files.download');
 });
 
 
