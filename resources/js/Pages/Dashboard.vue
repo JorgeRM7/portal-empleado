@@ -290,6 +290,8 @@ function getDayAttendanceData(rawDate) {
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 
+    status: { value: null, matchMode: FilterMatchMode.EQUALS },
+
     incidence_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
     before_date: { value: null, matchMode: FilterMatchMode.CONTAINS },
     rest_date: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -590,6 +592,63 @@ onMounted(() => {
                             </template>
                         </Calendar>
                     </div>
+
+                    <!-- <div class="flex border border-gray-300 w-full overflow-hidden">
+                        <div class="flex-grow">
+                            <Calendar
+                                v-model="attendanceDate"
+                                inline
+                                @date-select="openDetailsModal"
+                                class="w-full custom-calendar"
+                            >
+                                <template #date="{ date }">
+                                    <div class="attendance-day-cell">
+                                        <span class="day-number">{{ date.day }}</span>
+
+                                        <template v-if="getDayAttendanceData(date)">
+                                            <div
+                                                class="attendance-tag"
+                                                :style="{ backgroundColor: getDayAttendanceData(date)?.color || '#64748b' }"
+                                            >
+                                                <span class="text-full">{{ getDayAttendanceData(date)?.name }}</span>
+                                                <span class="text-short">{{ getDayAttendanceData(date)?.code || getDayAttendanceData(date)?.name?.substring(0, 2) }}</span>
+                                            </div>
+
+                                            <div class="extra-columns-container">
+                                                <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_dobles || 0) > 0 }">
+                                                    <span class="label">Dob:</span> {{ getDayAttendanceData(date)?.horas_dobles || 0 }}
+                                                </div>
+
+                                                <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_triples || 0) > 0 }">
+                                                    <span class="label">Tri:</span> {{ getDayAttendanceData(date)?.horas_triples || 0 }}
+                                                </div>
+
+                                                <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.sunday_premium || 0) > 0 }">
+                                                    <span class="label">PVac:</span> {{ getDayAttendanceData(date)?.sunday_premium || 0 }}
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </Calendar>
+                        </div>
+
+                        <div class="weekly-totals-column">
+                            <div class="totals-header">
+                                <div>DOB</div>
+                                <div>TRIP</div>
+                                <div>PRIMVAC</div>
+                            </div>
+
+                            <div class="totals-body">
+                                <div v-for="(total, index) in weeklyTotals" :key="index" class="week-total-row">
+                                    <div class="total-cell">{{ total.dob }}</div>
+                                    <div class="total-cell">{{ total.tri }}</div>
+                                    <div class="total-cell">{{ total.pvac }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -753,6 +812,7 @@ onMounted(() => {
                     v-model:filters="filters"
                     filterDisplay="menu"
                     :globalFilterFields="[
+                        'status',
                         'incidence_name',
                         'before_date',
                         'rest_date',
@@ -1624,5 +1684,53 @@ onMounted(() => {
 .dark .custom-calendar .extra-columns-container {
     border-top-color: rgba(255, 255, 255, 0.1) !important;
 }
+
+
+
+
+
+
+
+/* .weekly-totals-column {
+    display: flex;
+    flex-direction: column;
+    width: 180px;
+    border-left: 2px solid #333;
+    background-color: white;
+}
+
+.totals-header {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    height: 45px;
+    border-bottom: 2px solid #333;
+    align-items: center;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.75rem;
+}
+
+.totals-body {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.week-total-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    height: 115px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+    text-align: center;
+}
+
+.total-cell {
+    font-size: 1.2rem;
+}
+
+.no-border-calendar.p-datepicker {
+    border: none !important;
+} */
 
 </style>
