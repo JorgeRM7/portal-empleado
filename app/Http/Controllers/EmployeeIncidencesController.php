@@ -320,6 +320,7 @@ class EmployeeIncidencesController
             'range'             => 'required',
             'days_to_register'  => 'required',
             'schedule'          => 'nullable',
+            'notes'             => 'nullable',
         ]);
 
         $week = $getWeekData($validated['range'][0]);
@@ -332,6 +333,7 @@ class EmployeeIncidencesController
             "days"             => $validated['days_to_register'],
             "schedule_id"      => $validated['schedule'],
             "branch_office_id" => $request->branch_office_id,
+            "comment"          => $validated['notes'],
         ], $week));
 
         Logs::create([
@@ -590,6 +592,7 @@ class EmployeeIncidencesController
             'range'             => 'required',
             'days_to_register'  => 'required',
             'schedule'          => 'nullable',
+            'notes'             => 'nullable',
         ]);
 
         $oldData = $incidences_employee->getOriginal();
@@ -604,6 +607,7 @@ class EmployeeIncidencesController
             "days"             => $validated['days_to_register'],
             "branch_office_id" => $request->branch_office_id,
             "schedule_id"      => $validated['schedule'],
+            "comment"          => $validated['notes'],
         ], $week));
 
         Logs::create([

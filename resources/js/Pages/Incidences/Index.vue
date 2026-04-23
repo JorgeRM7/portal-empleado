@@ -1001,12 +1001,12 @@ onMounted(() => {
                     </div>
                 </template>
 
-                <Column
+                <!-- <Column
                     selectionMode="multiple"
                     style="width: 1rem"
                     :exportable="false"
                     columnKey="selection"
-                ></Column>
+                ></Column> -->
                 <Column
                     :exportable="false"
                     columnKey="acciones"
