@@ -149,11 +149,7 @@ const op = ref(null);
 const opMostrarColumnas = ref(null);
 const opFijarColumnas = ref(null);
 const deleteMultipleDialog = ref(false);
-const employeesByBranchOffice = ref(
-    props.employees.filter(
-        (employee) => employee.branch_office_id === branch_office_id.value?.id,
-    ),
-);
+const employeesByBranchOffice = ref(null);
 
 function getISOWeek(date = new Date()) {
     const d = new Date(
