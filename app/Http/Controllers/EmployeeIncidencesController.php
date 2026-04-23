@@ -29,13 +29,9 @@ class EmployeeIncidencesController
     public function index()
     {
         $incidences = Incidence::select('id','name')->get();
-        $branchOffices = BranchOffice::select('id','code')->get();
-        $employees = Employee::select('id','full_name', 'branch_office_id')->get();
         
         return Inertia::render('Incidences/Index', [
-            'incidences' => $incidences,
-            'branchOffices' => $branchOffices,
-            'employees' => $employees
+            'incidences' => $incidences
         ]);
     }
 
