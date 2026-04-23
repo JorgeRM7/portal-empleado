@@ -200,7 +200,6 @@ const exportColumns = ref({
     fecha_aprobado: true,
     creado_por: true,
     fecha_creado: true,
-    eliminado_por: true,
     status: true,
     numero_documento: true,
     fecha_adelanto: true,
@@ -225,7 +224,6 @@ const showColumns = ref({
     aprobado_por: true,
     fecha_aprobado: true,
     fecha_creado: false,
-    eliminado_por: false,
     status: true,
     numero_documento: false,
     fecha_adelanto: false,
@@ -249,7 +247,6 @@ const frozenColumns = ref({
     aprobado_por: false,
     fecha_aprobado: false,
     fecha_creado: false,
-    eliminado_por: false,
     status: false,
     numero_documento: false,
     fecha_adelanto: false,
@@ -319,7 +316,7 @@ const applyFilters = () => {
         year,
         employeeFilter.value,
         includeEliminatedFilter.value,
-        selectedIncidence?.name,
+        selectedIncidence?.id,
     );
 
     console.log(otherFilters.value);
@@ -329,8 +326,6 @@ const applyFilters = () => {
             params: {
                 week: week,
                 year: year,
-                employee_id: employeeFilter.value,
-                eliminated: includeEliminatedFilter.value,
                 incidence_id: selectedIncidence?.id,
             },
         })

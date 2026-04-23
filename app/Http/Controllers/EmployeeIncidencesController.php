@@ -28,7 +28,7 @@ class EmployeeIncidencesController
      */
     public function index()
     {
-        $incidences = Incidence::select('id','name')->get();
+        $incidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
         
         return Inertia::render('Incidences/Index', [
             'incidences' => $incidences

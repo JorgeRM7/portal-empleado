@@ -40,11 +40,8 @@ class EmployeeIncidences extends Model
 
     public static function getIncidences($branchOfficeId, $weeknumber, $weekyear, $employeeId, $incidenceId, $eliminated){
         $whereBranchOffice = $branchOfficeId != null ? "AND ei.branch_office_id = $branchOfficeId":"";
-        $whereWeekNumber = $weeknumber != null ? "AND ei.week_number = $weeknumber":"";
-        $whereWeekYear = $weekyear != null ? "AND ei.week_year = $weekyear":"";
         $whereEmployeeId = $employeeId != null ? "AND ei.employee_id = $employeeId":"";
         $whereIncidenceId = $incidenceId != null ? "AND ei.incidence_id = $incidenceId":"";
-        $whereEliminated = $eliminated != null ? "" : "";
         $sql = "SELECT 
                     ei.approved_at,
                     ei.declined_at, 
@@ -80,12 +77,9 @@ class EmployeeIncidences extends Model
                 LEFT JOIN users udec ON ei.declined_by = udec.id
                 WHERE ei.deleted_by IS NULL AND ei.deleted_at IS NULL 
                 $whereBranchOffice 
-                $whereWeekNumber 
-                $whereWeekYear 
                 $whereEmployeeId 
                 $whereIncidenceId
                 ORDER BY ei.created_at DESC";
-        //dd($sql);
         return DB::select($sql);
     }
 
