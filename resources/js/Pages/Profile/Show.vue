@@ -72,8 +72,6 @@ const employeePhoto = computed(() => {
         : page.props.auth?.user?.profile_photo_url || "";
 });
 
-console.log(page.props.auth);
-
 // ── Cerrar sesión ────────────────────────────────────────────────────────────
 const logoutConfirm = ref(false);
 const logout = () => router.post(route("logout"));
@@ -104,9 +102,9 @@ const logout = () => router.post(route("logout"));
                         />
                     </div>
                     <div class="hero-text">
-                        <h1 class="user-name">
+                        <p class="user-name">
                             {{ user.employee?.full_name ?? "—" }}
-                        </h1>
+                        </p>
                         <p class="user-email">{{ user.email ?? "—" }}</p>
                         <!-- <Tag value="Activo" class="status-tag" /> -->
                     </div>
@@ -205,7 +203,7 @@ const logout = () => router.post(route("logout"));
                     inputClass="w-full"
                 />
                 <span class="text-red-500 text-sm">{{
-                    passwordForm.errors.updatePassword.current_password
+                    passwordForm.errors.updatePassword?.current_password
                 }}</span>
                 <label>Nueva contraseña</label>
                 <Password
@@ -216,7 +214,7 @@ const logout = () => router.post(route("logout"));
                     inputClass="w-full"
                 />
                 <span class="text-red-500 text-sm">{{
-                    passwordForm.errors.updatePassword.password
+                    passwordForm.errors.updatePassword?.password
                 }}</span>
                 <label>Confirmar contraseña</label>
                 <Password
