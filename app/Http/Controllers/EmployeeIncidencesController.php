@@ -382,7 +382,7 @@ class EmployeeIncidencesController
     {
         $employeeData = Employee::where('id', $incidences_employee->employee_id)->first();
         $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
-        $allincidences = Incidence::select('id','name')->get();
+        $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
         return Inertia::render('Incidences/Edit', [
             'incidence' => $incidences_employee,
             'employeeData' => $employeeData,

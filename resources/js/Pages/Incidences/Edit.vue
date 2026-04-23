@@ -564,7 +564,7 @@ watch(
                     </Card>
                 </div> -->
 
-                <Card v-if="employeeId && !loading">
+                <Card>
                     <template #title>Editar incidencia</template>
                     <template #content>
                         <div class="flex flex-col gap-4">
