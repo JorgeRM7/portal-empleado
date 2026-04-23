@@ -200,7 +200,6 @@
   <div class="header">
     <div class="header-left">
       <span class="brand">
-        <img class="logo" src="{{ public_path('images/logo.png') }}" alt="Logo">
         <span class="brand-text">
           <p class="doc-title">Solicitud de Vacaciones</p>
           <p class="doc-subtitle">Formato interno de autorización</p>
