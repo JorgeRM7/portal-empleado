@@ -373,6 +373,12 @@ const descargarTxt = (id) => {
 };
 
 const status = (data) => {
+    if (data.requires_auth == 0) {
+        return {
+            color: "success",
+            text: "Aprobado",
+        };
+    }
     if (
         data.approved_at == null &&
         data.declined_at == null &&
@@ -1011,9 +1017,9 @@ onMounted(() => {
                     :exportable="false"
                     columnKey="acciones"
                     :style="{
-                        width: '8rem',
+                        width: '15rem',
                         display: showColumns.acciones ? '' : 'none',
-                        minWidth: '8rem',
+                        minWidth: '15rem',
                     }"
                     header="Acciones"
                 >

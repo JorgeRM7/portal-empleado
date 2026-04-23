@@ -68,7 +68,8 @@ class EmployeeIncidences extends Model
                     i.name as incidence_name,
                     i.color,
                     e.full_name,
-                    u.name as approved_by
+                    u.name as approved_by,
+                    i.requires_auth
                 FROM employee_incidences ei
                 INNER JOIN incidences i ON ei.incidence_id = i.id
                 INNER JOIN employees e ON ei.employee_id = e.id
