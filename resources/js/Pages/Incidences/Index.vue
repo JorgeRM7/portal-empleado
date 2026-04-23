@@ -1042,7 +1042,8 @@ onMounted(() => {
                                 v-if="
                                     data.approved_at == null &&
                                     data.declined_at == null &&
-                                    data.deleted_by == null
+                                    data.deleted_by == null &&
+                                    data.requires_auth == 1
                                 "
                             />
                             <Button
@@ -1061,7 +1062,8 @@ onMounted(() => {
                                 v-if="
                                     data.deleted_by == null &&
                                     data.approved_at == null &&
-                                    data.declined_at == null
+                                    data.declined_at == null &&
+                                    data.requires_auth == 1
                                 "
                                 :disabled="
                                     parseInt(data.week_number) < lastWeekNumber
