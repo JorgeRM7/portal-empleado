@@ -39,7 +39,7 @@ const editNewFiles = ref([]);
 const editRemovedFiles = ref([]);
 
 const regresarIndex = () => {
-    router.get(route("complaints"));
+    router.get("/complaints");
 };
 
 const options = ref([

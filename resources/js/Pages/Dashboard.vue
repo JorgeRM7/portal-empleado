@@ -42,10 +42,11 @@ const loadingTerms = ref(false);
 const openDetailsModal = (rawDate) => {
     const date = normalizeDate(rawDate);
     const weekData = getWeekDataByDate(date);
-
     if (!weekData) return;
 
     const dayKey = getDayKey(date);
+
+    const formattedDate = date.toLocaleDateString('en-CA');
 
     const englishDayMap = {
         'domingo': 'sunday', 'lunes': 'monday', 'martes': 'tuesday',
@@ -70,14 +71,14 @@ const openDetailsModal = (rawDate) => {
 
     details.value = {
         employee_id: employeeData.value?.id || employee.value?.id,
-        employee_name: employeeData.value?.name || 'Empleado',
+        employee_name: employeeData.value?.full_name || 'Empleado',
         department_name: employeeData.value?.department?.name || 'General',
         week_number: weekData.week_number,
         week_year: weekData.week_year,
         incidencia: weekData[`nombre_${dayKey}`] || 'SIN REGISTRO',
         color: weekData[`color_${dayKey}`] || '#64748b',
         descripcion_incidencia: `Registro correspondiente al día ${dayKey} de la semana ${weekData.week_number}.`,
-
+        fecha_dia: formattedDate,
         horario: {
             Turno: parsedInfo.Turno,
             Horario: parsedInfo.Horario,
@@ -90,6 +91,7 @@ const openDetailsModal = (rawDate) => {
         horas_triples: attendanceExtras?.horas_triples || 0,
         sunday_premium: attendanceExtras?.sunday_premium || 0,
     };
+    console.log(details.value);
 
     modalDetails.value = true;
 };
@@ -218,43 +220,45 @@ function getWeekDataByDate(date) {
     ) || null;
 }
 
-function getDayStyle(rawDate) {
-    const date = normalizeDate(rawDate);
-    const weekData = getWeekDataByDate(date);
+// function getDayStyle(rawDate) {
+//     const date = normalizeDate(rawDate);
+//     const weekData = getWeekDataByDate(date);
 
-    if (!weekData) return {};
+//     if (!weekData) return {};
 
-    const dayKey = getDayKey(date);
-    const colorKey = `color_${dayKey}`;
+//     const dayKey = getDayKey(date);
+//     const colorKey = `color_${dayKey}`;
 
-    if (!weekData[colorKey]) return {};
+//     console.log(date)
 
-    return {
-        backgroundColor: weekData[colorKey],
-        color: '#fff',
-        borderRadius: '999px',
-        fontWeight: '700'
-    };
-}
+//     if (!weekData[colorKey]) return {};
 
-function getDayClass(rawDate) {
-    const date = normalizeDate(rawDate);
-    const weekData = getWeekDataByDate(date);
+//     return {
+//         backgroundColor: weekData[colorKey],
+//         color: '#fff',
+//         borderRadius: '999px',
+//         fontWeight: '700'
+//     };
+// }
 
-    return weekData ? 'attendance-day' : '';
-}
+// function getDayClass(rawDate) {
+//     const date = normalizeDate(rawDate);
+//     const weekData = getWeekDataByDate(date);
 
-function getDayTitle(rawDate) {
-    const date = normalizeDate(rawDate);
-    const weekData = getWeekDataByDate(date);
+//     return weekData ? 'attendance-day' : '';
+// }
 
-    if (!weekData) return '';
+// function getDayTitle(rawDate) {
+//     const date = normalizeDate(rawDate);
+//     const weekData = getWeekDataByDate(date);
 
-    const dayKey = getDayKey(date);
-    const nameKey = `nombre_${dayKey}`;
+//     if (!weekData) return '';
 
-    return weekData[nameKey] || weekData[dayKey] || '';
-}
+//     const dayKey = getDayKey(date);
+//     const nameKey = `nombre_${dayKey}`;
+
+//     return weekData[nameKey] || weekData[dayKey] || '';
+// }
 
 function getDayAttendanceData(rawDate) {
     const date = normalizeDate(rawDate);
@@ -335,7 +339,7 @@ const showColumns = ref({
     fecha_inicio: true,
     fecha_fin: true,
     dias: true,
-    semana: false,
+    semana: true,
     año: false,
     horas_txt: false,
     aprobado_por: true,
@@ -356,6 +360,7 @@ const showColumnsV = ref({
     antiguedad: true,
     fecha: true,
 });
+
 
 const getStatus = (data) => {
     if (data.approved_at == null && data.declined_at == null && data.deleted_by == null) {
@@ -1300,7 +1305,158 @@ onMounted(() => {
             class="p-dialog-custom"
         >
             <template v-if="details">
-                <div class="grid grid-cols-2 gap-4 text-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div class="flex flex-col gap-4">
+
+                        <div class="rounded-xl shadow-sm border p-4">
+                            <div class="flex flex-col items-center text-center gap-3">
+                                <img
+                                    :src="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${details?.employee_id}.jpg`"
+                                    alt="Foto"
+                                    class="w-32 h-32 rounded-full object-cover border-4 shadow-xl flex-shrink-0"
+                                />
+
+                                <div class="w-full">
+                                    <h3 class="text-lg font-bold uppercase tracking-wide break-words">
+                                        ({{ details?.employee_id }})
+                                        {{ details?.employee_name }}
+                                    </h3>
+                                    <p class="text-sm text-gray-500">
+                                        {{ details?.department_name }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 text-sm mt-4 pt-4 border-t border-gray-100">
+                                <div class="text-center">
+                                    <p class="text-[10px] font-bold uppercase">Fecha</p>
+                                    <p class="truncate">{{ details?.horario?.Checadas?.[0]?.access_date ?? details.fecha_dia }}</p>
+                                </div>
+                                <div class="text-center border-x border-gray-100">
+                                    <p class="text-[10px] font-bold uppercase">Semana</p>
+                                    <p>{{ details?.week_number ?? "0" }}</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-[10px] font-bold uppercase">Año</p>
+                                    <p>{{ details?.week_year ?? "2026" }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl shadow-sm border p-4">
+                            <div class="grid grid-cols-2 gap-y-4 text-sm">
+                                <div>
+                                    <p class="font-bold text-[10px] uppercase mb-1">Turno</p>
+                                    <p class="text-gray-800 leading-tight">{{ details?.horario?.Turno || "N/A" }}</p>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-[10px] uppercase mb-1">Horario</p>
+                                    <p class="text-gray-800 leading-tight">{{ details?.horario?.Horario || "N/A" }}</p>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-[10px] uppercase mb-1">Entrada</p>
+                                    <p class="text-green-600 font-bold text-base">{{ details?.horario?.Entrada || "N/A" }}</p>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-[10px] uppercase mb-1">Salida</p>
+                                    <p class="text-red-600 font-bold text-base">{{ details.horario?.Salida || "N/A" }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <Badge value="Turno diurno" severity="secondary" class="text-[10px] px-2 py-1" />
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl shadow-sm border p-4">
+                            <h4 class="font-bold text-[10px] uppercase mb-2">Incidencia</h4>
+                            <Badge
+                                :value="details?.incidencia"
+                                :style="{ backgroundColor: details?.color || '#3b82f6', color: '#fff' }"
+                                class="mb-3 px-3 py-1 text-xs"
+                            />
+                            <p class="text-sm leading-relaxed break-words">
+                                {{ details?.descripcion_incidencia }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col h-full">
+                        <div class="rounded-xl shadow-sm border flex flex-col h-full overflow-hidden">
+
+                            <div class="px-4 py-3 border-b font-bold text-xs uppercase tracking-wider">
+                                Historial de checadas
+                            </div>
+
+                            <div class="p-4 flex-1 overflow-y-auto max-h-[450px]">
+                                <div class="space-y-5">
+                                    <div v-for="(item, index) in details?.horario?.Checadas || []" :key="index" class="flex items-start gap-3 relative">
+
+                                        <div
+                                            v-if="index < (details?.horario?.Checadas?.length - 1)"
+                                            class="absolute left-4 top-8 bottom-[-20px] w-px"
+                                        ></div>
+
+                                        <div class="w-8 h-8 flex items-center justify-center rounded-full bg-purple-50 border border-purple-100 z-10 flex-shrink-0">
+                                            <i class="pi pi-clock text-purple-500 text-xs"></i>
+                                        </div>
+
+                                        <div class="flex-1 rounded-lg p-3 border border-gray-100">
+                                            <p class="text-[10px] font-bold uppercase mb-2">Registro {{ index + 1 }}</p>
+                                            <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                                                <span class="flex items-center gap-1">
+                                                    <span class="opacity-70">📅</span> <b>{{ item?.access_date }}</b>
+                                                </span>
+                                                <span class="flex items-center gap-1">
+                                                    <span class="opacity-70">⏰</span> <b>{{ item?.access_time }}</b>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border-t p-3">
+                                <div class="flex flex-wrap gap-2">
+                                    <Tag
+                                        severity="info"
+                                        value="Dobles"
+                                        class="flex-1 min-w-[100px] !py-2 !text-[10px] uppercase"
+                                    >
+                                        <template #icon>
+                                            <i class="pi pi-bolt mr-1"></i>
+                                        </template>
+                                        <span>Dobles: <b>{{ details?.horas_dobles || 0 }}</b></span>
+                                    </Tag>
+
+                                    <Tag
+                                        severity="warning"
+                                        value="Triples"
+                                        class="flex-1 min-w-[100px] !py-2 !text-[10px] uppercase"
+                                    >
+                                        <template #icon>
+                                            <i class="pi pi-star-fill mr-1"></i>
+                                        </template>
+                                        <span>Triples: <b>{{ details?.horas_triples || 0 }}</b></span>
+                                    </Tag>
+
+                                    <Tag
+                                        severity="success"
+                                        value="Prima"
+                                        class="flex-1 min-w-[100px] !py-2 !text-[10px] uppercase"
+                                    >
+                                        <template #icon>
+                                            <i class="pi pi-percentage mr-1"></i>
+                                        </template>
+                                        <span>Prima: <b>{{ details?.sunday_premium || 0 }}</b></span>
+                                    </Tag>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <!-- <div class="grid grid-cols-2 gap-4 text-gray-700">
                     <div class="flex flex-col gap-4">
                         <div class="rounded-xl shadow-sm border p-4">
                             <div
@@ -1484,9 +1640,9 @@ onMounted(() => {
                                             <i class="pi pi-clock text-purple-500 text-xs"></i>
                                         </div>
 
-                                        <div class="flex-1 rounded-md p-3 border border-gray-200">
+                                        <div class="flex-1 rounded-md p-3 border">
                                             <div class="flex justify-between items-center mb-1">
-                                                <span class="text-xs text-gray-400">
+                                                <span class="text-xs">
                                                     Checada {{ index + 1 }}
                                                 </span>
                                             </div>
@@ -1517,7 +1673,7 @@ onMounted(() => {
                         </div>
 
                     </div>
-                </div>
+                </div> -->
             </template>
 
             <template #footer>
