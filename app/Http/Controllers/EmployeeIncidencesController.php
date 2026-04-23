@@ -100,9 +100,9 @@ class EmployeeIncidencesController
         $employee = Employee::select('branch_office_id')->where('id', $employee_id)->first();
         $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
         if($employee->branch_office_id != 19){
-            $allincidences = Incidence::select('id','name')->where('read_only', '=', '0')->where('active', '=', '1')->whereNotIn('id', [12,24,25,41])->get();
+            $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->whereNotIn('id', [12,24,25,41])->get();
         }else{
-            $allincidences = Incidence::select('id','name')->where('read_only', '=', '0')->where('active', '=', '1')->get();
+            $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
         }
         $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($employee->branch_office_id);
 
