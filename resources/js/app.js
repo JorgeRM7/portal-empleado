@@ -97,7 +97,8 @@ const spanishLocale = {
         "sábado",
     ],
     dayNamesShort: ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"],
-    dayNamesMin: ["D", "L", "M", "X", "J", "V", "S"],
+    dayNamesMin: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
+    // dayNamesMin: ["D", "L", "M", "X", "J", "V", "S"],
     monthNames: [
         "enero",
         "febrero",
@@ -139,6 +140,26 @@ const spanishLocale = {
         "Tamaño de archivo inválido, el máximo permitido es {0}.",
     invalidFileTypeMessage: "Tipo de archivo no permitido, se esperaba: {0}.",
 };
+
+const calendarLocaleFull = {
+    ...spanishLocale,
+    dayNamesMin: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
+};
+
+const calendarLocaleMobile = {
+    ...spanishLocale,
+    dayNamesMin: ["D", "L", "M", "X", "J", "V", "S"],
+};
+
+function isMobile() {
+    return window.matchMedia("(max-width: 768px)").matches;
+}
+
+function updateCalendarLocale(app) {
+    const locale = isMobile() ? calendarLocaleMobile : calendarLocaleFull;
+
+    app.config.globalProperties.$primevue.config.locale = locale;
+}
 
 // const MyPreset = definePreset(Aura, {
 //     semantic: {
@@ -266,6 +287,11 @@ createInertiaApp({
                     darkModeSelector: ".mode-dark",
                 },
             },
+        });
+        updateCalendarLocale(app);
+
+        window.addEventListener("resize", () => {
+            updateCalendarLocale(app);
         });
         app.use(ToastService);
         app.component("Toolbar", Toolbar);
