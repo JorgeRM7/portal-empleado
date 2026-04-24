@@ -11,13 +11,13 @@ import { usePage } from "@inertiajs/vue3";
 
 const showTermsModal = ref(false);
 
-onMounted(() => {
-    const user = usePage().props.auth?.user;
+// onMounted(() => {
+//     const user = usePage().props.auth?.user;
 
-    if (user && !user.terms_condition) {
-        showTermsModal.value = true;
-    }
-});
+//     if (user && !user.terms_condition) {
+//         showTermsModal.value = true;
+//     }
+// });
 
 const { layoutConfig, layoutState, isSidebarActive } = useLayout();
 
