@@ -290,6 +290,41 @@ function typeLabel(type) {
 
 function saveIncidence() {
     form.value.days_to_register = daysEditable.value;
+    if (form.value.incidence_id === 23) {
+        if (!form.value.singleDate) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Por favor seleccione un día",
+                life: 3000,
+            });
+            return;
+        }
+    }
+
+    if (form.value.incidence_id === 19) {
+        if (form.value.advance_date < form.value.rest_date) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "La fecha de reposición debe ser menor a la fecha de descanso",
+                life: 3000,
+            });
+            return;
+        }
+    }
+
+    if (form.value.incidence_id === 20) {
+        if (form.value.advance_date > form.value.rest_date) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "La fecha de descanso debe ser menor a la fecha de adelanto",
+                life: 3000,
+            });
+            return;
+        }
+    }
     sending.value = true;
     router.put(
         route("incidences-employee.update", props.incidence.id),
