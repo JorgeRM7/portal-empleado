@@ -12,6 +12,8 @@ import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
 import { router } from '@inertiajs/vue3';
 import { useToast } from "primevue/usetoast";
 
+
+
 // app.directive('tooltip', Tooltip);
 const toast = useToast();
 const page = usePage();
@@ -38,6 +40,13 @@ const details = ref(null);
 
 // const showTermsModal = ref(false);
 // const loadingTerms = ref(false);
+
+const normalizeDateOnly = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    return d;
+};
 
 const openDetailsModal = (rawDate) => {
     const date = normalizeDate(rawDate);
@@ -108,7 +117,7 @@ const openVacationsModal = async (id) => {
 
         vacationsHistory.value = data.map(item => ({
             ...item,
-            date_formatted: formatDate(item.date)
+            date: new Date(new Date(item.date).setHours(0,0,0,0))
         }));
     } catch (error) {
         console.error("Error al cargar vacaciones", error);
@@ -126,6 +135,12 @@ const formatDate = (date) => {
     return new Date(date).toLocaleDateString();
 };
 
+// const normalizeDateOnly = (date) => {
+//     if (!date) return null;
+//     const d = new Date(date);
+//     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+// };
+
 // Lógica para Incidencias
 const openIncidencesModal = async (id) => {
     if (!id) return;
@@ -137,8 +152,15 @@ const openIncidencesModal = async (id) => {
 
         incidencesHistory.value = data.map((incidence) => {
             const statusInfo = getStatus(incidence);
+
             return {
                 ...incidence,
+                before_date: normalizeDateOnly(incidence.before_date),
+                rest_date: normalizeDateOnly(incidence.rest_date),
+                expires_at: normalizeDateOnly(incidence.expires_at),
+                approved_at: normalizeDateOnly(incidence.approved_at),
+                declined_at: normalizeDateOnly(incidence.declined_at),
+
                 status: statusInfo.text,
                 status_color: statusInfo.color
             };
@@ -271,27 +293,59 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 
     status: { value: null, matchMode: FilterMatchMode.EQUALS },
-
     incidence_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    before_date: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    rest_date: { value: null, matchMode: FilterMatchMode.CONTAINS },
+
+    validity_from: {
+        operator: FilterOperator.AND,
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+    },
+    validity_to: {
+        operator: FilterOperator.AND,
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+    },
+    before_date: {
+        operator: FilterOperator.AND,
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+    },
+    rest_date: {
+        operator: FilterOperator.AND,
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+    },
+    expires_at: {
+        operator: FilterOperator.AND,
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+    },
+    approved_at: {
+        operator: FilterOperator.AND,
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+    },
+    declined_at: {
+        operator: FilterOperator.AND,
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+    },
+
+    // demás normales
     week_number: { value: null, matchMode: FilterMatchMode.CONTAINS },
     week_year: { value: null, matchMode: FilterMatchMode.CONTAINS },
     hours_txt: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    expires_at: { value: null, matchMode: FilterMatchMode.CONTAINS },
     days: { value: null, matchMode: FilterMatchMode.CONTAINS },
     comment: { value: null, matchMode: FilterMatchMode.CONTAINS },
     declined_by: { value: null, matchMode: FilterMatchMode.CONTAINS },
     deleted_by: { value: null, matchMode: FilterMatchMode.CONTAINS },
     approved_by: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    approved_at: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
 const filtersV = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     amount: { value: null, matchMode: FilterMatchMode.CONTAINS },
     seniority: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    date: { value: null, matchMode: FilterMatchMode.CONTAINS },
+
+    date: {
+        operator: FilterOperator.AND,
+        constraints: [
+            { value: null, matchMode: FilterMatchMode.DATE_IS }
+        ]
+    }
 });
 
 const showColumns = ref({
@@ -365,56 +419,6 @@ const weeklyTotals = computed(() => {
 
     return totals;
 });
-
-// const acceptTerms = () => {
-//     const employeeId = employeeData.value?.id || employee.value?.id;
-
-//     if (!employeeId) {
-//         console.error("No se encontró el ID del empleado");
-//         return;
-//     }
-
-//     router.put(route('term-conditions.update', { term_condition: employeeId }), {}, {
-//         onBefore: () => {
-//             loadingTerms.value = true;
-//         },
-//         onSuccess: () => {
-//             showTermsModal.value = false;
-
-//             toast.add({
-//                 severity: 'success',
-//                 summary: '¡Éxito!',
-//                 detail: 'Has aceptado los términos. Ya puedes navegar.',
-//                 life: 4000
-//             });
-//         },
-//         onError: (errors) => {
-//             console.error(errors);
-//             toast.add({
-//                 severity: 'error',
-//                 summary: 'Error',
-//                 detail: 'No se pudieron aceptar los términos.',
-//                 life: 4000
-//             });
-//         },
-//         onFinish: () => {
-//             loadingTerms.value = false;
-//         },
-//         preserveScroll: true
-//     });
-
-// };
-
-// const logout = () => {
-//     router.post(route('logout'), {}, {
-//         onBefore: () => {
-//             loadingTerms.value = true;
-//         },
-//         onSuccess: () => {
-//             console.log("Sesión cerrada.");
-//         }
-//     });
-// };
 
 onMounted(() => {
     obtenerEmpleado();
@@ -686,7 +690,7 @@ onMounted(() => {
                     size="small"
                     v-model:filters="filtersV"
                     filterDisplay="menu"
-                    :globalFilterFields="['amount', 'seniority', 'date_formatted']"
+                    :globalFilterFields="['amount', 'seniority', 'date']"
                     currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} vacaciones"
                 >
 
@@ -737,49 +741,27 @@ onMounted(() => {
                             />
                         </template>
                     </Column>
-                    <!-- <Column
-                        field="seniority"
-                        header="Antigüedad"
-                        :filter="true"
-                        :style="{
-                            width: '20rem',
-                            display: showColumnsV.antiguedad ? '' : 'none',
-                        }"
-                    >
-                        <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.seniority }} años</span>
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <InputText
-                                v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Antigüedad"
-                            />
-                        </template>
-                    </Column> -->
                     <Column
-                        field="date_formatted"
+                        field="date"
                         header="Fecha"
+                        dataType="date"
                         sortable
+                        :sortFunction="sortByDate"
                         :style="{
                             width: '20rem',
                             display: showColumnsV.fecha ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-
-                            <template v-else>
-                                <i class="pi pi-calendar mr-2"></i>
-                                {{ data.date_formatted }}
-                            </template>
+                            <i class="pi pi-calendar mr-2"></i>
+                            {{ formatDate(data.date) }}
                         </template>
+
                         <template #filter="{ filterModel }">
-                            <InputText
+                            <Calendar
                                 v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Fecha"
+                                dateFormat="dd/mm/yy"
+                                placeholder="Filtrar por fecha"
                             />
                         </template>
                     </Column>
@@ -862,6 +844,7 @@ onMounted(() => {
                         header="Estatus"
                         :filter="true"
                         columnKey="status"
+                        sortable
                         style="width: 5rem"
                     >
                         <template #body="{ data }">
@@ -892,6 +875,7 @@ onMounted(() => {
                         field="incidence_name"
                         header="Incidencia"
                         :filter="true"
+                        sortable
                         columnKey="incidence_name"
                         :style="{
                             width: '5rem',
@@ -914,45 +898,48 @@ onMounted(() => {
                     <Column
                         field="validity_from"
                         header="Fecha de inicio"
-                        :filter="true"
-                        filterMatchMode="equals"
-                        columnKey="validity_from"
+                        dataType="date"
+                        :showFilterMatchModes="false"
+                        sortable
+                        :sortFunction="sortByDate"
                         :style="{
                             width: '5rem',
                             display: showColumns.fecha_inicio ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.validity_from }}</span>
+                            {{ formatDate(data.validity_from) }}
                         </template>
+
                         <template #filter="{ filterModel }">
-                            <InputText
+                            <Calendar
                                 v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Fecha de Inicio"
+                                dateFormat="dd/mm/yy"
+                                placeholder="Filtrar por fecha"
                             />
                         </template>
                     </Column>
                     <Column
                         field="validity_to"
                         header="Fecha de fin"
-                        :filter="true"
-                        columnKey="validity_to"
+                        dataType="date"
+                        :showFilterMatchModes="false"
+                        sortable
+                        :sortFunction="sortByDate"
                         :style="{
                             width: '5rem',
                             display: showColumns.fecha_fin ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.validity_to }}</span>
+                            {{ formatDate(data.validity_to) }}
                         </template>
+
                         <template #filter="{ filterModel }">
-                            <InputText
+                            <Calendar
                                 v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Fecha de Fin"
+                                dateFormat="dd/mm/yy"
+                                placeholder="Filtrar por fecha"
                             />
                         </template>
                     </Column>
@@ -961,6 +948,7 @@ onMounted(() => {
                         header="Días"
                         :filter="true"
                         columnKey="days"
+                        sortable
                         :style="{
                             width: '5rem',
                             display: showColumns.dias ? '' : 'none',
@@ -974,22 +962,24 @@ onMounted(() => {
                     <Column
                         field="approved_at"
                         header="Fecha de aprobación"
-                        :filter="true"
-                        columnKey="approved_at"
+                        dataType="date"
+                        sortable
+                        :sortFunction="sortByDate"
+                        :showFilterMatchModes="false"
                         :style="{
-                            width: '5rem',
-                            display: showColumns.fecha_aprobado ? '' : 'none',
+                            width: '10rem',
+                            display: showColumnsV.fecha ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ formatDate(data.approved_at) }}</span>
+                            {{ formatDate(data.approved_at) }}
                         </template>
+
                         <template #filter="{ filterModel }">
-                            <InputText
+                            <Calendar
                                 v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Fecha de aprobación"
+                                dateFormat="dd/mm/yy"
+                                placeholder="Filtrar por fecha"
                             />
                         </template>
                     </Column>
@@ -997,6 +987,7 @@ onMounted(() => {
                         field="approved_by"
                         header="Aprobado por"
                         :filter="true"
+                        sortable
                         columnKey="approved_by"
                         :style="{
                             width: '5rem',
@@ -1004,13 +995,12 @@ onMounted(() => {
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.approved_by }}</span>
+                            {{ data.approved_by }}
                         </template>
+
                         <template #filter="{ filterModel }">
                             <InputText
                                 v-model="filterModel.value"
-                                type="text"
                                 placeholder="Buscar por Aprobado por"
                             />
                         </template>
@@ -1018,22 +1008,24 @@ onMounted(() => {
                     <Column
                         field="declined_at"
                         header="Fecha de rechazo"
-                        :filter="true"
-                        columnKey="declined_at"
+                        dataType="date"
+                        sortable
+                        :sortFunction="sortByDate"
+                        :showFilterMatchModes="false"
                         :style="{
                             width: '5rem',
                             display: showColumns.fecha_rechazado ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ formatDate(data.declined_at) }}</span>
+                            {{ formatDate(data.declined_at) }}
                         </template>
+
                         <template #filter="{ filterModel }">
-                            <InputText
+                            <Calendar
                                 v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Fecha de rechazo"
+                                dateFormat="dd/mm/yy"
+                                placeholder="Filtrar por fecha"
                             />
                         </template>
                     </Column>
@@ -1041,6 +1033,7 @@ onMounted(() => {
                         field="declined_by"
                         header="Rechazado por"
                         :filter="true"
+                        sortable
                         columnKey="declined_by"
                         :style="{
                             width: '5rem',
@@ -1048,13 +1041,12 @@ onMounted(() => {
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.declined_by }}</span>
+                            {{ data.declined_by }}
                         </template>
+
                         <template #filter="{ filterModel }">
                             <InputText
                                 v-model="filterModel.value"
-                                type="text"
                                 placeholder="Buscar por Rechazado por"
                             />
                         </template>
@@ -1064,6 +1056,7 @@ onMounted(() => {
                         field="document_number"
                         header="Número de documento"
                         :filter="true"
+                        sortable
                         columnKey="document_number"
                         :style="{
                             width: '5rem',
@@ -1085,44 +1078,48 @@ onMounted(() => {
                     <Column
                         field="before_date"
                         header="Fecha de adelanto"
-                        :filter="true"
-                        columnKey="before_date"
+                        dataType="date"
+                        sortable
+                        :sortFunction="sortByDate"
+                        :showFilterMatchModes="false"
                         :style="{
                             width: '5rem',
                             display: showColumns.fecha_adelanto ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.before_date }}</span>
+                            {{ formatDate(data.before_date) }}
                         </template>
+
                         <template #filter="{ filterModel }">
-                            <InputText
+                            <Calendar
                                 v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Fecha de adelanto"
+                                dateFormat="dd/mm/yy"
+                                placeholder="Filtrar por fecha"
                             />
                         </template>
                     </Column>
                     <Column
                         field="rest_date"
                         header="Fecha de descanso"
-                        :filter="true"
-                        columnKey="rest_date"
+                        dataType="date"
+                        sortable
+                        :sortFunction="sortByDate"
+                        :showFilterMatchModes="false"
                         :style="{
                             width: '5rem',
                             display: showColumns.fecha_descanso ? '' : 'none',
                         }"
                     >
                         <template #body="{ data }">
-                            <Skeleton v-if="loading"></Skeleton>
-                            <span v-else>{{ data.rest_date }}</span>
+                            {{ formatDate(data.rest_date) }}
                         </template>
+
                         <template #filter="{ filterModel }">
-                            <InputText
+                            <Calendar
                                 v-model="filterModel.value"
-                                type="text"
-                                placeholder="Buscar por Fecha de descanso"
+                                dateFormat="dd/mm/yy"
+                                placeholder="Filtrar por fecha"
                             />
                         </template>
                     </Column>
@@ -1130,6 +1127,8 @@ onMounted(() => {
                         field="created_at"
                         header="Fecha de creación"
                         :filter="true"
+                        sortable
+                        :sortFunction="sortByDate"
                         columnKey="created_at"
                         :style="{
                             width: '5rem',
@@ -1152,6 +1151,7 @@ onMounted(() => {
                         field="hours_txt"
                         header="Horas TXT"
                         :filter="true"
+                        sortable
                         columnKey="hours_txt"
                         :style="{
                             width: '5rem',
@@ -1174,6 +1174,7 @@ onMounted(() => {
                         field="week_year"
                         header="Año"
                         :filter="true"
+                        sortable
                         columnKey="week_year"
                         :style="{
                             width: '5rem',
@@ -1196,6 +1197,7 @@ onMounted(() => {
                         field="week_number"
                         header="Semana"
                         :filter="true"
+                        sortable
                         columnKey="week_number"
                         :style="{
                             width: '5rem',
@@ -1218,12 +1220,13 @@ onMounted(() => {
                         field="deleted_by"
                         header="Eliminado por"
                         :filter="true"
+                        sortable
+                        :sortFunction="sortByDate"
                         columnKey="comment"
                         :style="{
                             width: '5rem',
                             display: showColumns.eliminado_por ? '' : 'none',
                         }"
-                        sortable
                     >
                         <template #body="{ data }">
                             <Skeleton v-if="loading"></Skeleton>
@@ -1384,20 +1387,9 @@ onMounted(() => {
                                         class="flex-1 min-w-[100px] !py-2 !text-[10px] uppercase"
                                     >
                                         <template #icon>
-                                            <i class="pi pi-bolt mr-1"></i>
+                                            <i class="pi pi-clock mr-1"></i>
                                         </template>
-                                        <span>Dobles: <b>{{ details?.horas_dobles || 0 }}</b></span>
-                                    </Tag>
-
-                                    <Tag
-                                        severity="warning"
-                                        value="Triples"
-                                        class="flex-1 min-w-[100px] !py-2 !text-[10px] uppercase"
-                                    >
-                                        <template #icon>
-                                            <i class="pi pi-star-fill mr-1"></i>
-                                        </template>
-                                        <span>Triples: <b>{{ details?.horas_triples || 0 }}</b></span>
+                                        <span>Horas Extra Dobles: <b>{{ details?.horas_dobles || 0 }}</b></span>
                                     </Tag>
 
                                     <Tag
@@ -1408,7 +1400,7 @@ onMounted(() => {
                                         <template #icon>
                                             <i class="pi pi-percentage mr-1"></i>
                                         </template>
-                                        <span>Prima: <b>{{ details?.sunday_premium || 0 }}</b></span>
+                                        <span>Prima Dominical: <b>{{ details?.sunday_premium || 0 }}</b></span>
                                     </Tag>
                                 </div>
                             </div>
