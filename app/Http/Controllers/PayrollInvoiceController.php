@@ -448,9 +448,9 @@ class PayrollInvoiceController
                 //abort(404, 'El archivo no se encontró en el servidor remoto.');
                 return "El archivo no se encontró en el servidor remoto.";
             }
-            return $disk_inv->response($invoice->pdf_path);
+            return $disk_inv->download($invoice->pdf_path);
         }
-        return $disk->response($invoice->pdf_path);
+        return $disk->download($invoice->pdf_path);
     }
 
     public function downloadDocumentDigitalOcean($id)
@@ -470,9 +470,9 @@ class PayrollInvoiceController
                 //abort(404, 'El archivo no se encontró en el servidor remoto.');
                 return "El archivo no se encontró en el servidor remoto.";
             }
-            return $disk_inv->response($invoice->pdf_path);
+            return $disk_inv->download($invoice->pdf_path);
         }
-        return $disk->response($invoice->pdf_path);
+        return $disk->download($invoice->pdf_path);
     }
 
     public function queuMail(Request $request)
