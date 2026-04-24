@@ -120,35 +120,15 @@ const otherFilters = ref([
 const initFilters = () => {
     filters.value = {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        id: {
+        semana: {
             operator: FilterOperator.AND,
             constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
         },
-        branch_office: {
+        anio: {
             operator: FilterOperator.AND,
             constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
         },
-        employee_id: {
-            operator: FilterOperator.AND,
-            constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
-        },
-        employee: {
-            operator: FilterOperator.AND,
-            constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
-        },
-        week: {
-            operator: FilterOperator.AND,
-            constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
-        },
-        year: {
-            operator: FilterOperator.AND,
-            constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
-        },
-        payroll_type: {
-            operator: FilterOperator.AND,
-            constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
-        },
-        status: {
+        tipo_recibo: {
             operator: FilterOperator.AND,
             constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
         },
@@ -575,15 +555,7 @@ initFilters();
                 :filterDelay="500"
                 v-model:filters="filters"
                 filterDisplay="menu"
-                :globalFilterFields="[
-                    'nombre_empleado',
-                    'id',
-                    'planta',
-                    'numero_nomina',
-                    'semana',
-                    'year',
-                    'tipo_recibo',
-                ]"
+                :globalFilterFields="['week', 'year', 'payroll_type']"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} recibos de nomina"
             >
@@ -775,16 +747,19 @@ initFilters();
                 </Column>
 
                 <Column
-                    field="week"
+                    field="semana"
                     header="Semana"
                     :filter="true"
-                    columnKey="id"
+                    columnKey="week"
                     :frozen="frozenColumns.semana"
                     :style="{
                         width: '5rem',
                         display: showColumns.semana ? '' : 'none',
                     }"
                     :exportable="exportColumns.semana"
+                    :showFilterMatchModes="false"
+                    :showFilterOperator="false"
+                    filterField="semana"
                 >
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
@@ -794,7 +769,8 @@ initFilters();
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Semana"
+                            placeholder="Buscar semana"
+                            @keyup.enter="applyFilters"
                         />
                     </template>
                 </Column>
@@ -802,7 +778,7 @@ initFilters();
                     field="year"
                     header="Año"
                     :filter="true"
-                    columnKey="id"
+                    columnKey="year"
                     :frozen="frozenColumns.anio"
                     :style="{
                         width: '5rem',
@@ -823,16 +799,19 @@ initFilters();
                     </template>
                 </Column>
                 <Column
-                    field="payroll_type"
+                    field="tipo_recibo"
                     header="Tipo de Recibo"
                     :filter="true"
-                    columnKey="id"
+                    columnKey="payroll_type"
                     :frozen="frozenColumns.tipo_recibo"
                     :style="{
                         width: '5rem',
                         display: showColumns.tipo_recibo ? '' : 'none',
                     }"
                     :exportable="exportColumns.tipo_recibo"
+                    :showFilterMatchModes="false"
+                    :showFilterOperator="false"
+                    filterField="tipo_recibo"
                 >
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
@@ -842,7 +821,8 @@ initFilters();
                         <InputText
                             v-model="filterModel.value"
                             type="text"
-                            placeholder="Buscar por Tipo de Recibo"
+                            placeholder="Buscar tipo"
+                            @keyup.enter="applyFilters"
                         />
                     </template>
                 </Column>
