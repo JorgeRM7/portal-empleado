@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\BranchOffice;
 use App\Models\User;
+use App\Models\UserNomina;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -930,10 +931,8 @@ class ComplaintsModuleController
                         'type'                 => 'ASIGNACION'
                     ]);
 
-                    $user = User::find($userId);
-                    if ($user) {
-                        $user->notify(new TicketAssignment('Quejas', $queja->id));
-                    }
+                    $user = UserNomina::find($userId);
+                    $user->notify(new TicketAssignment('Quejas', $queja->id));
                 }
 
                 // 🔹 CONSTRUIR RESPUESTA CON FEEDBACK
