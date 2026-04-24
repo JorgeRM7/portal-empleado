@@ -7,17 +7,68 @@ import AppTopbar from "./AppTopBar.vue";
 import { Head } from "@inertiajs/vue3";
 import Toast from "@/Components/Toast.vue";
 import Assistant from "@/Components/Assistant.vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, router } from "@inertiajs/vue3";
+import { useToast } from "primevue/usetoast";
 
+
+const page = usePage();
+const loadingTerms = ref(false);
 const showTermsModal = ref(false);
+const toast = useToast();
 
-// onMounted(() => {
-//     const user = usePage().props.auth?.user;
+const acceptTerms = () => {
+    const userId = page.props.auth?.user?.id;
+    console.log(userId);
+    if (!userId) {
+        console.error("No se encontró el ID del usuario");
+        return;
+    }
 
-//     if (user && !user.terms_condition) {
-//         showTermsModal.value = true;
-//     }
-// });
+    router.put(route('term-conditions.update', { term_condition: userId }), {}, {
+        onBefore: () => {
+            loadingTerms.value = true;
+        },
+        onSuccess: () => {
+            showTermsModal.value = false;
+
+            // 🔥 actualizar el usuario en frontend
+            page.props.auth.user.terms_condition = 1;
+
+            toast.add({
+                severity: 'success',
+                summary: '¡Éxito!',
+                detail: 'Has aceptado los términos. Ya puedes navegar.',
+                life: 4000
+            });
+        },
+        onError: (errors) => {
+            console.error(errors);
+        },
+        onFinish: () => {
+            loadingTerms.value = false;
+        },
+        preserveScroll: true
+    });
+};
+
+const logout = () => {
+    router.post(route('logout'), {}, {
+        onBefore: () => {
+            loadingTerms.value = true;
+        },
+        onSuccess: () => {
+            console.log("Sesión cerrada.");
+        }
+    });
+};
+
+onMounted(() => {
+    const user = usePage().props.auth?.user;
+
+    if (user && !user.terms_condition) {
+        showTermsModal.value = true;
+    }
+});
 
 const { layoutConfig, layoutState, isSidebarActive } = useLayout();
 
