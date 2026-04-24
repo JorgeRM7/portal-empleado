@@ -18,7 +18,6 @@ const toast = useToast();
 
 const acceptTerms = () => {
     const userId = page.props.auth?.user?.id;
-    console.log(userId);
     if (!userId) {
         console.error("No se encontró el ID del usuario");
         return;
@@ -31,8 +30,10 @@ const acceptTerms = () => {
         onSuccess: () => {
             showTermsModal.value = false;
 
-            // 🔥 actualizar el usuario en frontend
-            page.props.auth.user.terms_condition = 1;
+            router.reload({
+                only: ['auth'],
+                preserveState: false
+            });
 
             toast.add({
                 severity: 'success',
@@ -62,13 +63,13 @@ const logout = () => {
     });
 };
 
-onMounted(() => {
-    const user = usePage().props.auth?.user;
-
-    if (user && !user.terms_condition) {
-        showTermsModal.value = true;
-    }
-});
+watch(
+    () => page.props.auth?.user?.terms_condition,
+    (value) => {
+        showTermsModal.value = Number(value) !== 1;
+    },
+    { immediate: true }
+);
 
 const { layoutConfig, layoutState, isSidebarActive } = useLayout();
 
