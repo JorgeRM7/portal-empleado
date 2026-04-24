@@ -230,6 +230,30 @@ function saveIncidence() {
             return;
         }
     }
+
+    if (form.value.incidence_id === 19) {
+        if (form.value.advance_date < form.value.rest_date) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "La fecha de reposición debe ser menor a la fecha de descanso",
+                life: 3000,
+            });
+            return;
+        }
+    }
+
+    if (form.value.incidence_id === 20) {
+        if (form.value.advance_date > form.value.rest_date) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "La fecha de descanso debe ser menor a la fecha de adelanto",
+                life: 3000,
+            });
+            return;
+        }
+    }
     sending.value = true;
     router.post(route("incidences-employee.store"), form.value, {
         onSuccess: () => {
