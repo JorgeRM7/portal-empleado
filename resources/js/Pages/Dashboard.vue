@@ -36,8 +36,8 @@ const incidencesHistory = ref([]);
 const modalDetails = ref(false);
 const details = ref(null);
 
-const showTermsModal = ref(false);
-const loadingTerms = ref(false);
+// const showTermsModal = ref(false);
+// const loadingTerms = ref(false);
 
 const openDetailsModal = (rawDate) => {
     const date = normalizeDate(rawDate);
@@ -170,9 +170,9 @@ function obtenerEmpleado() {
         .then(response => {
             console.log('Datos del empleado:', response.data);
             employeeData.value = response.data.employee;
-            if (!employeeData.value.terms_condition) {
-                showTermsModal.value = true;
-            }
+            // if (!employeeData.value.terms_condition) {
+            //     showTermsModal.value = true;
+            // }
             employeeVacations.value = response.data.vacaciones;
             employeeIncidences.value = response.data.incidencias_empleado;
             antiguedad.value = response.data.antiguedad;
@@ -366,55 +366,55 @@ const weeklyTotals = computed(() => {
     return totals;
 });
 
-const acceptTerms = () => {
-    const employeeId = employeeData.value?.id || employee.value?.id;
+// const acceptTerms = () => {
+//     const employeeId = employeeData.value?.id || employee.value?.id;
 
-    if (!employeeId) {
-        console.error("No se encontró el ID del empleado");
-        return;
-    }
+//     if (!employeeId) {
+//         console.error("No se encontró el ID del empleado");
+//         return;
+//     }
 
-    router.put(route('term-conditions.update', { term_condition: employeeId }), {}, {
-        onBefore: () => {
-            loadingTerms.value = true;
-        },
-        onSuccess: () => {
-            showTermsModal.value = false;
+//     router.put(route('term-conditions.update', { term_condition: employeeId }), {}, {
+//         onBefore: () => {
+//             loadingTerms.value = true;
+//         },
+//         onSuccess: () => {
+//             showTermsModal.value = false;
 
-            toast.add({
-                severity: 'success',
-                summary: '¡Éxito!',
-                detail: 'Has aceptado los términos. Ya puedes navegar.',
-                life: 4000
-            });
-        },
-        onError: (errors) => {
-            console.error(errors);
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'No se pudieron aceptar los términos.',
-                life: 4000
-            });
-        },
-        onFinish: () => {
-            loadingTerms.value = false;
-        },
-        preserveScroll: true
-    });
+//             toast.add({
+//                 severity: 'success',
+//                 summary: '¡Éxito!',
+//                 detail: 'Has aceptado los términos. Ya puedes navegar.',
+//                 life: 4000
+//             });
+//         },
+//         onError: (errors) => {
+//             console.error(errors);
+//             toast.add({
+//                 severity: 'error',
+//                 summary: 'Error',
+//                 detail: 'No se pudieron aceptar los términos.',
+//                 life: 4000
+//             });
+//         },
+//         onFinish: () => {
+//             loadingTerms.value = false;
+//         },
+//         preserveScroll: true
+//     });
 
-};
+// };
 
-const logout = () => {
-    router.post(route('logout'), {}, {
-        onBefore: () => {
-            loadingTerms.value = true;
-        },
-        onSuccess: () => {
-            console.log("Sesión cerrada.");
-        }
-    });
-};
+// const logout = () => {
+//     router.post(route('logout'), {}, {
+//         onBefore: () => {
+//             loadingTerms.value = true;
+//         },
+//         onSuccess: () => {
+//             console.log("Sesión cerrada.");
+//         }
+//     });
+// };
 
 onMounted(() => {
     obtenerEmpleado();
