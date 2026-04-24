@@ -931,7 +931,9 @@ class ComplaintsModuleController
                     ]);
 
                     $user = User::find($userId);
-                    $user->notify(new TicketAssignment('Quejas', $queja->id));
+                    if ($user) {
+                        $user->notify(new TicketAssignment('Quejas', $queja->id));
+                    }
                 }
 
                 // 🔹 CONSTRUIR RESPUESTA CON FEEDBACK
