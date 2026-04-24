@@ -53,8 +53,8 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         if ($user) {
-            $user->loadMissing([
-                'employee:id,full_name,branch_office_id,position_id,department_id,status,entry_date'
+            $user->load([
+                'employee:id,user_id,terms_condition,full_name,branch_office_id,position_id,department_id,status,entry_date'
             ]);
         }
 
@@ -63,6 +63,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user ? [
                     'id' => $user->id,
                     'email' => $user->email,
+                    'terms_condition' => $user->employee->terms_condition ?? 0,
                     'employee' => $user->employee ? [
                         'id' => $user->employee->id,
                         'full_name' => $user->employee->full_name,
