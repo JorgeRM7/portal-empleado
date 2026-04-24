@@ -120,6 +120,7 @@ Route::middleware([
     Route::resource('term-conditions', TermConditionController::class)->names([
         'index' => 'term-conditions'
     ]);
+
 });
 
 
