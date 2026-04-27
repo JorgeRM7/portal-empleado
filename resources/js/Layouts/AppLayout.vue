@@ -9,6 +9,7 @@ import Toast from "@/Components/Toast.vue";
 import Assistant from "@/Components/Assistant.vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
+import InactivityTimer from '@/Components/InactivityTimer.vue';
 
 
 const page = usePage();
@@ -114,7 +115,7 @@ function bindOutsideClickListener() {
 
 function unbindOutsideClickListener() {
     if (outsideClickListener.value) {
-        document.removeEventListener("click", outsideClickListener);
+        document.removeEventListener("click", outsideClickListener.value);
         outsideClickListener.value = null;
     }
 }
@@ -123,12 +124,18 @@ function isOutsideClicked(event) {
     const sidebarEl = document.querySelector(".layout-sidebar");
     const topbarEl = document.querySelector(".layout-menu-button");
 
-    return !(
-        sidebarEl.isSameNode(event.target) ||
-        sidebarEl.contains(event.target) ||
-        topbarEl.isSameNode(event.target) ||
-        topbarEl.contains(event.target)
-    );
+    if (!sidebarEl || !topbarEl) return false;
+
+    try {
+        return !(
+            sidebarEl.isSameNode(event.target) ||
+            sidebarEl.contains(event.target) ||
+            topbarEl.isSameNode(event.target) ||
+            topbarEl.contains(event.target)
+        );
+    } catch (e) {
+        return false;
+    }
 }
 </script>
 
@@ -149,6 +156,7 @@ function isOutsideClicked(event) {
             <app-footer></app-footer>
         </div>
         <!-- <Assistant use-backend="true" endpoint="/chat" /> -->
+        <InactivityTimer :on-logout="logout" />
         <div class="layout-mask animate-fadein"></div>
     </div>
     <Toast />

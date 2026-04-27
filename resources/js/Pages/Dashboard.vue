@@ -666,7 +666,7 @@ onMounted(() => {
             v-model:visible="vacationsVisible"
             header="Historial de Vacaciones"
             modal
-            :style="{ width: '60vw' }"
+            :style="{ width: '70rem', maxWidth: '95vw' }"
             :breakpoints="{
                 '768px': '90vw',
                 '640px': '100vw'
@@ -773,7 +773,7 @@ onMounted(() => {
             v-model:visible="incidencesVisible"
             header="Registro de Incidencias"
             modal
-            :style="{ width: '60vw' }"
+            :style="{ width: '70rem', maxWidth: '95vw' }"
             :breakpoints="{
                 '768px': '90vw',
                 '640px': '100vw'
