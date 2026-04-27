@@ -53,13 +53,47 @@ function parseYmdToDate(s) {
     return new Date(y, m - 1, d);
 }
 
+// Tus grupos por ID
+const GROUPS = {
+    TXT: new Set([23]),
+    VAC: new Set([3]),
+    SHIFT: new Set([20, 18, 19]),
+    DOC: new Set([53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13]),
+};
+
+const SHIFT_IDS = new Set([20, 18, 19]);
+
 const busyMap = computed(() => {
     const map = new Map();
+
     for (const inc of incidences.value) {
+        console.log("inc", inc);
         const start = parseYmdToDate(inc.start_date);
         const end = parseYmdToDate(inc.end_date);
-        const cur = atMidnight(start);
 
+        // 👉 Caso especial: SHIFT (solo fechas puntuales)
+        if (SHIFT_IDS.has(Number(inc.id))) {
+            if (start) {
+                map.set(ymd(start), {
+                    type: inc.type,
+                    id: inc.id,
+                    type_color: inc.type_color,
+                });
+            }
+
+            if (end && ymd(end) !== ymd(start)) {
+                map.set(ymd(end), {
+                    type: inc.type,
+                    id: inc.id,
+                    type_color: inc.type_color,
+                });
+            }
+
+            continue; // 🔥 importante: NO entrar al while
+        }
+
+        // 👉 Comportamiento normal (bloquear rango completo)
+        const cur = atMidnight(start);
         while (cur <= end) {
             map.set(ymd(cur), {
                 type: inc.type,
@@ -69,6 +103,7 @@ const busyMap = computed(() => {
             cur.setDate(cur.getDate() + 1);
         }
     }
+
     return map;
 });
 
@@ -124,14 +159,6 @@ const daysEditable = ref(daysCalculated.value);
 watch(daysCalculated, (newVal) => {
     daysEditable.value = newVal;
 });
-
-// Tus grupos por ID
-const GROUPS = {
-    TXT: new Set([23]),
-    VAC: new Set([3]),
-    SHIFT: new Set([20, 18, 19]),
-    DOC: new Set([53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13]),
-};
 
 const incidenceUI = computed(() => {
     const id = Number(form.value.incidence_id);
