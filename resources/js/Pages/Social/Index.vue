@@ -44,6 +44,13 @@ const toggleLike = async (post) => {
     }
 };
 
+const isVideo = (path) => {
+    if (!path) return false;
+    const videoExtensions = ["mp4", "webm", "ogg", "mov"];
+    const extension = path.split(".").pop().toLowerCase();
+    return videoExtensions.includes(extension);
+};
+
 // --- ESCUCHAR TIEMPO REAL ---
 onMounted(() => {
     console.log("Iniciando escucha de WebSockets...");
@@ -90,11 +97,21 @@ onMounted(() => {
             <div v-for="post in postsList" :key="post.id" class="mb-6 px-4">
                 <Card class="overflow-hidden shadow-2 border-round-xl">
                     <template #header>
+                        <video
+                            v-if="isVideo(post.path)"
+                            :src="`/storage/img/social/${post.path}`"
+                            class="w-full h-full block object-cover transition-opacity duration-500"
+                            :class="post.isLoaded ? 'opacity-100' : 'opacity-0'"
+                            controls
+                            @loadeddata="post.isLoaded = true"
+                        ></video>
+
                         <img
-                            :src="post.path"
-                            alt="Post Image"
-                            class="w-full block"
-                            style="max-height: 350px; object-fit: cover"
+                            v-else
+                            :src="`/storage/img/social/${post.path}`"
+                            class="w-full h-full block object-cover transition-opacity duration-500"
+                            :class="post.isLoaded ? 'opacity-100' : 'opacity-0'"
+                            @load="post.isLoaded = true"
                         />
                     </template>
 

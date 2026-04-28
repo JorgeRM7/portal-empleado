@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PostController
@@ -28,5 +29,15 @@ class PostController
             });
 
         return Inertia::render('Social/Index', ['posts' => $posts]);
+    }
+
+    public function show($path)
+    {
+        // El disco 'hostinger_private' es el que ya configuraste en filesystems.php
+        if (!Storage::disk('remote_sftp')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('remote_sftp')->response($path);
     }
 }
