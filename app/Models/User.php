@@ -30,6 +30,8 @@ class User extends Authenticatable
     use Notifiable;
 
     protected $guard_name = 'web';
+
+    protected $table = 'user_employees';
     /**
      * The attributes that are mass assignable.
      *
