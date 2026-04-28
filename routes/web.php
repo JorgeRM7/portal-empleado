@@ -15,6 +15,7 @@ use App\Http\Controllers\ComplaintsModuleController;
 use App\Http\Controllers\EmployeeIncidencesController;
 use App\Http\Controllers\PayrollInvoiceController;
 use App\Http\Controllers\TermConditionController;
+use App\Http\Controllers\CommunityController;
 
 
 // -----------------------------------------------------
@@ -119,6 +120,10 @@ Route::middleware([
 
     Route::resource('term-conditions', TermConditionController::class)->names([
         'index' => 'term-conditions'
+    ]);
+
+    Route::resource('community', CommunityController::class)->names([
+        'index' => 'community'
     ]);
 
 });
