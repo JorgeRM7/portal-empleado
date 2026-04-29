@@ -20,42 +20,6 @@ const toast = useToast();
 const showWarningNotifications = ref(false);
 const isPermanentlyBlocked = ref(false);
 
-// const acceptTerms = () => {
-//     const userId = page.props.auth?.user?.id;
-//     if (!userId) {
-//         console.error("No se encontró el ID del usuario");
-//         return;
-//     }
-
-//     router.put(route('term-conditions.update', { term_condition: userId }), {}, {
-//         onBefore: () => {
-//             loadingTerms.value = true;
-//         },
-//         onSuccess: () => {
-//             showTermsModal.value = false;
-
-//             router.reload({
-//                 only: ['auth'],
-//                 preserveState: false
-//             });
-
-//             toast.add({
-//                 severity: 'success',
-//                 summary: '¡Éxito!',
-//                 detail: 'Has aceptado los términos. Ya puedes navegar.',
-//                 life: 4000
-//             });
-//         },
-//         onError: (errors) => {
-//             console.error(errors);
-//         },
-//         onFinish: () => {
-//             loadingTerms.value = false;
-//         },
-//         preserveScroll: true
-//     });
-// };
-
 const acceptTerms = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
@@ -95,7 +59,6 @@ const acceptTerms = async () => {
             });
         }
     } else {
-        // Si el usuario le dio a "Bloquear" justo ahora
         isPermanentlyBlocked.value = (permission === 'denied');
         showWarningNotifications.value = true;
     }
