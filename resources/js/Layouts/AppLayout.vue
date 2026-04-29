@@ -11,6 +11,7 @@ import { usePage, router } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import InactivityTimer from '@/Components/InactivityTimer.vue';
 import { obtenerTokenReal } from "../firebase";
+import { getMessaging, onMessage } from "firebase/messaging";
 
 
 const page = usePage();
@@ -19,6 +20,7 @@ const showTermsModal = ref(false);
 const toast = useToast();
 const showWarningNotifications = ref(false);
 const isPermanentlyBlocked = ref(false);
+const messaging = getMessaging();
 
 const acceptTerms = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -83,6 +85,30 @@ const confirmSelection = (token) => {
         onFinish: () => { loadingTerms.value = false; }
     });
 };
+
+onMessage(messaging, (payload) => {
+    console.log('Mensaje recibido en primer plano (App abierta):', payload);
+
+    // OPCIÓN A: Mostrar una notificación nativa del navegador
+    const notificationTitle = payload.notification.title;
+    const notificationOptions = {
+        body: payload.notification.body,
+        icon: '/logo.png',
+    };
+
+    // Esto fuerza a que salga el cuadrito de notificación arriba a la derecha
+    new Notification(notificationTitle, notificationOptions);
+
+    // OPCIÓN B: Mostrar un aviso dentro de tu portal (Toast de PrimeVue)
+
+    // toast.add({
+    //     severity: 'info',
+    //     summary: payload.notification.title,
+    //     detail: payload.notification.body,
+    //     life: 5000
+    // });
+
+});
 
 const logout = () => {
     router.post(route('logout'), {}, {
