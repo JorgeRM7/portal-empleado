@@ -16,21 +16,6 @@ class TermConditionController
         ]);
     }
 
-    // public function update(Request $request, $id)
-    // {
-    //     $employee = Employee::find($id);
-
-    //     if (!$employee) {
-    //         return back()->withErrors(['message' => 'Empleado no encontrado.']);
-    //     }
-
-    //     $employee->update([
-    //         'terms_condition' => 1
-    //     ]);
-
-    //     return back()->with('success', 'Términos aceptados correctamente.');
-    // }
-
     public function update(Request $request, $id)
     {
         // Buscamos al empleado (tabla employees)

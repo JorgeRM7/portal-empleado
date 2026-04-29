@@ -57,6 +57,19 @@ const isPermanentlyBlocked = ref(false);
 // };
 
 const acceptTerms = async () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    // Si es iOS y no está "instalada" la app
+    if (isIOS && !window.navigator.standalone) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Atención usuario de iPhone',
+            detail: 'Para recibir notificaciones, pulsa el botón compartir y selecciona "Añadir a la pantalla de inicio".',
+            life: 8000
+        });
+        return;
+    }
+
     const userId = page.props.auth?.user?.id;
     if (!userId) return;
 
