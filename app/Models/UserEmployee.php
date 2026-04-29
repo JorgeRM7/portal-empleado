@@ -15,6 +15,7 @@ class UserEmployee extends Authenticatable
     protected $fillable = [
         'email',
         'password',
+        'device_token',
     ];
 
     protected $hidden = [

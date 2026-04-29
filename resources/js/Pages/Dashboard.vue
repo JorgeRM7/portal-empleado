@@ -100,7 +100,7 @@ const openDetailsModal = (rawDate) => {
         horas_triples: attendanceExtras?.horas_triples || 0,
         sunday_premium: attendanceExtras?.sunday_premium || 0,
     };
-    console.log(details.value);
+    // console.log(details.value);
 
     modalDetails.value = true;
 };
@@ -166,7 +166,7 @@ const openIncidencesModal = async (id) => {
             };
         });
 
-        console.log(incidencesHistory.value);
+        // console.log(incidencesHistory.value);
     } catch (error) {
         console.error("Error al cargar incidencias", error);
     } finally {
@@ -190,7 +190,7 @@ function obtenerEmpleado() {
     let id = employee.value.id;
     axios.get(`/dashboard/show/${id}`)
         .then(response => {
-            console.log('Datos del empleado:', response.data);
+            // console.log('Datos del empleado:', response.data);
             employeeData.value = response.data.employee;
             // if (!employeeData.value.terms_condition) {
             //     showTermsModal.value = true;

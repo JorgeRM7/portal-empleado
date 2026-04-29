@@ -1,0 +1,247 @@
+name: 🚀 Despliegue Sandbox (Linux)
+
+on:
+  push:
+    branches: ["main"] # ← O usa "main" si quieres que ambos servidores se actualicen igual
+
+jobs:
+  deploy-sandbox:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------------
+      # FASE 0: CHECKOUT Y NOTIFICACIÓN
+      # ------------------------------------------------------------------
+      - name: Checkout del código
+        uses: actions/checkout@v3
+        with:
+          clean: false
+          fetch-depth: 2
+
+      - name: 🚀 Notificar INICIO de Despliegue Sandbox
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": ":rocket: Iniciando Despliegue a SANDBOX",
+              "attachments": [
+                {
+                  "color": "#3AA3E3",
+                  "title": ":rocket: Despliegue a Sandbox",
+                  "fields": [
+                    {
+                      "title": "Usuario",
+                      "value": "${{ github.actor }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Rama",
+                      "value": "sandbox",
+                      "short": true
+                    },
+                    {
+                      "title": "Commit",
+                      "value": "${{ github.event.head_commit.message }}",
+                      "short": false
+                    },
+                    {
+                      "title": "Servidor",
+                      "value": "sandbox.miportalrh.com",
+                      "short": true
+                    }
+                  ],
+                  "footer": "GitHub Actions"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      # ------------------------------------------------------------------
+      # FASE 1: CONEXIÓN SSH Y PREPARACIÓN
+      # ------------------------------------------------------------------
+      - name: 📡 Configurar llave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST_SANDBOX }} >> ~/.ssh/known_hosts
+
+      - name: 🔓 Preparar permisos para rsync
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_SANDBOX }}
+          username: ${{ secrets.SSH_USER_SANDBOX }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            sudo chown -R ubuntu:www-data /var/www/miportalrh
+            sudo chmod -R 775 /var/www/miportalrh
+
+      # ------------------------------------------------------------------
+      # FASE 2: SINCRONIZACIÓN DE ARCHIVOS (RSYNC)
+      # ------------------------------------------------------------------
+      - name: 🔄 Sincronizar archivos vía Rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='.env' \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='storage/app' \
+            --exclude='storage/logs' \
+            --exclude='storage/framework/cache' \
+            --exclude='storage/framework/sessions' \
+            --exclude='storage/framework/views' \
+            --exclude='bootstrap/cache' \
+            --exclude='.github' \
+            --exclude='.gitignore' \
+            ./ ${{ secrets.SSH_USER_SANDBOX }}@${{ secrets.SSH_HOST_SANDBOX }}:${{ secrets.DEPLOY_PATH_SANDBOX }}
+
+      - name: 🔒 Restaurar permisos para producción
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_SANDBOX }}
+          username: ${{ secrets.SSH_USER_SANDBOX }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            sudo chown -R www-www-data /var/www/miportalrh
+            sudo chmod -R 775 /var/www/miportalrh/storage
+            sudo chmod -R 775 /var/www/miportalrh/bootstrap/cache
+            sudo chmod -R 755 /var/www/miportalrh/public
+
+      # ------------------------------------------------------------------
+      # FASE 3: INSTALACIÓN DE DEPENDENCIAS EN EL SERVIDOR
+      # ------------------------------------------------------------------
+      - name: 📦 Instalar Dependencias Backend (Composer)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_SANDBOX }}
+          username: ${{ secrets.SSH_USER_SANDBOX }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH_SANDBOX }}
+            echo "📦 Instalando Composer..."
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: 🔓 Preparar permisos para npm build
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_SANDBOX }}
+          username: ${{ secrets.SSH_USER_SANDBOX }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH_SANDBOX }}
+            sudo chown -R ubuntu:ubuntu public/build node_modules 2>/dev/null || true
+            sudo chmod -R 775 public/build node_modules 2>/dev/null || true
+            echo "✅ Permisos preparados"
+
+      # === COMPILAR FRONTEND ===
+      - name: 🎨 Compilar Frontend (Vue + Vite)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_SANDBOX }}
+          username: ${{ secrets.SSH_USER_SANDBOX }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH_SANDBOX }}
+
+            # Limpiar caché de Vite para evitar errores de permisos
+            rm -rf node_modules/.vite public/build 2>/dev/null || true
+
+            # Instalar dependencias
+            npm install --legacy-peer-deps
+
+            # Ejecutar build
+            npm run build
+
+            echo "✅ Build completado"
+
+      # === RESTAURAR PERMISOS POST-BUILD ===
+      - name: 🔒 Restaurar permisos para Nginx/PHP
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_SANDBOX }}
+          username: ${{ secrets.SSH_USER_SANDBOX }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH_SANDBOX }}
+
+            # Nginx necesita leer los archivos compilados
+            sudo chown -R www-www-data public/build
+            sudo chmod -R 755 public/build
+
+            # Laravel necesita escribir en storage y cache
+            sudo chown -R www-www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+
+            echo "✅ Permisos restaurados"
+
+      - name: 🔒 Corregir Permisos y Optimizar
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_SANDBOX }}
+          username: ${{ secrets.SSH_USER_SANDBOX }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH_SANDBOX }}
+
+            echo "🔒 Corrigiendo permisos..."
+            sudo chown -R www-data:www-data storage bootstrap/cache public/build
+            sudo chmod -R 775 storage bootstrap/cache
+            sudo chmod -R 755 public/build
+
+            echo "⚙️ Optimizando Laravel..."
+            sudo -u www-data php artisan config:cache
+            sudo -u www-data php artisan route:cache
+            sudo -u www-data php artisan view:cache
+            sudo -u www-data php artisan migrate --force
+
+            echo "🔄 Reiniciando servicios..."
+            sudo systemctl reload nginx
+            sudo systemctl reload php8.3-fpm
+
+      # ------------------------------------------------------------------
+      # FASE 5: MONITOREO (Smoke Test)
+      # ------------------------------------------------------------------
+      - name: 🕵️ Verificar que el sitio cargue
+        run: |
+          curl -f ${{ secrets.APP_URL_SANDBOX }}/login || exit 1
+          echo "✅ El sitio sandbox responde correctamente"
+
+      # ------------------------------------------------------------------
+      # FASE FINAL: NOTIFICACIÓN RESULTADO
+      # ------------------------------------------------------------------
+      - name: 📢 Notificar RESULTADO a Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && ':white_check_mark: Despliegue Sandbox Exitoso' || ':x: Fallo en Despliegue Sandbox' }}",
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "title": "${{ job.status == 'success' && ':white_check_mark: Sandbox Completado' || ':x: Error en Sandbox' }}",
+                  "fields": [
+                    {
+                      "title": "Repositorio",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "sandbox",
+                      "short": true
+                    },
+                    {
+                      "title": "Servidor",
+                      "value": "sandbox.miportalrh.com",
+                      "short": true
+                    }
+                  ],
+                  "footer": "GitHub Actions"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
