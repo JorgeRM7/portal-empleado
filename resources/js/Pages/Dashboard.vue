@@ -620,7 +620,7 @@ onMounted(() => {
                         <Tag value="Mes actual" severity="info" rounded />
                     </div>
 
-                    <div class="border border-gray-300 w-full">
+                    <div class="w-full">
                         <Calendar
                             v-model="attendanceDate"
                             inline
