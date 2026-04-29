@@ -14,7 +14,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Models\Permission;
 
-class User extends Authenticatable
+class User_nom extends Authenticatable
 {
     use HasApiTokens;
 
@@ -31,7 +31,7 @@ class User extends Authenticatable
 
     protected $guard_name = 'web';
 
-    protected $table = 'user_employees';
+    protected $table = 'users';
     /**
      * The attributes that are mass assignable.
      *

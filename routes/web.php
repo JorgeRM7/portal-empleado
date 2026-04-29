@@ -13,7 +13,9 @@ use App\Http\Controllers\WeeklyAssistencesController;
 use App\Http\Controllers\ComplaintsModuleController;
 
 use App\Http\Controllers\EmployeeIncidencesController;
+use App\Http\Controllers\LikeController;
 use App\Http\Controllers\PayrollInvoiceController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\TermConditionController;
 
 
@@ -121,6 +123,13 @@ Route::middleware([
         'index' => 'term-conditions'
     ]);
 
+    Route::get('/posts', [PostController::class, 'index'])
+        ->name('posts.index');
+    Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])
+        ->name('posts.like');
+    Route::get('/storage/img/social/{path}', [PostController::class, 'show'])
+        ->where('path', '.*')
+        ->name('posts.image');
 });
 
 
