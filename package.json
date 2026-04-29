@@ -19,6 +19,7 @@
         "axios": "^1.11.0",
         "chart.js": "3.3.2",
         "date-fns": "^4.1.0",
+        "firebase": "^12.12.1",
         "flag-icons": "^7.5.0",
         "papaparse": "^5.5.3",
         "pinia": "^3.0.3",

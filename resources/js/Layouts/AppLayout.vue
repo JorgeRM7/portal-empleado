@@ -10,32 +10,93 @@ import Assistant from "@/Components/Assistant.vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import InactivityTimer from '@/Components/InactivityTimer.vue';
+import { obtenerTokenReal } from "../firebase";
 
 
 const page = usePage();
 const loadingTerms = ref(false);
 const showTermsModal = ref(false);
 const toast = useToast();
+const showWarningNotifications = ref(false);
+const isPermanentlyBlocked = ref(false);
 
-const acceptTerms = () => {
+// const acceptTerms = () => {
+//     const userId = page.props.auth?.user?.id;
+//     if (!userId) {
+//         console.error("No se encontró el ID del usuario");
+//         return;
+//     }
+
+//     router.put(route('term-conditions.update', { term_condition: userId }), {}, {
+//         onBefore: () => {
+//             loadingTerms.value = true;
+//         },
+//         onSuccess: () => {
+//             showTermsModal.value = false;
+
+//             router.reload({
+//                 only: ['auth'],
+//                 preserveState: false
+//             });
+
+//             toast.add({
+//                 severity: 'success',
+//                 summary: '¡Éxito!',
+//                 detail: 'Has aceptado los términos. Ya puedes navegar.',
+//                 life: 4000
+//             });
+//         },
+//         onError: (errors) => {
+//             console.error(errors);
+//         },
+//         onFinish: () => {
+//             loadingTerms.value = false;
+//         },
+//         preserveScroll: true
+//     });
+// };
+
+const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
-    if (!userId) {
-        console.error("No se encontró el ID del usuario");
+    if (!userId) return;
+
+    // Revisamos el estado actual del permiso
+    if (Notification.permission === 'denied') {
+        isPermanentlyBlocked.value = true;
+        showWarningNotifications.value = true;
         return;
     }
 
-    router.put(route('term-conditions.update', { term_condition: userId }), {}, {
-        onBefore: () => {
-            loadingTerms.value = true;
-        },
+    const permission = await Notification.requestPermission();
+
+    if (permission === 'granted') {
+        const tokenReal = await obtenerTokenReal();
+        if (tokenReal) {
+            confirmSelection(tokenReal);
+        } else {
+            toast.add({
+                severity: 'error',
+                summary: 'Error de Red',
+                detail: 'No pudimos conectar con el servidor de notificaciones. Intenta de nuevo.',
+                life: 4000
+            });
+        }
+    } else {
+        // Si el usuario le dio a "Bloquear" justo ahora
+        isPermanentlyBlocked.value = (permission === 'denied');
+        showWarningNotifications.value = true;
+    }
+};
+
+const confirmSelection = (token) => {
+    router.put(route('term-conditions.update', { term_condition: page.props.auth.user.id }), {
+        device_token: token
+    }, {
+        onBefore: () => { loadingTerms.value = true; },
         onSuccess: () => {
             showTermsModal.value = false;
-
-            router.reload({
-                only: ['auth'],
-                preserveState: false
-            });
-
+            showWarningNotifications.value = false;
+            router.reload({ only: ['auth'], preserveState: false });
             toast.add({
                 severity: 'success',
                 summary: '¡Éxito!',
@@ -43,13 +104,7 @@ const acceptTerms = () => {
                 life: 4000
             });
         },
-        onError: (errors) => {
-            console.error(errors);
-        },
-        onFinish: () => {
-            loadingTerms.value = false;
-        },
-        preserveScroll: true
+        onFinish: () => { loadingTerms.value = false; }
     });
 };
 
@@ -174,19 +229,6 @@ function isOutsideClicked(event) {
                 <InlineMessage severity="info">Para continuar utilizando el <strong>Mi Portal RH</strong>, es necesario que leas y aceptes los términos de confidencialidad y uso de datos.</InlineMessage>
             </div>
 
-            <!-- <div class="flex-grow w-full bg-gray-200 dark:bg-gray-900">
-                <iframe
-                    src="/path-to-your-pdf.pdf#toolbar=0"
-                    class="w-full h-full border-none"
-                    type="application/pdf"
-                >
-                    <div class="p-10 text-center">
-                        <p>Tu navegador no puede mostrar el PDF directamente.</p>
-                        <a href="/path-to-your-pdf.pdf" target="_blank" class="text-blue-500 underline">Haz clic aquí para descargar el documento.</a>
-                    </div>
-                </iframe>
-            </div> -->
-
             <div class="p-6 rounded-xl border border-gray-100 dark:border-gray-700 max-h-[350px] overflow-y-auto text-sm leading-relaxed text-gray-600 dark:text-gray-300">
                 <h3 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
                     <i class="pi pi-shield text-emerald-500"></i>
@@ -241,6 +283,49 @@ function isOutsideClicked(event) {
                     class="w-full sm:w-auto shadow-lg shadow-emerald-500/20"
                     raised
                 />
+            </div>
+        </div>
+    </Dialog>
+    <Dialog
+        v-model:visible="showWarningNotifications"
+        header="Configuración Requerida"
+        :modal="true"
+        :closable="false"
+        class="mx-4 w-full md:w-[500px]"
+    >
+        <div class="flex flex-col gap-4">
+            <div class="flex items-center gap-3 text-red-600">
+                <i class="pi pi-bell-slash text-4xl"></i>
+                <p class="font-bold text-xl">Notificaciones Desactivadas</p>
+            </div>
+
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                Para continuar en <strong>Mi Portal RH</strong>, debes permitir las notificaciones. Esto nos permite enviarte tus recibos y avisos importantes.
+            </p>
+
+            <div v-if="isPermanentlyBlocked" class=" p-4 rounded-lg border border-blue-200">
+                <p class="text-xs font-bold mb-2 flex items-center gap-2">
+                    <i class="pi pi-info-circle"></i> CÓMO ACTIVARLAS:
+                </p>
+                <ol class="text-xs pl-4 list-decimal flex flex-col gap-2">
+                    <li>Haz clic en el icono del <strong>candado (🔒)</strong> o de <strong>información (ⓘ)</strong> situado a la izquierda de la dirección web en la parte superior.</li>
+                    <li>Si ya habías bloqueado los permisos anteriormente, ahí verás la opción de <strong>Notificaciones</strong> desactivada.</li>
+                    <li>Activa el interruptor de <strong>Notificaciones</strong> para permitir que el portal te envíe avisos.</li>
+                    <li>Cierra ese pequeño menú, regresa aquí y pulsa el botón de abajo.</li>
+                </ol>
+            </div>
+
+            <div class="flex flex-col gap-2 mt-4">
+                <Button
+                    label="Ya las activé, intentar de nuevo"
+                    severity="success"
+                    icon="pi pi-refresh"
+                    @click="acceptTerms"
+                    class="w-full"
+                />
+                <p class="text-[10px] text-center">
+                    Si el problema persiste, refresca la página ó presiona F5 en tu teclado.
+                </p>
             </div>
         </div>
     </Dialog>
