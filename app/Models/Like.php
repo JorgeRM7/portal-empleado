@@ -11,4 +11,21 @@ class Like extends Model
         'post_id',
         'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function employee()
+    {
+        return $this->hasOneThrough(
+            Employee::class, 
+            User::class, 
+            'id',      
+            'id', 
+            'user_id', 
+            'id'       
+        );
+    }
 }

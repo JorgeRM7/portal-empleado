@@ -87,6 +87,7 @@ onMounted(() => {
         console.error("❌ Echo no está definido. Revisa tu bootstrap.js");
     }
 });
+console.log(props.posts);
 </script>
 
 <template>
@@ -115,12 +116,7 @@ onMounted(() => {
                                 <div class="post-header">
                                     <div class="author-info">
                                         <Avatar
-                                            :image="post.user?.avatar"
-                                            :label="
-                                                !post.user?.avatar
-                                                    ? post.user?.name.charAt(0)
-                                                    : null
-                                            "
+                                            :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${post.user?.employee_id}.jpg`"
                                             shape="circle"
                                             class="author-avatar"
                                         />
@@ -187,14 +183,57 @@ onMounted(() => {
 
                             <!-- Footer con interacciones -->
                             <template #footer>
-                                <div class="post-footer mb-2">
+                                <div class="post-footer">
                                     <div class="likes-counter">
                                         <i class="pi pi-heart-fill"></i>
                                         <span>{{ post.likes_count ?? 0 }}</span>
                                     </div>
+
+                                    <!-- Likers avatars -->
+                                    <div
+                                        v-if="
+                                            post.likers &&
+                                            post.likers.length > 0
+                                        "
+                                        class="likers-section"
+                                    >
+                                        <div class="likers-label">
+                                            Le dieron like:
+                                        </div>
+                                        <div class="likers-container">
+                                            <div
+                                                v-for="liker in post.likers.slice(
+                                                    0,
+                                                    8,
+                                                )"
+                                                :key="liker.id"
+                                                class="liker-avatar"
+                                                :title="liker.name"
+                                            >
+                                                <Avatar
+                                                    :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${liker.id}.jpg`"
+                                                    shape="circle"
+                                                    size="small"
+                                                    class="avatar-small"
+                                                />
+                                            </div>
+
+                                            <!-- Mostrar +X si hay más -->
+                                            <div
+                                                v-if="post.likers.length > 8"
+                                                class="likers-more"
+                                                :title="`${post.likers
+                                                    .slice(8)
+                                                    .map((l) => l.name)
+                                                    .join(', ')}`"
+                                            >
+                                                +{{ post.likers.length - 8 }}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <Divider />
+                                <Divider class="mt-10" />
 
                                 <div class="post-actions">
                                     <Button
@@ -270,12 +309,7 @@ onMounted(() => {
                     <div class="expanded-header">
                         <div class="author-section">
                             <Avatar
-                                :image="selectedPost.user?.avatar"
-                                :label="
-                                    !selectedPost.user?.avatar
-                                        ? selectedPost.user?.name.charAt(0)
-                                        : null
-                                "
+                                :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${selectedPost.user?.employee_id}.jpg`"
                                 shape="circle"
                                 size="large"
                             />
@@ -306,6 +340,41 @@ onMounted(() => {
                             <i class="pi pi-heart-fill"></i>
                             {{ selectedPost.likes_count ?? 0 }} Me gusta
                         </span>
+                    </div>
+
+                    <!-- Likers en modal expandido -->
+                    <div
+                        v-if="
+                            selectedPost.likers &&
+                            selectedPost.likers.length > 0
+                        "
+                        class="expanded-likers"
+                    >
+                        <div class="expanded-likers-label">Le dieron like:</div>
+                        <div class="expanded-likers-list">
+                            <div
+                                v-for="(liker, index) in selectedPost.likers"
+                                :key="liker.id"
+                                class="expanded-liker-item"
+                            >
+                                <Avatar
+                                    :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${liker.id}.jpg`"
+                                    shape="circle"
+                                    size="small"
+                                    class="avatar-small"
+                                />
+                                <span class="liker-name">
+                                    {{ liker.name }}
+                                </span>
+                                <span
+                                    v-if="
+                                        index < selectedPost.likers.length - 1
+                                    "
+                                    class="liker-separator"
+                                >
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
                     <Divider />
@@ -463,7 +532,6 @@ onMounted(() => {
     width: 100%;
     height: 0;
     padding-bottom: 100%;
-    overflow: hidden;
     background-color: var(--secondary-bg);
     cursor: pointer;
     transition: all 0.3s ease;
@@ -555,13 +623,72 @@ onMounted(() => {
     font-size: 14px;
 }
 
+/* Likers section */
+.likers-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
+.likers-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.likers-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.liker-avatar {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.liker-avatar:hover {
+    transform: scale(1.1);
+}
+
+.avatar-small :deep(.p-avatar) {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 12px !important;
+}
+
+.likers-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--secondary-bg);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    cursor: help;
+    transition: all 0.2s ease;
+}
+
+.likers-more:hover {
+    background-color: #e8e8e8;
+    transform: scale(1.1);
+}
+
 /* Post actions */
 .post-actions {
     display: flex;
     gap: 12px;
-    padding: 8px 0;
-    margin: 0 -16px -16px;
-    padding: 8px 16px 0;
+    padding-top: 8px;
 }
 
 .action-button {
@@ -630,7 +757,6 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     padding: 16px;
-    overflow-y: auto;
     background-color: var(--primary-bg);
 }
 
@@ -701,10 +827,56 @@ onMounted(() => {
     color: #e4405f;
 }
 
+/* Expanded likers section */
+.expanded-likers {
+    margin: 8px 0;
+    padding: 8px 0;
+}
+
+.expanded-likers-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.expanded-likers-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.expanded-liker-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background-color: var(--secondary-bg);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.expanded-liker-item:hover {
+    background-color: #e8e8e8;
+}
+
+.liker-name {
+    font-weight: 500;
+}
+
+.liker-separator {
+    color: var(--text-secondary);
+    margin-left: 2px;
+}
+
 .expanded-actions {
     display: flex;
-    gap: 8px;
-    padding: 8px 0 0;
+    padding: 10px 0;
 }
 
 .action-button-expanded {
@@ -717,6 +889,7 @@ onMounted(() => {
     font-size: 12px !important;
     font-weight: 600 !important;
     transition: all 0.2s ease !important;
+    padding: 8px 0 !important;
 }
 
 .action-button-expanded:hover {
