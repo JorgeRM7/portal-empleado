@@ -31,6 +31,11 @@ const rawMenu = ref([
         icon: "pi pi-file-check",
         to: "/term-conditions",
     },
+    {
+        label: "Noticias",
+        icon: "pi pi-calendar-minus",
+        to: "/posts",
+    },
 ]);
 
 // const flatMenu = computed(() => {
@@ -65,4 +70,3 @@ const rawMenu = ref([
     margin-top: 1rem;
 }
 </style>
-
