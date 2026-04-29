@@ -284,7 +284,7 @@ function isOutsideClicked(event) {
                     <i class="pi pi-info-circle"></i> CÓMO ACTIVARLAS:
                 </p>
                 <ol class="text-xs pl-4 list-decimal flex flex-col gap-2">
-                    <li>Haz clic en el icono del <strong>candado (🔒)</strong> o de <strong>información (ⓘ)</strong> situado a la izquierda de la dirección web en la parte superior.</li>
+                    <li>Haz clic en el icono del <strong>candado (🔒)</strong> o de <strong>ajustes o controles (⊶))</strong> situado a la izquierda de la dirección web en la parte superior.</li>
                     <li>Si ya habías bloqueado los permisos anteriormente, ahí verás la opción de <strong>Notificaciones</strong> desactivada.</li>
                     <li>Activa el interruptor de <strong>Notificaciones</strong> para permitir que el portal te envíe avisos.</li>
                     <li>Cierra ese pequeño menú, regresa aquí y pulsa el botón de abajo.</li>
