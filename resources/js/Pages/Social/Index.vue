@@ -1,42 +1,40 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { ref, onMounted } from "vue";
-import axios from "axios"; // Asegúrate de tener axios importado
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
 import Card from "primevue/card";
 import Button from "primevue/button";
 import Avatar from "primevue/avatar";
 import Skeleton from "primevue/skeleton";
+import Dialog from "primevue/dialog";
+import Divider from "primevue/divider";
 
-// 1. Recibir los datos reales desde el controlador (Inertia)
+// Props
 const props = defineProps({
     posts: Array,
 });
 
-// 2. Hacerlos reactivos para que la UI se actualice al recibir eventos de Echo
+// Reactive data
 const postsList = ref(props.posts);
 const loading = ref(false);
+const selectedPost = ref(null);
+const expandModalVisible = ref(false);
 
-// --- LÓGICA DEL LIKE (CONECTADA AL BACKEND) ---
+// Like logic
 const toggleLike = async (post) => {
-    // 1. Asegurar que el conteo sea un número antes de empezar
     if (isNaN(post.likes_count)) post.likes_count = 0;
 
     const originalStatus = post.user_liked;
     const originalCount = post.likes_count;
 
-    // 2. Cambio visual inmediato (Optimistic UI)
     post.user_liked = !post.user_liked;
     post.user_liked ? post.likes_count++ : post.likes_count--;
 
     try {
         const { data } = await axios.post(`/posts/${post.id}/like`);
-
-        // 3. Sincronizar con lo que el servidor mandó
-        // Usamos los nombres exactos: likes_count y user_liked
         post.likes_count = data.likes_count;
         post.user_liked = data.user_liked;
     } catch (error) {
-        // Revertir si algo sale mal
         console.error("Error al procesar el like", error);
         post.user_liked = originalStatus;
         post.likes_count = originalCount;
@@ -44,6 +42,13 @@ const toggleLike = async (post) => {
     }
 };
 
+// Expandir post
+const expandPost = (post) => {
+    selectedPost.value = post;
+    expandModalVisible.value = true;
+};
+
+// Verificar si es video
 const isVideo = (path) => {
     if (!path) return false;
     const videoExtensions = ["mp4", "webm", "ogg", "mov"];
@@ -51,15 +56,13 @@ const isVideo = (path) => {
     return videoExtensions.includes(extension);
 };
 
-// --- ESCUCHAR TIEMPO REAL ---
+// WebSocket real-time
 onMounted(() => {
     console.log("Iniciando escucha de WebSockets...");
 
     if (window.Echo) {
-        // 1. Forzar salida de cualquier suscripción previa (limpieza)
         window.Echo.leaveChannel("posts");
 
-        // 2. Suscribirse de nuevo
         window.Echo.channel("posts")
             .subscribed(() => {
                 console.log("✅ ¡Suscrito con éxito al canal 'posts'!");
@@ -76,7 +79,6 @@ onMounted(() => {
                 }
             });
 
-        // 3. Ver estado de conexión global
         console.log(
             "Estado de Echo:",
             window.Echo.connector.pusher.connection.state,
@@ -89,99 +91,712 @@ onMounted(() => {
 
 <template>
     <AppLayout title="Noticias">
-        <div class="container mx-auto py-8" style="max-width: 600px">
-            <h1 class="text-3xl font-bold mb-6 text-900 px-4">
-                Feed de Noticias
-            </h1>
+        <!-- Contenedor principal del feed -->
+        <div class="news-feed-wrapper">
+            <div class="news-feed-container">
+                <div class="feed-header">
+                    <h1 class="feed-title">Feed de Noticias</h1>
+                </div>
 
-            <div v-for="post in postsList" :key="post.id" class="mb-6 px-4">
-                <Card class="overflow-hidden shadow-2 border-round-xl">
-                    <template #header>
-                        <video
-                            v-if="isVideo(post.path)"
-                            :src="`/storage/img/social/${post.path}`"
-                            class="w-full h-full block object-cover transition-opacity duration-500"
-                            :class="post.isLoaded ? 'opacity-100' : 'opacity-0'"
-                            controls
-                            @loadeddata="post.isLoaded = true"
-                        ></video>
+                <!-- Posts -->
+                <transition-group
+                    name="fade-slide"
+                    tag="div"
+                    class="posts-list"
+                >
+                    <div
+                        v-for="post in postsList"
+                        :key="post.id"
+                        class="post-wrapper"
+                    >
+                        <Card class="post-card">
+                            <!-- Header del post -->
+                            <template #title>
+                                <div class="post-header">
+                                    <div class="author-info">
+                                        <Avatar
+                                            :image="post.user?.avatar"
+                                            :label="
+                                                !post.user?.avatar
+                                                    ? post.user?.name.charAt(0)
+                                                    : null
+                                            "
+                                            shape="circle"
+                                            class="author-avatar"
+                                        />
+                                        <div class="author-details">
+                                            <div class="author-name">
+                                                {{ post.user?.name }}
+                                            </div>
+                                            <div class="post-title">
+                                                {{ post.title }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
 
-                        <img
-                            v-else
-                            :src="`/storage/img/social/${post.path}`"
-                            class="w-full h-full block object-cover transition-opacity duration-500"
-                            :class="post.isLoaded ? 'opacity-100' : 'opacity-0'"
-                            @load="post.isLoaded = true"
-                        />
-                    </template>
+                            <!-- Imagen/Video del post -->
+                            <template #header>
+                                <div
+                                    class="post-media-container"
+                                    @click="expandPost(post)"
+                                >
+                                    <!-- Skeleton loading -->
+                                    <div
+                                        v-if="!post.isLoaded"
+                                        class="skeleton-loader"
+                                    >
+                                        <Skeleton width="100%" height="100%" />
+                                    </div>
 
-                    <template #title>
-                        <div class="flex align-items-center gap-3 mb-2">
+                                    <!-- Video -->
+                                    <video
+                                        v-if="isVideo(post.path)"
+                                        :src="`/storage/img/social/${post.path}`"
+                                        class="post-media"
+                                        :class="{ loaded: post.isLoaded }"
+                                        controls
+                                        @loadeddata="post.isLoaded = true"
+                                    ></video>
+
+                                    <!-- Imagen -->
+                                    <img
+                                        v-else
+                                        :src="`/storage/img/social/${post.path}`"
+                                        class="post-media"
+                                        :class="{ loaded: post.isLoaded }"
+                                        @load="post.isLoaded = true"
+                                    />
+
+                                    <!-- Overlay expansión -->
+                                    <div class="media-overlay">
+                                        <div class="expand-icon">
+                                            <i class="pi pi-search-plus"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Descripción -->
+                            <template #content>
+                                <p class="post-description">
+                                    {{ post.description }}
+                                </p>
+                            </template>
+
+                            <!-- Footer con interacciones -->
+                            <template #footer>
+                                <div class="post-footer mb-2">
+                                    <div class="likes-counter">
+                                        <i class="pi pi-heart-fill"></i>
+                                        <span>{{ post.likes_count ?? 0 }}</span>
+                                    </div>
+                                </div>
+
+                                <Divider />
+
+                                <div class="post-actions">
+                                    <Button
+                                        @click="toggleLike(post)"
+                                        :icon="
+                                            post.user_liked
+                                                ? 'pi pi-heart-fill'
+                                                : 'pi pi-heart'
+                                        "
+                                        label="Me gusta"
+                                        :class="[
+                                            'action-button',
+                                            {
+                                                liked: post.user_liked,
+                                            },
+                                        ]"
+                                    />
+
+                                    <!-- <Button
+                                        icon="pi pi-comment"
+                                        label="Comentar"
+                                        class="action-button"
+                                    />
+
+                                    <Button
+                                        icon="pi pi-share-alt"
+                                        label="Compartir"
+                                        class="action-button"
+                                    /> -->
+                                </div>
+                            </template>
+                        </Card>
+                    </div>
+                </transition-group>
+
+                <!-- Loading indicator -->
+                <div v-if="loading" class="loading-section">
+                    <Skeleton width="100%" height="400px" class="mb-4" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de expansión del post -->
+        <Dialog
+            v-model:visible="expandModalVisible"
+            modal
+            :header="`Publicación de ${selectedPost?.user?.name}`"
+            :style="{ width: '90vw', maxWidth: '900px' }"
+            @hide="selectedPost = null"
+            class="expand-dialog"
+        >
+            <div v-if="selectedPost" class="expanded-post">
+                <!-- Media expandida -->
+                <div class="expanded-media">
+                    <video
+                        v-if="isVideo(selectedPost.path)"
+                        :src="`/storage/img/social/${selectedPost.path}`"
+                        class="expanded-video"
+                        controls
+                        autoplay
+                    ></video>
+
+                    <img
+                        v-else
+                        :src="`/storage/img/social/${selectedPost.path}`"
+                        class="expanded-image"
+                    />
+                </div>
+
+                <!-- Contenido del post expandido -->
+                <div class="expanded-content">
+                    <!-- Autor -->
+                    <div class="expanded-header">
+                        <div class="author-section">
                             <Avatar
-                                :image="post.user?.avatar"
+                                :image="selectedPost.user?.avatar"
                                 :label="
-                                    !post.user?.avatar
-                                        ? post.user?.name.charAt(0)
+                                    !selectedPost.user?.avatar
+                                        ? selectedPost.user?.name.charAt(0)
                                         : null
                                 "
                                 shape="circle"
-                                class="bg-primary text-white"
+                                size="large"
                             />
-                            <span class="text-lg font-semibold">{{
-                                post.user?.name
-                            }}</span>
+                            <div class="author-info-expanded">
+                                <div class="author-name">
+                                    {{ selectedPost.user?.name }}
+                                </div>
+                                <div class="post-time">Hace poco</div>
+                            </div>
                         </div>
-                        <div class="text-sm text-500 font-medium ml-1">
-                            {{ post.title }}
-                        </div>
-                    </template>
+                    </div>
 
-                    <template #content>
-                        <p class="m-0 text-700 line-height-3">
-                            {{ post.description }}
+                    <Divider />
+
+                    <!-- Título y descripción -->
+                    <div class="expanded-text">
+                        <h3 class="expanded-title">{{ selectedPost.title }}</h3>
+                        <p class="expanded-description">
+                            {{ selectedPost.description }}
                         </p>
-                    </template>
+                    </div>
 
-                    <template #footer>
-                        <div
-                            class="flex align-items-center justify-content-between pt-3 border-top-1 border-300"
-                        >
-                            <Button
-                                @click="toggleLike(post)"
-                                :icon="
-                                    post.user_liked
-                                        ? 'pi pi-heart-fill'
-                                        : 'pi pi-heart'
-                                "
-                                :label="String(post.likes_count ?? 0)"
-                                :class="
-                                    post.user_liked
-                                        ? 'p-button-danger'
-                                        : 'p-button-text p-button-secondary'
-                                "
-                                rounded
-                            />
+                    <Divider />
 
-                            <Button
-                                icon="pi pi-share-alt"
-                                class="p-button-text p-button-secondary"
-                                rounded
-                            />
-                        </div>
-                    </template>
-                </Card>
+                    <!-- Estadísticas -->
+                    <div class="expanded-stats">
+                        <span class="stat-item">
+                            <i class="pi pi-heart-fill"></i>
+                            {{ selectedPost.likes_count ?? 0 }} Me gusta
+                        </span>
+                    </div>
+
+                    <Divider />
+
+                    <!-- Acciones en el modal -->
+                    <div class="expanded-actions">
+                        <Button
+                            @click="toggleLike(selectedPost)"
+                            :icon="
+                                selectedPost.user_liked
+                                    ? 'pi pi-heart-fill'
+                                    : 'pi pi-heart'
+                            "
+                            label="Me gusta"
+                            :class="[
+                                'action-button-expanded',
+                                { liked: selectedPost.user_liked },
+                            ]"
+                        />
+
+                        <!-- <Button
+                            icon="pi pi-comment"
+                            label="Comentar"
+                            class="action-button-expanded"
+                        />
+
+                        <Button
+                            icon="pi pi-share-alt"
+                            label="Compartir"
+                            class="action-button-expanded"
+                        /> -->
+                    </div>
+                </div>
             </div>
-
-            <div v-if="loading" class="px-4">
-                <Skeleton width="100%" height="300px" class="mb-4" />
-            </div>
-        </div>
+        </Dialog>
     </AppLayout>
 </template>
 
 <style scoped>
-.container {
-    background-color: #f8f9fa;
+/* Variables CSS */
+:root {
+    --primary-bg: #ffffff;
+    --secondary-bg: #f0f2f5;
+    --border-color: #ccc;
+    --text-primary: #050505;
+    --text-secondary: #65676b;
+    --accent-color: #e4405f;
+    --hover-bg: #f2f2f2;
+}
+
+/* Feed wrapper */
+.news-feed-wrapper {
+    background-color: var(--secondary-bg);
     min-height: 100vh;
+    padding: 20px 0;
+}
+
+.news-feed-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0 12px;
+}
+
+/* Header */
+.feed-header {
+    margin-bottom: 24px;
+}
+
+.feed-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+/* Posts list */
+.posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.post-wrapper {
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Card del post */
+.post-card {
+    border-radius: 8px !important;
+    border: none !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    transition: box-shadow 0.2s ease;
+    overflow: hidden !important;
+}
+
+.post-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Post header */
+.post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    margin: 0;
+}
+
+.author-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.author-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 18px !important;
+}
+
+.author-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.author-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.post-title {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* Media container */
+.post-media-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 100%;
+    overflow: hidden;
+    background-color: var(--secondary-bg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 0 -16px 12px -16px;
+    width: calc(100% + 32px);
+}
+
+.post-media-container:hover .media-overlay {
+    opacity: 1;
+    visibility: visible;
+}
+
+.skeleton-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.post-media {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.post-media.loaded {
+    opacity: 1;
+}
+
+/* Overlay para expansión */
+.media-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
+    z-index: 2;
+}
+
+.expand-icon {
+    color: white;
+    font-size: 40px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Post description */
+.post-description {
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    word-wrap: break-word;
+}
+
+/* Post footer */
+.post-footer {
+    padding: 8px 0;
+    margin: 0 -16px -16px;
+    padding: 8px 16px 0;
+}
+
+.likes-counter {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.likes-counter i {
+    color: #e4405f;
+    font-size: 14px;
+}
+
+/* Post actions */
+.post-actions {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+    margin: 0 -16px -16px;
+    padding: 8px 16px 0;
+}
+
+.action-button {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-radius: 4px !important;
+    height: 36px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.action-button:hover {
+    background-color: var(--hover-bg) !important;
+    color: #0a66c2 !important;
+}
+
+.action-button.liked {
+    color: #e4405f !important;
+}
+
+/* Loading section */
+.loading-section {
+    padding: 0 12px;
+}
+
+/* Dialog de expansión */
+.expand-dialog :deep(.p-dialog-header) {
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px;
+}
+
+.expand-dialog :deep(.p-dialog-content) {
+    padding: 0 !important;
+}
+
+.expanded-post {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-height: 600px;
+    height: 100%;
+}
+
+.expanded-media {
+    background-color: var(--secondary-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    overflow: hidden;
+}
+
+.expanded-image,
+.expanded-video {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.expanded-content {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    overflow-y: auto;
+    background-color: var(--primary-bg);
+}
+
+.expanded-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.author-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.author-info-expanded {
+    display: flex;
+    flex-direction: column;
+}
+
+.author-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.post-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.expanded-text {
+    flex: 1;
+}
+
+.expanded-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.expanded-description {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.expanded-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 8px 0;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-item i {
+    color: #e4405f;
+}
+
+.expanded-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 0 0;
+}
+
+.action-button-expanded {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-radius: 4px !important;
+    height: 32px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.action-button-expanded:hover {
+    background-color: var(--hover-bg) !important;
+    color: #0a66c2 !important;
+}
+
+.action-button-expanded.liked {
+    color: #e4405f !important;
+}
+
+/* Transiciones */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: all 0.3s ease;
+}
+
+.fade-slide-enter-from {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .expanded-post {
+        grid-template-columns: 1fr;
+        max-height: none;
+    }
+
+    .expanded-media {
+        min-height: 400px;
+        order: -1;
+    }
+
+    .expanded-content {
+        max-height: 300px;
+    }
+
+    .feed-title {
+        font-size: 24px;
+    }
+
+    .action-button,
+    .action-button-expanded {
+        font-size: 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .news-feed-container {
+        padding: 0;
+    }
+
+    .post-wrapper {
+        border-radius: 0;
+    }
+
+    .post-card {
+        border-radius: 0 !important;
+    }
+
+    .feed-title {
+        padding: 0 12px;
+        font-size: 20px;
+    }
+
+    .feed-header {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+
+    .expand-dialog :deep(.p-dialog) {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        margin: 0 !important;
+    }
 }
 </style>
