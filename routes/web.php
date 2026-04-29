@@ -131,9 +131,6 @@ Route::middleware([
     Route::get('/storage/img/social/{path}', [PostController::class, 'show'])
         ->where('path', '.*')
         ->name('posts.image');
-    Route::resource('community', CommunityController::class)->names([
-        'index' => 'community'
-    ]);
 
 });
 
