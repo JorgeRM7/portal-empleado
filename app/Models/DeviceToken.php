@@ -9,15 +9,15 @@ class DeviceToken extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'user_device_tokens';
+    protected $table = 'user_employees_device_tokens';
 
     protected $fillable = [
-        'id_user',
+        'employee_id',
         'device_token',
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'id_user');
+        return $this->belongsTo(User::class, 'employee_id');
     }
 }

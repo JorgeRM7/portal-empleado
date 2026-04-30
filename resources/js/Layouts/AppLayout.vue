@@ -21,6 +21,7 @@ const toast = useToast();
 const showWarningNotifications = ref(false);
 const isPermanentlyBlocked = ref(false);
 const messaging = getMessaging();
+const deferredPrompt = ref(null);
 
 const acceptTerms = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -75,6 +76,19 @@ const confirmSelection = (token) => {
             showTermsModal.value = false;
             showWarningNotifications.value = false;
             router.reload({ only: ['auth'], preserveState: false });
+
+            // --- LÓGICA DE ACCESO DIRECTO AQUÍ ---
+            if (deferredPrompt.value) {
+                // Si el navegador capturó el evento (Android / Chrome)
+                deferredPrompt.value.prompt();
+                deferredPrompt.value.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Usuario aceptó instalar el acceso directo');
+                    }
+                    deferredPrompt.value = null; // Limpiamos el evento
+                });
+            }
+
             toast.add({
                 severity: 'success',
                 summary: '¡Éxito!',
@@ -171,25 +185,29 @@ function isOutsideClicked(event) {
     }
 }
 
-// onMounted(() => {
-//     onMessage(messaging, (payload) => {
-//         console.log('Mensaje recibido en primer plano:', payload);
+onMounted(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt.value = e;
+    });
+    // onMessage(messaging, (payload) => {
+    //     console.log('Mensaje recibido en primer plano:', payload);
 
-//         if (Notification.permission === "granted") {
-//             new Notification(payload.notification.title, {
-//                 body: payload.notification.body,
-//                 icon: '/logo.png',
-//             });
-//         }
+    //     if (Notification.permission === "granted") {
+    //         new Notification(payload.notification.title, {
+    //             body: payload.notification.body,
+    //             icon: '/logo.png',
+    //         });
+    //     }
 
-//         toast.add({
-//             severity: 'info',
-//             summary: payload.notification.title || 'Aviso de Portal RH',
-//             detail: payload.notification.body || 'Tienes una nueva actualización.',
-//             life: 6000
-//         });
-//     });
-// });
+    //     toast.add({
+    //         severity: 'info',
+    //         summary: payload.notification.title || 'Aviso de Portal RH',
+    //         detail: payload.notification.body || 'Tienes una nueva actualización.',
+    //         life: 6000
+    //     });
+    // });
+});
 </script>
 
 <template>

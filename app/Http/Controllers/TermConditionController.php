@@ -30,9 +30,9 @@ class TermConditionController
 
         if ($request->has('device_token') && $request->device_token != null) {
 
-            DB::table('user_device_tokens')->updateOrInsert(
+            DB::table('user_employees_device_tokens')->updateOrInsert(
                 [
-                    'id_user' => $request->user()->id,
+                    'employee_id' => $request->user()->id,
                     'device_token' => $request->device_token
                 ],
                 [
