@@ -171,29 +171,25 @@ function isOutsideClicked(event) {
     }
 }
 
-onMounted(() => {
-    // Escuchar mensajes cuando la app está abierta (Primer plano)
-    onMessage(messaging, (payload) => {
-        console.log('Mensaje recibido en primer plano:', payload);
+// onMounted(() => {
+//     onMessage(messaging, (payload) => {
+//         console.log('Mensaje recibido en primer plano:', payload);
 
-        // 1. Mostrar Notificación Nativa (Funciona en Android/Windows)
-        if (Notification.permission === "granted") {
-            new Notification(payload.notification.title, {
-                body: payload.notification.body,
-                icon: '/logo.png',
-            });
-        }
+//         if (Notification.permission === "granted") {
+//             new Notification(payload.notification.title, {
+//                 body: payload.notification.body,
+//                 icon: '/logo.png',
+//             });
+//         }
 
-        // 2. Mostrar Toast de PrimeVue (ESTO ES LO MEJOR PARA IPHONE)
-        // Descomenta esto para que el usuario vea el aviso dentro del portal
-        toast.add({
-            severity: 'info',
-            summary: payload.notification.title || 'Aviso de Portal RH',
-            detail: payload.notification.body || 'Tienes una nueva actualización.',
-            life: 6000 // Se queda 6 segundos
-        });
-    });
-});
+//         toast.add({
+//             severity: 'info',
+//             summary: payload.notification.title || 'Aviso de Portal RH',
+//             detail: payload.notification.body || 'Tienes una nueva actualización.',
+//             life: 6000
+//         });
+//     });
+// });
 </script>
 
 <template>
