@@ -15,10 +15,16 @@ const props = defineProps({
 });
 
 // Reactive data
-const postsList = ref(props.posts);
+const postsList = ref(props.posts.slice(0, 10)); // Mostrar solo los primeros 10
+const allPosts = ref(props.posts); // Guardar todos los posts
 const loading = ref(false);
 const selectedPost = ref(null);
 const expandModalVisible = ref(false);
+const currentIndex = ref(10); // Índice del siguiente post a cargar
+const postsPerPage = ref(5); // Cantidad de posts a cargar por scroll
+const hasMore = computed(() => currentIndex.value < allPosts.value.length); // ¿Hay más posts?
+const loadingMore = ref(false); // Indicador de carga de más posts
+const sentinelElement = ref(null); // Elemento centinela para Intersection Observer
 
 // Like logic
 const toggleLike = async (post) => {
@@ -48,6 +54,49 @@ const expandPost = (post) => {
     expandModalVisible.value = true;
 };
 
+// Cargar más posts al llegar al final
+const loadMorePosts = () => {
+    if (loadingMore.value || !hasMore.value) return;
+
+    loadingMore.value = true;
+
+    // Simular pequeño delay para que el usuario vea que está cargando
+    setTimeout(() => {
+        const nextIndex = currentIndex.value + postsPerPage.value;
+        const newPosts = allPosts.value.slice(currentIndex.value, nextIndex);
+        postsList.value.push(...newPosts);
+        currentIndex.value = nextIndex;
+        loadingMore.value = false;
+    }, 300);
+};
+
+// Configurar Intersection Observer para scroll infinito
+const setupIntersectionObserver = () => {
+    if (!sentinelElement.value) return;
+
+    const observer = new IntersectionObserver(
+        (entries) => {
+            if (
+                entries[0].isIntersecting &&
+                hasMore.value &&
+                !loadingMore.value
+            ) {
+                loadMorePosts();
+            }
+        },
+        {
+            root: null,
+            rootMargin: "100px", // Cargar antes de que llegue al final
+            threshold: 0.1,
+        },
+    );
+
+    observer.observe(sentinelElement.value);
+
+    // Retornar función para limpiar el observer
+    return () => observer.disconnect();
+};
+
 // Verificar si es video
 const isVideo = (path) => {
     if (!path) return false;
@@ -59,6 +108,9 @@ const isVideo = (path) => {
 // WebSocket real-time
 onMounted(() => {
     console.log("Iniciando escucha de WebSockets...");
+
+    // Configurar Intersection Observer para scroll infinito
+    setupIntersectionObserver();
 
     if (window.Echo) {
         window.Echo.leaveChannel("posts");
@@ -79,6 +131,17 @@ onMounted(() => {
                 }
             });
 
+        window.Echo.channel("social-wall")
+            .subscribed(() => {
+                console.log("✅ ¡Suscrito con éxito al canal 'social-wall'!");
+            })
+            .listen(".PostCreated", (e) => {
+                console.log("🚀 POST NUEVO RECIBIDO:", e.post);
+                postsList.value.unshift(e.post);
+                allPosts.value.unshift(e.post); // Agregar también a allPosts
+                currentIndex.value++; // Aumentar el índice
+            });
+
         console.log(
             "Estado de Echo:",
             window.Echo.connector.pusher.connection.state,
@@ -87,7 +150,6 @@ onMounted(() => {
         console.error("❌ Echo no está definido. Revisa tu bootstrap.js");
     }
 });
-console.log(props.posts);
 </script>
 
 <template>
@@ -269,9 +331,25 @@ console.log(props.posts);
                     </div>
                 </transition-group>
 
-                <!-- Loading indicator -->
-                <div v-if="loading" class="loading-section">
-                    <Skeleton width="100%" height="400px" class="mb-4" />
+                <!-- Centinela para scroll infinito -->
+                <div
+                    ref="sentinelElement"
+                    class="scroll-sentinel"
+                    v-show="hasMore"
+                >
+                    <!-- Indicador de carga de más posts -->
+                    <div v-if="loadingMore" class="loading-more">
+                        <Skeleton width="100%" height="300px" class="mb-4" />
+                        <Skeleton width="100%" height="300px" class="mb-4" />
+                    </div>
+                </div>
+
+                <!-- Mensaje cuando no hay más posts -->
+                <div
+                    v-if="!hasMore && postsList.length > 0"
+                    class="no-more-posts"
+                >
+                    <p>No hay más publicaciones</p>
                 </div>
             </div>
         </div>
@@ -372,6 +450,7 @@ console.log(props.posts);
                                     "
                                     class="liker-separator"
                                 >
+                                    •
                                 </span>
                             </div>
                         </div>
@@ -532,6 +611,7 @@ console.log(props.posts);
     width: 100%;
     height: 0;
     padding-bottom: 100%;
+    overflow: hidden;
     background-color: var(--secondary-bg);
     cursor: pointer;
     transition: all 0.3s ease;
@@ -688,7 +768,9 @@ console.log(props.posts);
 .post-actions {
     display: flex;
     gap: 12px;
-    padding-top: 8px;
+    padding: 8px 0;
+    margin: 0 -16px -16px;
+    padding: 8px 16px 0;
 }
 
 .action-button {
@@ -712,9 +794,26 @@ console.log(props.posts);
     color: #e4405f !important;
 }
 
-/* Loading section */
-.loading-section {
+/* Loading section - Scroll Infinito */
+.scroll-sentinel {
+    height: 200px;
+    margin-top: 24px;
+}
+
+.loading-more {
     padding: 0 12px;
+}
+
+.no-more-posts {
+    text-align: center;
+    padding: 32px 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 24px;
+}
+
+.no-more-posts p {
+    margin: 0;
 }
 
 /* Dialog de expansión */
@@ -757,6 +856,7 @@ console.log(props.posts);
     display: flex;
     flex-direction: column;
     padding: 16px;
+    overflow-y: auto;
     background-color: var(--primary-bg);
 }
 
@@ -876,7 +976,8 @@ console.log(props.posts);
 
 .expanded-actions {
     display: flex;
-    padding: 10px 0;
+    gap: 8px;
+    padding: 8px 0 0;
 }
 
 .action-button-expanded {
@@ -889,7 +990,6 @@ console.log(props.posts);
     font-size: 12px !important;
     font-weight: 600 !important;
     transition: all 0.2s ease !important;
-    padding: 8px 0 !important;
 }
 
 .action-button-expanded:hover {

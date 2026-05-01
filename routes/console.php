@@ -6,3 +6,6 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('process:invoices-h2h')
     ->everyTenMinutes()
     ->withoutOverlapping();
+
+// COMANDO BLOG
+Schedule::command('app:sync-internal')->everyMinute();
