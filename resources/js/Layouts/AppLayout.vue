@@ -25,6 +25,35 @@ const deferredPrompt = ref(null);
 const showInstallModal = ref(false);
 
 const acceptTerms = async () => {
+    const userId = page.props.auth?.user?.id;
+    if (!userId) return;
+
+    try {
+        loadingTerms.value = true;
+
+        // ✅ SOLO guarda términos (sin token)
+        await router.put(route('term-conditions.update', { term_condition: userId }), {});
+
+        showTermsModal.value = false;
+
+        toast.add({
+            severity: 'success',
+            summary: 'Términos aceptados',
+            detail: 'Ahora puedes activar las notificaciones.',
+            life: 4000
+        });
+
+        // 👇 IMPORTANTE: después de aceptar términos, pedimos notificaciones
+        await setupNotifications();
+
+    } catch (error) {
+        console.error(error);
+    } finally {
+        loadingTerms.value = false;
+    }
+};
+
+const setupNotifications = async () => {
     showWarningNotifications.value = false;
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -33,87 +62,113 @@ const acceptTerms = async () => {
         toast.add({
             severity: 'warn',
             summary: 'Atención usuario de iPhone',
-            detail: 'Para recibir notificaciones, pulsa el botón compartir y selecciona "Añadir a la pantalla de inicio".',
+            detail: 'Para recibir notificaciones, agrega la app a pantalla de inicio.',
             life: 10000
         });
         return;
     }
 
-    const userId = page.props.auth?.user?.id;
-    if (!userId) return;
-
+    // 🚨 Si ya están bloqueadas
     if (Notification.permission === 'denied') {
         isPermanentlyBlocked.value = true;
         showWarningNotifications.value = true;
-        showTermsModal.value = false;
         return;
     }
 
     try {
-        loadingTerms.value = true;
+        if (Notification.permission === 'granted') {
+            const tokenReal = await obtenerTokenReal();
+
+            if (!tokenReal) return;
+
+            await saveDeviceToken(tokenReal);
+
+            return;
+        }
+
         const permission = await Notification.requestPermission();
 
         if (permission === 'granted') {
             const tokenReal = await obtenerTokenReal();
 
             if (tokenReal) {
-                confirmSelection(tokenReal);
+                await saveDeviceToken(tokenReal);
             } else {
-                loadingTerms.value = false;
                 toast.add({
                     severity: 'error',
-                    summary: 'Error de Configuración',
-                    detail: 'No pudimos generar el token. Intenta refrescar la página.',
+                    summary: 'Error',
+                    detail: 'No se pudo generar el token.',
                     life: 4000
                 });
             }
         } else {
             isPermanentlyBlocked.value = (permission === 'denied');
             showWarningNotifications.value = true;
-            showTermsModal.value = false;
-            loadingTerms.value = false;
         }
+
     } catch (error) {
-        loadingTerms.value = false;
-        console.error("Error en el proceso de aceptación:", error);
+        console.error(error);
     }
 };
 
-const confirmSelection = (token) => {
-    router.put(route('term-conditions.update', { term_condition: page.props.auth.user.id }), {
-        device_token: token
+const saveDeviceToken = async (token) => {
+    await router.post(route('device-tokens.store'), {
+        token: token
     }, {
-        onBefore: () => { loadingTerms.value = true; },
         onSuccess: () => {
-            showTermsModal.value = false;
-            showWarningNotifications.value = false;
-
-            router.reload({
-                only: ['auth'],
-                preserveState: false,
-                onFinish: () => {
-                    installApp();
-                }
-            });
-
             toast.add({
                 severity: 'success',
-                summary: '¡Configuración Completa!',
-                detail: 'Términos aceptados y notificaciones activadas.',
+                summary: 'Notificaciones activadas',
+                detail: 'Este dispositivo ya recibirá notificaciones.',
                 life: 4000
             });
         },
-        onFinish: () => { loadingTerms.value = false; },
         onError: () => {
             toast.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Hubo un problema al guardar tus datos. Intenta nuevamente.',
+                detail: 'No se pudo guardar el dispositivo.',
                 life: 4000
             });
         }
     });
 };
+
+// const confirmSelection = (token) => {
+//     router.put(route('term-conditions.update', { term_condition: page.props.auth.user.id }), {
+//         device_token: token
+//     }, {
+//         onBefore: () => { loadingTerms.value = true; },
+//         onSuccess: () => {
+//             showTermsModal.value = false;
+//             showWarningNotifications.value = false;
+
+//             router.reload({
+//                 only: ['auth'],
+//                 preserveState: false,
+//                 onFinish: () => {
+//                     installApp();
+//                 }
+//             });
+
+//             toast.add({
+//                 severity: 'success',
+//                 summary: '¡Configuración Completa!',
+//                 detail: 'Términos aceptados y notificaciones activadas.',
+//                 life: 4000
+//             });
+//         },
+//         onFinish: () => { loadingTerms.value = false; },
+//         onError: () => {
+//             toast.add({
+//                 severity: 'error',
+//                 summary: 'Error',
+//                 detail: 'Hubo un problema al guardar tus datos. Intenta nuevamente.',
+//                 life: 4000
+//             });
+//         }
+//     });
+// };
 
 const logout = () => {
     router.post(route('logout'), {}, {
@@ -202,9 +257,7 @@ function isOutsideClicked(event) {
 
 onMounted(() => {
     window.addEventListener('beforeinstallprompt', (e) => {
-        // 1. Evitamos que Chrome muestre su propio banner feo
         e.preventDefault();
-        // 2. Guardamos el evento en nuestra variable reactiva
         deferredPrompt.value = e;
         console.log("Evento de instalación capturado y listo.");
     });
@@ -213,16 +266,24 @@ onMounted(() => {
         deferredPrompt.value = null;
         console.log('PWA instalada con éxito');
     });
+
+    const user = page.props.auth?.user;
+
+    if (!user) return;
+
+    if (Number(user.terms_condition) !== 1) {
+        showTermsModal.value = true;
+    } else {
+        setupNotifications();
+    }
 });
 
 
 const installApp = async () => {
     if (!deferredPrompt.value) return;
 
-    // Mostramos el prompt del navegador
     deferredPrompt.value.prompt();
 
-    // Esperamos la respuesta del usuario
     const { outcome } = await deferredPrompt.value.userChoice;
 
     if (outcome === 'accepted') {
