@@ -138,7 +138,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     observer?.disconnect();
-
+    console.log('aqui')
     window.removeEventListener("pwa-install-available", handlePwaInstallAvailable);
     window.removeEventListener("pwa-installed", handlePwaInstalled);
 });
