@@ -1,9 +1,8 @@
 const CACHE_NAME = 'mi-portal-rh-v1';
-const OFFLINE_URL = '/offline'; // Opcional: una ruta simple para errores de red
+const OFFLINE_URL = '/offline';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
-    // Pre-cachear recursos críticos si lo deseas
 });
 
 self.addEventListener('activate', (event) => {
@@ -11,7 +10,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Solo cacheamos peticiones GET (no las de Firebase o API dinámicas)
     if (event.request.method !== 'GET') return;
 
     event.respondWith(
@@ -22,7 +20,53 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Mantén aquí tu lógica de Firebase Push que ya tenías
 self.addEventListener('push', function(event) {
-    // ... tu código de notificaciones actual
+    if (!(self.Notification && self.Notification.permission === 'granted')) {
+        return;
+    }
+
+    let data = {};
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data = { title: 'Mi Portal RH', body: event.data.text() };
+        }
+    }
+
+    const title = data.title || 'Mi Portal RH';
+    const options = {
+        body: data.body || 'Tienes una nueva notificación.',
+        icon: '/icons/logo.png',
+        badge: '/icons/logo.png',
+        vibrate: [200, 100, 200],
+        data: {
+            url: data.url || '/'
+        },
+        actions: [
+            { action: 'open', title: 'Ver ahora' }
+        ]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+            if (clientList.length > 0) {
+                let client = clientList[0];
+                for (let i = 0; i < clientList.length; i++) {
+                    if (clientList[i].focused) {
+                        client = clientList[i];
+                    }
+                }
+                return client.focus();
+            }
+            return clients.openWindow(event.notification.data.url);
+        })
+    );
 });
