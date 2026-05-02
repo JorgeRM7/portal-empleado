@@ -136,42 +136,6 @@ const saveDeviceToken = async (token) => {
     }
 };
 
-// const confirmSelection = (token) => {
-//     router.put(route('term-conditions.update', { term_condition: page.props.auth.user.id }), {
-//         device_token: token
-//     }, {
-//         onBefore: () => { loadingTerms.value = true; },
-//         onSuccess: () => {
-//             showTermsModal.value = false;
-//             showWarningNotifications.value = false;
-
-//             router.reload({
-//                 only: ['auth'],
-//                 preserveState: false,
-//                 onFinish: () => {
-//                     installApp();
-//                 }
-//             });
-
-//             toast.add({
-//                 severity: 'success',
-//                 summary: '¡Configuración Completa!',
-//                 detail: 'Términos aceptados y notificaciones activadas.',
-//                 life: 4000
-//             });
-//         },
-//         onFinish: () => { loadingTerms.value = false; },
-//         onError: () => {
-//             toast.add({
-//                 severity: 'error',
-//                 summary: 'Error',
-//                 detail: 'Hubo un problema al guardar tus datos. Intenta nuevamente.',
-//                 life: 4000
-//             });
-//         }
-//     });
-// };
-
 const logout = () => {
     router.post(route('logout'), {}, {
         onBefore: () => {

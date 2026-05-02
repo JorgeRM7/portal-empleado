@@ -20,7 +20,7 @@ messaging.onBackgroundMessage((payload) => {
 
     const notificationOptions = {
         body: payload.notification?.body || payload.data?.body || "Tienes una nueva actualización.",
-        icon: '/logo.png',
+        icon: '/icons/logo.png',
         badge: '/logo-small.png',
         vibrate: [200, 100, 200],
         tag: 'notificacion-rh-' + (payload.data?.news_id || Date.now()),
