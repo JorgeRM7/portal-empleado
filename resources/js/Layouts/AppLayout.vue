@@ -25,9 +25,11 @@ const deferredPrompt = ref(null);
 const showInstallModal = ref(false);
 
 const acceptTerms = async () => {
+    // 0. Resetear estados de advertencia al intentar de nuevo
+    showWarningNotifications.value = false;
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    // 1. Validación para iOS
     if (isIOS && !window.navigator.standalone) {
         toast.add({
             severity: 'warn',
@@ -41,41 +43,41 @@ const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
     if (!userId) return;
 
-    // 2. Revisar si las notificaciones están bloqueadas permanentemente
+    // 1. Revisar permiso actual
     if (Notification.permission === 'denied') {
         isPermanentlyBlocked.value = true;
         showWarningNotifications.value = true;
-        // Opcional: Podrías permitir que acepte términos aunque no reciba notificaciones
-        // confirmSelection(null);
+        // Cerramos el de términos para que no haya conflicto visual
+        showTermsModal.value = false;
         return;
     }
 
     try {
-        // 3. Solicitar permiso de notificación
+        loadingTerms.value = true; // Feedback visual de que está procesando
         const permission = await Notification.requestPermission();
 
         if (permission === 'granted') {
-            // 4. Si acepta, intentamos obtener el token
             const tokenReal = await obtenerTokenReal();
 
             if (tokenReal) {
-                // Enviamos el token al servidor
                 confirmSelection(tokenReal);
             } else {
-                // Error al generar el token (ej. Firebase/Red)
+                loadingTerms.value = false;
                 toast.add({
                     severity: 'error',
                     summary: 'Error de Configuración',
-                    detail: 'No pudimos generar tu identificador de notificaciones. Intenta de nuevo.',
+                    detail: 'No pudimos generar el token. Intenta refrescar la página.',
                     life: 4000
                 });
             }
         } else {
-            // El usuario rechazó o cerró el permiso
             isPermanentlyBlocked.value = (permission === 'denied');
             showWarningNotifications.value = true;
+            showTermsModal.value = false;
+            loadingTerms.value = false;
         }
     } catch (error) {
+        loadingTerms.value = false;
         console.error("Error en el proceso de aceptación:", error);
     }
 };
