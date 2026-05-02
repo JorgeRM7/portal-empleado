@@ -25,7 +25,6 @@ const deferredPrompt = ref(null);
 const showInstallModal = ref(false);
 
 const acceptTerms = async () => {
-    // 0. Resetear estados de advertencia al intentar de nuevo
     showWarningNotifications.value = false;
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -43,17 +42,15 @@ const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
     if (!userId) return;
 
-    // 1. Revisar permiso actual
     if (Notification.permission === 'denied') {
         isPermanentlyBlocked.value = true;
         showWarningNotifications.value = true;
-        // Cerramos el de términos para que no haya conflicto visual
         showTermsModal.value = false;
         return;
     }
 
     try {
-        loadingTerms.value = true; // Feedback visual de que está procesando
+        loadingTerms.value = true;
         const permission = await Notification.requestPermission();
 
         if (permission === 'granted') {
@@ -378,7 +375,7 @@ const installApp = async () => {
                     class="w-full"
                 />
                 <p class="text-[10px] text-center">
-                    Si el problema persiste, refresca la página ó presiona F5 en tu teclado.
+                    Si el problema persiste, refresca la página.
                 </p>
             </div>
         </div>
