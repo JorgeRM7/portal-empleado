@@ -42,14 +42,13 @@ class DeviceTokensController
             ], 401);
         }
 
-        // Evita duplicados y permite múltiples dispositivos
         DeviceToken::withTrashed()->updateOrCreate(
             [
                 'device_token' => $request->token
             ],
             [
                 'employee_id' => $user->id,
-                'deleted_at' => null // por si estaba soft delete
+                'deleted_at' => null
             ]
         );
 

@@ -112,26 +112,28 @@ const setupNotifications = async () => {
 };
 
 const saveDeviceToken = async (token) => {
-    await router.post(route('device-tokens.store'), {
-        token: token
-    }, {
-        onSuccess: () => {
-            toast.add({
-                severity: 'success',
-                summary: 'Notificaciones activadas',
-                detail: 'Este dispositivo ya recibirá notificaciones.',
-                life: 4000
-            });
-        },
-        onError: () => {
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'No se pudo guardar el dispositivo.',
-                life: 4000
-            });
-        }
-    });
+    try {
+        const response = await axios.post(route('device-tokens.store'), {
+            token: token
+        });
+
+        // toast.add({
+        //     severity: 'success',
+        //     summary: 'Éxito',
+        //     detail: response.data.message,
+        //     life: 4000
+        // });
+
+        console.log(response.data.message);
+
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.data?.message || 'No se pudo guardar el dispositivo.',
+            life: 4000
+        });
+    }
 };
 
 // const confirmSelection = (token) => {
