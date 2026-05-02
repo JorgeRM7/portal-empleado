@@ -1,15 +1,16 @@
 <script setup>
-import { useForm, Link as InertiaLink, Head } from "@inertiajs/vue3";
+import { useForm, Head } from "@inertiajs/vue3";
 
 // PrimeVue
 import Card from "primevue/card";
 import InputText from "primevue/inputtext";
 import Password from "primevue/password";
-import Checkbox from "primevue/checkbox";
 import Button from "primevue/button";
 import Message from "primevue/message";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import Dialog from "primevue/dialog";
+
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+
 defineProps({
     status: String,
 });
@@ -26,25 +27,22 @@ const submitForm = () => {
     });
 };
 
+/**
+ * Tema claro / oscuro
+ */
 const isDark = ref(false);
 
 const readTheme = () => {
     const root = document.documentElement;
 
-    // Caso Tailwind: <html class="dark">
     const darkByClass = root.classList.contains("dark");
-
-    // Caso atributo: <html data-theme="dark"> o data-bs-theme="dark"
     const darkByDataTheme = root.getAttribute("data-theme") === "dark";
     const darkByBsTheme = root.getAttribute("data-bs-theme") === "dark";
 
     isDark.value = darkByClass || darkByDataTheme || darkByBsTheme;
 };
 
-let observer;
-
-
-// onBeforeUnmount(() => observer?.disconnect());
+let observer = null;
 
 const bgStyle = computed(() => ({
     backgroundImage: `url(${
@@ -56,16 +54,21 @@ const bgStyle = computed(() => ({
     backgroundPosition: "center",
 }));
 
+/**
+ * PWA / Crear acceso directo
+ */
 const deferredPrompt = ref(null);
 const showInstallButton = ref(false);
-const showIosInstall = ref(false);
+const showInstallInstructions = ref(false);
 const isIos = ref(false);
+const isAndroid = ref(false);
 const isStandalone = ref(false);
 
 const detectDevice = () => {
     const userAgent = window.navigator.userAgent.toLowerCase();
 
     isIos.value = /iphone|ipad|ipod/.test(userAgent);
+    isAndroid.value = /android/.test(userAgent);
 
     isStandalone.value =
         window.matchMedia("(display-mode: standalone)").matches ||
@@ -73,13 +76,21 @@ const detectDevice = () => {
 };
 
 const installApp = async () => {
-    // iPhone / iPad
+    /**
+     * iPhone / iPad:
+     * iOS no permite abrir un prompt automático.
+     * Solo podemos mostrar instrucciones.
+     */
     if (isIos.value) {
-        showIosInstall.value = true;
+        showInstallInstructions.value = true;
         return;
     }
 
-    // Android Chrome si ya está disponible el prompt
+    /**
+     * Android / Chrome:
+     * Si Chrome ya disparó beforeinstallprompt,
+     * podemos abrir el instalador nativo.
+     */
     if (deferredPrompt.value) {
         deferredPrompt.value.prompt();
 
@@ -89,11 +100,15 @@ const installApp = async () => {
 
         deferredPrompt.value = null;
         showInstallButton.value = false;
+
         return;
     }
 
-    // Android si Chrome todavía no libera el prompt
-    showIosInstall.value = true;
+    /**
+     * Si Android todavía no liberó el prompt,
+     * mostramos instrucciones manuales.
+     */
+    showInstallInstructions.value = true;
 };
 
 const handleBeforeInstallPrompt = (event) => {
@@ -106,27 +121,13 @@ const handleBeforeInstallPrompt = (event) => {
 };
 
 const handleAppInstalled = () => {
+    console.log("App instalada correctamente");
+
     deferredPrompt.value = null;
     showInstallButton.value = false;
+    showInstallInstructions.value = false;
+    isStandalone.value = true;
 };
-
-
-// onMounted(() => {
-//     readTheme();
-
-//     observer = new MutationObserver(readTheme);
-//     observer.observe(document.documentElement, {
-//         attributes: true,
-//         attributeFilter: ["class", "data-theme", "data-bs-theme"],
-//     });
-// });
-
-onBeforeUnmount(() => {
-    observer?.disconnect();
-
-    window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.removeEventListener("appinstalled", handleAppInstalled);
-});
 
 onMounted(() => {
     readTheme();
@@ -141,15 +142,22 @@ onMounted(() => {
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
-    // En iOS no existe beforeinstallprompt,
-    // entonces mostramos botón manual si no está instalada.
+    /**
+     * Mostramos el botón si la app no está instalada.
+     * En Android intentará instalar.
+     * En iPhone mostrará instrucciones.
+     */
     if (!isStandalone.value) {
         showInstallButton.value = true;
     }
 });
 
+onBeforeUnmount(() => {
+    observer?.disconnect();
 
-
+    window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.removeEventListener("appinstalled", handleAppInstalled);
+});
 </script>
 
 <template>
@@ -175,7 +183,6 @@ onMounted(() => {
                 class="shadow-none border-0 w-full h-full flex flex-col justify-center"
             >
                 <template #content>
-
                     <div class="flex justify-center mb-1">
                         <img
                             src="/assets/media/logos/logo.png"
@@ -183,6 +190,7 @@ onMounted(() => {
                             class="w-80 h-80 object-contain"
                         />
                     </div>
+
                     <!-- Header minimal -->
                     <div class="mb-6">
                         <div class="text-4xl font-semibold text-center">
@@ -211,6 +219,7 @@ onMounted(() => {
                             <label class="block mb-2 font-medium">
                                 Usuario o Email
                             </label>
+
                             <InputText
                                 v-model="form.email"
                                 autocomplete="username"
@@ -219,6 +228,7 @@ onMounted(() => {
                                 :invalid="!!form.errors.email"
                                 name="email"
                             />
+
                             <small v-if="form.errors.email" class="p-error">
                                 {{ form.errors.email }}
                             </small>
@@ -229,6 +239,7 @@ onMounted(() => {
                             <label class="block mb-2 font-medium">
                                 Contraseña
                             </label>
+
                             <Password
                                 v-model="form.password"
                                 :feedback="false"
@@ -240,6 +251,7 @@ onMounted(() => {
                                 :invalid="!!form.errors.password"
                                 name="password"
                             />
+
                             <small v-if="form.errors.password" class="p-error">
                                 {{ form.errors.password }}
                             </small>
@@ -254,10 +266,12 @@ onMounted(() => {
                             :loading="form.processing"
                             :disabled="form.processing"
                         />
+
+                        <!-- Instalar PWA / Crear acceso directo -->
                         <Button
                             v-if="showInstallButton && !isStandalone"
                             type="button"
-                            label="Crear acceso directo"
+                            :label="deferredPrompt ? 'Instalar app' : 'Crear acceso directo'"
                             icon="pi pi-mobile"
                             class="w-full p-button-outlined"
                             @click="installApp"
@@ -266,10 +280,11 @@ onMounted(() => {
                 </template>
             </Card>
         </div>
-        
     </div>
+
+    <!-- Modal instrucciones PWA -->
     <Dialog
-        v-model:visible="showIosInstall"
+        v-model:visible="showInstallInstructions"
         modal
         header="Crear acceso directo"
         :style="{ width: '90%', maxWidth: '430px' }"
@@ -283,7 +298,10 @@ onMounted(() => {
                 <ol class="list-decimal pl-5 space-y-2 text-gray-700">
                     <li>Abre este portal desde Safari.</li>
                     <li>Toca el botón de compartir.</li>
-                    <li>Selecciona <strong>Agregar a pantalla de inicio</strong>.</li>
+                    <li>
+                        Selecciona
+                        <strong>Agregar a pantalla de inicio</strong>.
+                    </li>
                     <li>Presiona <strong>Agregar</strong>.</li>
                 </ol>
             </template>
@@ -296,13 +314,19 @@ onMounted(() => {
                 <ol class="list-decimal pl-5 space-y-2 text-gray-700">
                     <li>Abre este portal desde Chrome.</li>
                     <li>Toca el menú de los tres puntos.</li>
-                    <li>Selecciona <strong>Instalar app</strong> o <strong>Agregar a pantalla principal</strong>.</li>
+                    <li>
+                        Selecciona
+                        <strong>Instalar app</strong>
+                        o
+                        <strong>Agregar a pantalla principal</strong>.
+                    </li>
                     <li>Confirma la instalación.</li>
                 </ol>
             </template>
 
             <Message severity="info" :closable="false">
-                Si el botón automático no aparece, usa el menú del navegador para agregarlo manualmente.
+                Por seguridad, el acceso directo no puede crearse completamente automático.
+                El usuario debe confirmar la instalación.
             </Message>
         </div>
     </Dialog>
