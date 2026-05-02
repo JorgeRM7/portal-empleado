@@ -176,7 +176,7 @@ jobs:
 
             echo "✅ Permisos restaurados"
 
-      - name: 🔒 Corregir Permisos y Optimizar
+      - name: 🔒 Asegurar Permisos Finales para el Servidor Web (Nginx/PHP-FPM)
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST_SANDBOX }}
@@ -185,15 +185,28 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH_SANDBOX }}
 
-            echo "🔒 Corrigiendo permisos..."
-            sudo chown -R www-data:www-data storage bootstrap/cache public/build
+            echo "🔒 Asignando propietario www-data a storage y cache..."
+            # Aseguramos que el servidor web sea el dueño para poder escribir caché
+            sudo chown -R www-data:www-data storage bootstrap/cache
+
+            # Garantizamos permisos de escritura (775) para el grupo y usuario
             sudo chmod -R 775 storage bootstrap/cache
+
+            # Aseguramos permisos de lectura públicos para el build de Vite
             sudo chmod -R 755 public/build
 
             echo "⚙️ Optimizando Laravel..."
+            # Ejecutamos las caches como el usuario www-data para que los archivos creados sean suyos
             sudo -u www-data php artisan route:cache
             sudo -u www-data php artisan view:cache
             sudo -u www-data php artisan migrate --force
+
+            echo "🗑️ Limpiando caché de posts antigua (por seguridad)..."
+            # Nos aseguramos de que no queden llaves viejas en conflicto
+            sudo -u www-data php artisan cache:forget last_post_id
+
+            # Sincronizamos el puntero una última vez para romper cualquier bucle existente
+            sudo -u www-data php artisan tinker --execute="\Illuminate\Support\Facades\Cache::forever('last_synced_post_id', \App\Models\Post::max('id'))"
 
             echo "🔄 Reiniciando servicios..."
             sudo systemctl reload nginx
