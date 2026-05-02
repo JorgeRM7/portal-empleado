@@ -81,30 +81,21 @@ const acceptTerms = async () => {
 };
 
 const confirmSelection = (token) => {
-    // Usamos el ID del usuario autenticado para la ruta
     router.put(route('term-conditions.update', { term_condition: page.props.auth.user.id }), {
-        device_token: token // Este token se guardará en la tabla user_device_tokens
+        device_token: token
     }, {
         onBefore: () => { loadingTerms.value = true; },
         onSuccess: () => {
             showTermsModal.value = false;
             showWarningNotifications.value = false;
 
-            // Recargamos datos de sesión para actualizar el estado de terms_condition en el frontend
-            router.reload({ only: ['auth'], preserveState: false });
-
-            installApp();
-
-            // 5. Lógica de Instalación de PWA (Solo si el evento fue capturado)
-            if (deferredPrompt.value) {
-                deferredPrompt.value.prompt();
-                deferredPrompt.value.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('El usuario instaló la App');
-                    }
-                    deferredPrompt.value = null;
-                });
-            }
+            router.reload({
+                only: ['auth'],
+                preserveState: false,
+                onFinish: () => {
+                    installApp();
+                }
+            });
 
             toast.add({
                 severity: 'success',
@@ -211,20 +202,20 @@ function isOutsideClicked(event) {
 }
 
 onMounted(() => {
-    // Capturamos el evento de instalación
     window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevenir que el navegador lo muestre automáticamente
+        // 1. Evitamos que Chrome muestre su propio banner feo
         e.preventDefault();
-        // Guardamos el evento para dispararlo después
+        // 2. Guardamos el evento en nuestra variable reactiva
         deferredPrompt.value = e;
+        console.log("Evento de instalación capturado y listo.");
     });
 
     window.addEventListener('appinstalled', () => {
         deferredPrompt.value = null;
-        showInstallModal.value = false;
         console.log('PWA instalada con éxito');
     });
 });
+
 
 const installApp = async () => {
     if (!deferredPrompt.value) return;
@@ -259,6 +250,17 @@ const installApp = async () => {
                 </div>
             </div>
             <app-footer></app-footer>
+            <div v-if="deferredPrompt" class="fixed bottom-8 right-8 z-[9999] animate-bounce-slow">
+                <Button
+                    icon="pi pi-download"
+                    severity="success"
+                    rounded
+                    raised
+                    @click="installApp"
+                    v-tooltip.left="'Instalar aplicación'"
+                    class="w-16 h-16 shadow-2xl !bg-emerald-500 !border-none"
+                />
+            </div>
         </div>
         <!-- <Assistant use-backend="true" endpoint="/chat" /> -->
         <InactivityTimer :on-logout="logout" />
@@ -380,3 +382,22 @@ const installApp = async () => {
         </div>
     </Dialog>
 </template>
+<style scoped>
+.animate-bounce-slow {
+    animation: bounce 3s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}
+
+/* Ajuste para que no tape contenido importante en móviles */
+@media (max-width: 768px) {
+    .fixed {
+        bottom: 2rem;
+        right: 1.5rem;
+    }
+}
+</style>
