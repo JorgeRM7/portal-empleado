@@ -609,14 +609,14 @@ onMounted(() => {
 .post-media-container {
     position: relative;
     width: 100%;
-    height: 0;
-    padding-bottom: 100%;
+    /* Eliminamos height: 0 y padding-bottom: 100% para que no sea un cuadrado forzado */
+    height: auto;
     overflow: hidden;
     background-color: var(--secondary-bg);
     cursor: pointer;
     transition: all 0.3s ease;
-    margin: 0 -16px 12px -16px;
-    width: calc(100% + 32px);
+    /* Ajustamos margenes para que se vea bien en el card */
+    margin: 0 0 12px 0;
 }
 
 .post-media-container:hover .media-overlay {
@@ -625,21 +625,18 @@ onMounted(() => {
 }
 
 .skeleton-loader {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
-    height: 100%;
-    z-index: 1;
+    height: 300px; /* Una altura base mientras carga */
 }
 
 .post-media {
-    position: absolute;
-    top: 0;
-    left: 0;
+    /* Cambiamos de absolute a relative para que el contenedor reconozca su altura */
+    position: relative;
+    display: block;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto; /* Permite que la altura sea proporcional al ancho */
+    max-height: 800px; /* Opcional: evita que imágenes excesivamente largas rompan el feed */
+    object-fit: contain; /* Asegura que se vea toda la imagen sin recortes */
     opacity: 0;
     transition: opacity 0.3s ease;
 }
