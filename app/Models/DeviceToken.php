@@ -14,6 +14,7 @@ class DeviceToken extends Model
     protected $fillable = [
         'employee_id',
         'device_token',
+        'device_identifier',
     ];
 
     public function user()

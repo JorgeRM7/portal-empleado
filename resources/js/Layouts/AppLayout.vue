@@ -24,6 +24,16 @@ const messaging = getMessaging();
 const deferredPrompt = ref(null);
 const showInstallModal = ref(false);
 
+const getOrGenerateDeviceId = () => {
+    let deviceId = localStorage.getItem('my_device_id');
+    if (!deviceId) {
+        // Genera un ID único basado en la fecha y un número aleatorio
+        deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('my_device_id', deviceId);
+    }
+    return deviceId;
+};
+
 const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
     if (!userId) return;
@@ -31,7 +41,6 @@ const acceptTerms = async () => {
     try {
         loadingTerms.value = true;
 
-        // ✅ SOLO guarda términos (sin token)
         await router.put(route('term-conditions.update', { term_condition: userId }), {});
 
         showTermsModal.value = false;
@@ -43,7 +52,6 @@ const acceptTerms = async () => {
             life: 4000
         });
 
-        // 👇 IMPORTANTE: después de aceptar términos, pedimos notificaciones
         await setupNotifications();
 
     } catch (error) {
@@ -68,7 +76,6 @@ const setupNotifications = async () => {
         return;
     }
 
-    // 🚨 Si ya están bloqueadas
     if (Notification.permission === 'denied') {
         isPermanentlyBlocked.value = true;
         showWarningNotifications.value = true;
@@ -113,8 +120,11 @@ const setupNotifications = async () => {
 
 const saveDeviceToken = async (token) => {
     try {
+        const deviceIdentifier = getOrGenerateDeviceId();
+
         const response = await axios.post(route('device-tokens.store'), {
-            token: token
+            token: token,
+            device_id: deviceIdentifier
         });
 
         // toast.add({

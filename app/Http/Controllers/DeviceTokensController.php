@@ -30,7 +30,8 @@ class DeviceTokensController
     public function store(Request $request)
     {
         $request->validate([
-            'token' => 'required|string'
+            'token' => 'required|string',
+            'device_id' => 'required|string'
         ]);
 
         $user = Auth::user();
@@ -42,12 +43,23 @@ class DeviceTokensController
             ], 401);
         }
 
+        // DeviceToken::withTrashed()->updateOrCreate(
+        //     [
+        //         'device_token' => $request->token
+        //     ],
+        //     [
+        //         'employee_id' => $user->id,
+        //         'deleted_at' => null
+        //     ]
+        // );
+
         DeviceToken::withTrashed()->updateOrCreate(
             [
-                'device_token' => $request->token
+                'employee_id' => $user->id,
+                'device_identifier' => $request->device_id
             ],
             [
-                'employee_id' => $user->id,
+                'device_token' => $request->token,
                 'deleted_at' => null
             ]
         );
