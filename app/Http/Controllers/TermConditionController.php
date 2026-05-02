@@ -6,6 +6,8 @@ use App\Models\Employee;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 class TermConditionController
 {
     public function index()
@@ -18,24 +20,26 @@ class TermConditionController
 
     public function update(Request $request, $id)
     {
-        // Buscamos al empleado (tabla employees)
         $employee = Employee::find($id);
 
         if (!$employee) {
             return back()->withErrors(['message' => 'Empleado no encontrado.']);
         }
 
-        // 1. Actualizamos términos en la tabla 'employees'
-        $employee->update([
-            'terms_condition' => 1
-        ]);
+        $employee->update(['terms_condition' => 1]);
 
-        // 2. Actualizamos el token en la tabla 'user_employees'
-        // Usamos el usuario autenticado para estar seguros
-        if ($request->has('device_token')) {
-            $request->user()->update([
-                'device_token' => $request->device_token
-            ]);
+        if ($request->has('device_token') && $request->device_token != null) {
+
+            DB::table('user_employees_device_tokens')->updateOrInsert(
+                [
+                    'employee_id' => $request->user()->id,
+                    'device_token' => $request->device_token
+                ],
+                [
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
         }
 
         return back()->with('success', 'Todo actualizado correctamente.');

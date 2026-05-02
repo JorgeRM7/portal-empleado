@@ -3,6 +3,11 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <!-- PWA Meta Tags -->
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#096CC8">
+        <link rel="apple-touch-icon" href="/logo.png">
+        <link rel="manifest" href="/manifest.json">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
@@ -41,15 +46,49 @@
                 }
                 document.documentElement.setAttribute("data-bs-theme", themeMode);
             }
-            
+
             if (window.top != window.self) { window.top.location.replace(window.self.location.href); }
         </script>
         @inertia
 
-        
+
         <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
         <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
         <script src="{{ asset('assets/js/widgets.bundle.js') }}"></script>
+
+        <script>
+            // 1. Configuración de Tema Metronic
+            var defaultThemeMode = "light";
+            var themeMode;
+            if (document.documentElement) {
+                if (localStorage.getItem("data-bs-theme") !== null) {
+                    themeMode = localStorage.getItem("data-bs-theme");
+                } else {
+                    themeMode = defaultThemeMode;
+                }
+                document.documentElement.setAttribute("data-bs-theme", themeMode);
+            }
+
+            // 2. Control de iFrames
+            if (window.top != window.self) {
+                window.top.location.replace(window.self.location.href);
+            }
+
+            // 3. Registro de Service Worker (PWA)
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(reg => console.log('SW registrado correctamente', reg))
+                        .catch(err => console.log('Error al registrar SW', err));
+                });
+            }
+
+            // 4. Tema oscuro extra (opcional si usas PrimeVue o custom)
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme === "dark") {
+                document.documentElement.classList.add("app-dark", "mode-dark");
+            }
+        </script>
     </body>
 </html>
 <script>

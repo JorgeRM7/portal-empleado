@@ -21,17 +21,21 @@ const toast = useToast();
 const showWarningNotifications = ref(false);
 const isPermanentlyBlocked = ref(false);
 const messaging = getMessaging();
+const deferredPrompt = ref(null);
+const showInstallModal = ref(false);
 
 const acceptTerms = async () => {
+    // 0. Resetear estados de advertencia al intentar de nuevo
+    showWarningNotifications.value = false;
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    // Si es iOS y no está "instalada" la app
     if (isIOS && !window.navigator.standalone) {
         toast.add({
             severity: 'warn',
             summary: 'Atención usuario de iPhone',
             detail: 'Para recibir notificaciones, pulsa el botón compartir y selecciona "Añadir a la pantalla de inicio".',
-            life: 8000
+            life: 10000
         });
         return;
     }
@@ -39,30 +43,42 @@ const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
     if (!userId) return;
 
-    // Revisamos el estado actual del permiso
+    // 1. Revisar permiso actual
     if (Notification.permission === 'denied') {
         isPermanentlyBlocked.value = true;
         showWarningNotifications.value = true;
+        // Cerramos el de términos para que no haya conflicto visual
+        showTermsModal.value = false;
         return;
     }
 
-    const permission = await Notification.requestPermission();
+    try {
+        loadingTerms.value = true; // Feedback visual de que está procesando
+        const permission = await Notification.requestPermission();
 
-    if (permission === 'granted') {
-        const tokenReal = await obtenerTokenReal();
-        if (tokenReal) {
-            confirmSelection(tokenReal);
+        if (permission === 'granted') {
+            const tokenReal = await obtenerTokenReal();
+
+            if (tokenReal) {
+                confirmSelection(tokenReal);
+            } else {
+                loadingTerms.value = false;
+                toast.add({
+                    severity: 'error',
+                    summary: 'Error de Configuración',
+                    detail: 'No pudimos generar el token. Intenta refrescar la página.',
+                    life: 4000
+                });
+            }
         } else {
-            toast.add({
-                severity: 'error',
-                summary: 'Error de Red',
-                detail: 'No pudimos conectar con el servidor de notificaciones. Intenta de nuevo.',
-                life: 4000
-            });
+            isPermanentlyBlocked.value = (permission === 'denied');
+            showWarningNotifications.value = true;
+            showTermsModal.value = false;
+            loadingTerms.value = false;
         }
-    } else {
-        isPermanentlyBlocked.value = (permission === 'denied');
-        showWarningNotifications.value = true;
+    } catch (error) {
+        loadingTerms.value = false;
+        console.error("Error en el proceso de aceptación:", error);
     }
 };
 
@@ -74,41 +90,33 @@ const confirmSelection = (token) => {
         onSuccess: () => {
             showTermsModal.value = false;
             showWarningNotifications.value = false;
-            router.reload({ only: ['auth'], preserveState: false });
+
+            router.reload({
+                only: ['auth'],
+                preserveState: false,
+                onFinish: () => {
+                    installApp();
+                }
+            });
+
             toast.add({
                 severity: 'success',
-                summary: '¡Éxito!',
-                detail: 'Has aceptado los términos. Ya puedes navegar.',
+                summary: '¡Configuración Completa!',
+                detail: 'Términos aceptados y notificaciones activadas.',
                 life: 4000
             });
         },
-        onFinish: () => { loadingTerms.value = false; }
+        onFinish: () => { loadingTerms.value = false; },
+        onError: () => {
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Hubo un problema al guardar tus datos. Intenta nuevamente.',
+                life: 4000
+            });
+        }
     });
 };
-
-onMessage(messaging, (payload) => {
-    console.log('Mensaje recibido en primer plano (App abierta):', payload);
-
-    // OPCIÓN A: Mostrar una notificación nativa del navegador
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/logo.png',
-    };
-
-    // Esto fuerza a que salga el cuadrito de notificación arriba a la derecha
-    new Notification(notificationTitle, notificationOptions);
-
-    // OPCIÓN B: Mostrar un aviso dentro de tu portal (Toast de PrimeVue)
-
-    // toast.add({
-    //     severity: 'info',
-    //     summary: payload.notification.title,
-    //     detail: payload.notification.body,
-    //     life: 5000
-    // });
-
-});
 
 const logout = () => {
     router.post(route('logout'), {}, {
@@ -194,6 +202,39 @@ function isOutsideClicked(event) {
         return false;
     }
 }
+
+onMounted(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // 1. Evitamos que Chrome muestre su propio banner feo
+        e.preventDefault();
+        // 2. Guardamos el evento en nuestra variable reactiva
+        deferredPrompt.value = e;
+        console.log("Evento de instalación capturado y listo.");
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredPrompt.value = null;
+        console.log('PWA instalada con éxito');
+    });
+});
+
+
+const installApp = async () => {
+    if (!deferredPrompt.value) return;
+
+    // Mostramos el prompt del navegador
+    deferredPrompt.value.prompt();
+
+    // Esperamos la respuesta del usuario
+    const { outcome } = await deferredPrompt.value.userChoice;
+
+    if (outcome === 'accepted') {
+        console.log('Usuario aceptó la instalación');
+    }
+
+    deferredPrompt.value = null;
+    showInstallModal.value = false;
+};
 </script>
 
 <template>
@@ -211,6 +252,17 @@ function isOutsideClicked(event) {
                 </div>
             </div>
             <app-footer></app-footer>
+            <div v-if="deferredPrompt" class="fixed bottom-8 right-8 z-[9999] animate-bounce-slow">
+                <Button
+                    icon="pi pi-download"
+                    severity="success"
+                    rounded
+                    raised
+                    @click="installApp"
+                    v-tooltip.left="'Instalar aplicación'"
+                    class="w-16 h-16 shadow-2xl !bg-emerald-500 !border-none"
+                />
+            </div>
         </div>
         <!-- <Assistant use-backend="true" endpoint="/chat" /> -->
         <InactivityTimer :on-logout="logout" />
@@ -332,3 +384,22 @@ function isOutsideClicked(event) {
         </div>
     </Dialog>
 </template>
+<style scoped>
+.animate-bounce-slow {
+    animation: bounce 3s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}
+
+/* Ajuste para que no tape contenido importante en móviles */
+@media (max-width: 768px) {
+    .fixed {
+        bottom: 2rem;
+        right: 1.5rem;
+    }
+}
+</style>
