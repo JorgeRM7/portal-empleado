@@ -79,27 +79,27 @@ const installApp = async () => {
         return;
     }
 
-    // Android / Chrome
-    if (!deferredPrompt.value) {
+    // Android Chrome si ya está disponible el prompt
+    if (deferredPrompt.value) {
+        deferredPrompt.value.prompt();
+
+        const choiceResult = await deferredPrompt.value.userChoice;
+
+        console.log("Resultado instalación:", choiceResult.outcome);
+
+        deferredPrompt.value = null;
+        showInstallButton.value = false;
         return;
     }
 
-    deferredPrompt.value.prompt();
-
-    const choiceResult = await deferredPrompt.value.userChoice;
-
-    if (choiceResult.outcome === "accepted") {
-        console.log("Usuario instaló la app");
-    } else {
-        console.log("Usuario canceló instalación");
-    }
-
-    deferredPrompt.value = null;
-    showInstallButton.value = false;
+    // Android si Chrome todavía no libera el prompt
+    showIosInstall.value = true;
 };
 
 const handleBeforeInstallPrompt = (event) => {
     event.preventDefault();
+
+    console.log("beforeinstallprompt disparado");
 
     deferredPrompt.value = event;
     showInstallButton.value = true;
@@ -143,7 +143,7 @@ onMounted(() => {
 
     // En iOS no existe beforeinstallprompt,
     // entonces mostramos botón manual si no está instalada.
-    if (isIos.value && !isStandalone.value) {
+    if (!isStandalone.value) {
         showInstallButton.value = true;
     }
 });
@@ -269,12 +269,13 @@ onMounted(() => {
         
     </div>
     <Dialog
-            v-model:visible="showIosInstall"
-            modal
-            header="Agregar a pantalla de inicio"
-            :style="{ width: '90%', maxWidth: '420px' }"
-        >
-            <div class="space-y-4">
+        v-model:visible="showIosInstall"
+        modal
+        header="Crear acceso directo"
+        :style="{ width: '90%', maxWidth: '430px' }"
+    >
+        <div class="space-y-4">
+            <template v-if="isIos">
                 <p class="text-gray-600">
                     Para crear el acceso directo en iPhone:
                 </p>
@@ -285,10 +286,24 @@ onMounted(() => {
                     <li>Selecciona <strong>Agregar a pantalla de inicio</strong>.</li>
                     <li>Presiona <strong>Agregar</strong>.</li>
                 </ol>
+            </template>
 
-                <Message severity="info" :closable="false">
-                    En iPhone no se puede instalar automáticamente, Apple requiere que el usuario lo agregue manualmente.
-                </Message>
-            </div>
-        </Dialog>
+            <template v-else>
+                <p class="text-gray-600">
+                    Para crear el acceso directo en Android:
+                </p>
+
+                <ol class="list-decimal pl-5 space-y-2 text-gray-700">
+                    <li>Abre este portal desde Chrome.</li>
+                    <li>Toca el menú de los tres puntos.</li>
+                    <li>Selecciona <strong>Instalar app</strong> o <strong>Agregar a pantalla principal</strong>.</li>
+                    <li>Confirma la instalación.</li>
+                </ol>
+            </template>
+
+            <Message severity="info" :closable="false">
+                Si el botón automático no aparece, usa el menú del navegador para agregarlo manualmente.
+            </Message>
+        </div>
+    </Dialog>
 </template>
