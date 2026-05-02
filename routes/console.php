@@ -8,4 +8,4 @@ use Illuminate\Support\Facades\Schedule;
 //     ->withoutOverlapping();
 
 // COMANDO BLOG
-Schedule::command('app:sync-internal')->everyMinute();
+Schedule::command('app:sync-internal-posts')->everyMinute();
