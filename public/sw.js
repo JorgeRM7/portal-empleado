@@ -38,7 +38,19 @@ self.addEventListener("activate", (event) => {
     event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("fetch", (event) => {
-    // Por ahora dejamos que todo siga normal.
-    // Después puedes cachear assets si quieres modo offline.
+self.addEventListener('fetch', (event) => {
+    // Solo cacheamos peticiones GET (no las de Firebase o API dinámicas)
+    if (event.request.method !== 'GET') return;
+
+    event.respondWith(
+        fetch(event.request)
+            .catch(() => {
+                return caches.match(event.request);
+            })
+    );
+});
+
+// Mantén aquí tu lógica de Firebase Push que ya tenías
+self.addEventListener('push', function(event) {
+    // ... tu código de notificaciones actual
 });
