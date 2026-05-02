@@ -206,7 +206,7 @@ jobs:
             sudo -u www-data php artisan cache:forget last_post_id
 
             # Sincronizamos el puntero una última vez para romper cualquier bucle existente
-            sudo -u www-data php artisan tinker --execute="\Illuminate\Support\Facades\Cache::forever('last_synced_post_id', \App\Models\Post::max('id'))"
+            sudo -u www-data XDG_CONFIG_HOME=/tmp php artisan tinker --execute="\Illuminate\Support\Facades\Cache::forever('last_synced_post_id', \App\Models\Post::max('id'))"
 
             echo "🔄 Reiniciando servicios..."
             sudo systemctl reload nginx
