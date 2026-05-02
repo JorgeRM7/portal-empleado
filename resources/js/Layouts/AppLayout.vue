@@ -112,63 +112,29 @@ const setupNotifications = async () => {
 };
 
 const saveDeviceToken = async (token) => {
-    await router.post(route('device-tokens.store'), {
-        token: token
-    }, {
-        onSuccess: () => {
-            toast.add({
-                severity: 'success',
-                summary: 'Notificaciones activadas',
-                detail: 'Este dispositivo ya recibirá notificaciones.',
-                life: 4000
-            });
-        },
-        onError: () => {
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'No se pudo guardar el dispositivo.',
-                life: 4000
-            });
-        }
-    });
+    try {
+        const response = await axios.post(route('device-tokens.store'), {
+            token: token
+        });
+
+        // toast.add({
+        //     severity: 'success',
+        //     summary: 'Éxito',
+        //     detail: response.data.message,
+        //     life: 4000
+        // });
+
+        console.log(response.data.message);
+
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.data?.message || 'No se pudo guardar el dispositivo.',
+            life: 4000
+        });
+    }
 };
-
-// const confirmSelection = (token) => {
-//     router.put(route('term-conditions.update', { term_condition: page.props.auth.user.id }), {
-//         device_token: token
-//     }, {
-//         onBefore: () => { loadingTerms.value = true; },
-//         onSuccess: () => {
-//             showTermsModal.value = false;
-//             showWarningNotifications.value = false;
-
-//             router.reload({
-//                 only: ['auth'],
-//                 preserveState: false,
-//                 onFinish: () => {
-//                     installApp();
-//                 }
-//             });
-
-//             toast.add({
-//                 severity: 'success',
-//                 summary: '¡Configuración Completa!',
-//                 detail: 'Términos aceptados y notificaciones activadas.',
-//                 life: 4000
-//             });
-//         },
-//         onFinish: () => { loadingTerms.value = false; },
-//         onError: () => {
-//             toast.add({
-//                 severity: 'error',
-//                 summary: 'Error',
-//                 detail: 'Hubo un problema al guardar tus datos. Intenta nuevamente.',
-//                 life: 4000
-//             });
-//         }
-//     });
-// };
 
 const logout = () => {
     router.post(route('logout'), {}, {

@@ -41,6 +41,26 @@ import "flag-icons/css/flag-icons.min.css";
 import ConfirmationService from "primevue/confirmationservice";
 import ConfirmDialog from "primevue/confirmdialog";
 
+window.deferredPwaPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+
+    console.log("beforeinstallprompt capturado globalmente");
+
+    window.deferredPwaPrompt = event;
+
+    window.dispatchEvent(new CustomEvent("pwa-install-available"));
+});
+
+window.addEventListener("appinstalled", () => {
+    console.log("PWA instalada");
+
+    window.deferredPwaPrompt = null;
+
+    window.dispatchEvent(new CustomEvent("pwa-installed"));
+});
+
 const appName = import.meta.env.VITE_APP_NAME || "Mi portal RH";
 
 const spanishLocale = {
