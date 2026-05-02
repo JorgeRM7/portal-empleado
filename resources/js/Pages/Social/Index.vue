@@ -14,6 +14,8 @@ const props = defineProps({
     posts: Array,
 });
 
+console.log(props);
+
 // Reactive data
 const postsList = ref(props.posts.slice(0, 10)); // Mostrar solo los primeros 10
 const allPosts = ref(props.posts); // Guardar todos los posts
@@ -197,6 +199,9 @@ onMounted(() => {
                                         <div class="author-details">
                                             <div class="author-name">
                                                 {{ post.user?.name }}
+                                            </div>
+                                            <div class="post-time">
+                                                {{ post.created_at }}
                                             </div>
                                             <div class="post-title">
                                                 {{ post.title }}
@@ -422,7 +427,9 @@ onMounted(() => {
                                 <div class="author-name">
                                     {{ selectedPost.user?.name }}
                                 </div>
-                                <div class="post-time">Hace poco</div>
+                                <div class="post-time">
+                                    {{ selectedPost.created_at }}
+                                </div>
                             </div>
                         </div>
                     </div>
