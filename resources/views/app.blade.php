@@ -9,6 +9,18 @@
         <link rel="apple-touch-icon" href="/logo.png">
         <link rel="manifest" href="/manifest.json">
 
+        <link rel="manifest" href="/manifest.webmanifest">
+
+        <meta name="theme-color" content="#0f172a">
+
+        <meta name="mobile-web-app-capable" content="yes">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="Portal RH">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+        <link rel="apple-touch-icon" href="/assets/media/logos/logo.png">
+
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
@@ -91,11 +103,11 @@
         </script>
     </body>
 </html>
-<script>
+{{-- <script>
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark") {
         document.documentElement.classList.add("app-dark", "mode-dark");
     } else {
         document.documentElement.classList.remove("app-dark", "mode-dark");
     }
-</script>
+</script> --}}

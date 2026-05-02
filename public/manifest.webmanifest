@@ -1,0 +1,23 @@
+{
+    "name": "Mi Portal RH",
+    "short_name": "Portal RH",
+    "description": "Portal de empleados Grupo Ortiz",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0f172a",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/assets/media/logos/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/media/logos/logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

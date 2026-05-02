@@ -9,7 +9,7 @@ import Checkbox from "primevue/checkbox";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-
+import Dialog from "primevue/dialog";
 defineProps({
     status: String,
 });
@@ -43,17 +43,8 @@ const readTheme = () => {
 
 let observer;
 
-onMounted(() => {
-    readTheme();
 
-    observer = new MutationObserver(readTheme);
-    observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-theme", "data-bs-theme"],
-    });
-});
-
-onBeforeUnmount(() => observer?.disconnect());
+// onBeforeUnmount(() => observer?.disconnect());
 
 const bgStyle = computed(() => ({
     backgroundImage: `url(${
@@ -64,6 +55,101 @@ const bgStyle = computed(() => ({
     backgroundSize: "cover",
     backgroundPosition: "center",
 }));
+
+const deferredPrompt = ref(null);
+const showInstallButton = ref(false);
+const showIosInstall = ref(false);
+const isIos = ref(false);
+const isStandalone = ref(false);
+
+const detectDevice = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+
+    isIos.value = /iphone|ipad|ipod/.test(userAgent);
+
+    isStandalone.value =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+};
+
+const installApp = async () => {
+    // iPhone / iPad
+    if (isIos.value) {
+        showIosInstall.value = true;
+        return;
+    }
+
+    // Android / Chrome
+    if (!deferredPrompt.value) {
+        return;
+    }
+
+    deferredPrompt.value.prompt();
+
+    const choiceResult = await deferredPrompt.value.userChoice;
+
+    if (choiceResult.outcome === "accepted") {
+        console.log("Usuario instaló la app");
+    } else {
+        console.log("Usuario canceló instalación");
+    }
+
+    deferredPrompt.value = null;
+    showInstallButton.value = false;
+};
+
+const handleBeforeInstallPrompt = (event) => {
+    event.preventDefault();
+
+    deferredPrompt.value = event;
+    showInstallButton.value = true;
+};
+
+const handleAppInstalled = () => {
+    deferredPrompt.value = null;
+    showInstallButton.value = false;
+};
+
+
+// onMounted(() => {
+//     readTheme();
+
+//     observer = new MutationObserver(readTheme);
+//     observer.observe(document.documentElement, {
+//         attributes: true,
+//         attributeFilter: ["class", "data-theme", "data-bs-theme"],
+//     });
+// });
+
+onBeforeUnmount(() => {
+    observer?.disconnect();
+
+    window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.removeEventListener("appinstalled", handleAppInstalled);
+});
+
+onMounted(() => {
+    readTheme();
+    detectDevice();
+
+    observer = new MutationObserver(readTheme);
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class", "data-theme", "data-bs-theme"],
+    });
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    // En iOS no existe beforeinstallprompt,
+    // entonces mostramos botón manual si no está instalada.
+    if (isIos.value && !isStandalone.value) {
+        showInstallButton.value = true;
+    }
+});
+
+
+
 </script>
 
 <template>
@@ -168,9 +254,41 @@ const bgStyle = computed(() => ({
                             :loading="form.processing"
                             :disabled="form.processing"
                         />
+                        <Button
+                            v-if="showInstallButton && !isStandalone"
+                            type="button"
+                            label="Crear acceso directo"
+                            icon="pi pi-mobile"
+                            class="w-full p-button-outlined"
+                            @click="installApp"
+                        />
                     </form>
                 </template>
             </Card>
         </div>
+        
     </div>
+    <Dialog
+            v-model:visible="showIosInstall"
+            modal
+            header="Agregar a pantalla de inicio"
+            :style="{ width: '90%', maxWidth: '420px' }"
+        >
+            <div class="space-y-4">
+                <p class="text-gray-600">
+                    Para crear el acceso directo en iPhone:
+                </p>
+
+                <ol class="list-decimal pl-5 space-y-2 text-gray-700">
+                    <li>Abre este portal desde Safari.</li>
+                    <li>Toca el botón de compartir.</li>
+                    <li>Selecciona <strong>Agregar a pantalla de inicio</strong>.</li>
+                    <li>Presiona <strong>Agregar</strong>.</li>
+                </ol>
+
+                <Message severity="info" :closable="false">
+                    En iPhone no se puede instalar automáticamente, Apple requiere que el usuario lo agregue manualmente.
+                </Message>
+            </div>
+        </Dialog>
 </template>
