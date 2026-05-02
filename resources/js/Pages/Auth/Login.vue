@@ -76,42 +76,54 @@ const detectDevice = () => {
 };
 
 const installApp = async () => {
+    /**
+     * iPhone / iPad:
+     * iOS no permite abrir un prompt automático.
+     * Solo podemos mostrar instrucciones.
+     */
     if (isIos.value) {
         showInstallInstructions.value = true;
         return;
     }
 
-    const promptEvent = deferredPrompt.value || window.deferredPwaPrompt;
+    /**
+     * Android / Chrome:
+     * Si Chrome ya disparó beforeinstallprompt,
+     * podemos abrir el instalador nativo.
+     */
+    if (deferredPrompt.value) {
+        deferredPrompt.value.prompt();
 
-    if (promptEvent) {
-        promptEvent.prompt();
-
-        const choiceResult = await promptEvent.userChoice;
+        const choiceResult = await deferredPrompt.value.userChoice;
 
         console.log("Resultado instalación:", choiceResult.outcome);
 
         deferredPrompt.value = null;
-        window.deferredPwaPrompt = null;
         showInstallButton.value = false;
 
         return;
     }
 
+    /**
+     * Si Android todavía no liberó el prompt,
+     * mostramos instrucciones manuales.
+     */
     showInstallInstructions.value = true;
 };
 
-const handlePwaInstallAvailable = () => {
-    console.log("PWA disponible desde evento global");
+const handleBeforeInstallPrompt = (event) => {
+    event.preventDefault();
 
-    deferredPrompt.value = window.deferredPwaPrompt;
+    console.log("beforeinstallprompt disparado");
+
+    deferredPrompt.value = event;
     showInstallButton.value = true;
 };
 
-const handlePwaInstalled = () => {
-    console.log("PWA instalada desde evento global");
+const handleAppInstalled = () => {
+    console.log("App instalada correctamente");
 
     deferredPrompt.value = null;
-    window.deferredPwaPrompt = null;
     showInstallButton.value = false;
     showInstallInstructions.value = false;
     isStandalone.value = true;
@@ -127,20 +139,24 @@ onMounted(() => {
         attributeFilter: ["class", "data-theme", "data-bs-theme"],
     });
 
-    window.addEventListener("pwa-install-available", handlePwaInstallAvailable);
-    window.addEventListener("pwa-installed", handlePwaInstalled);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
 
-    if (window.deferredPwaPrompt) {
-        deferredPrompt.value = window.deferredPwaPrompt;
+    /**
+     * Mostramos el botón si la app no está instalada.
+     * En Android intentará instalar.
+     * En iPhone mostrará instrucciones.
+     */
+    if (!isStandalone.value) {
         showInstallButton.value = true;
     }
 });
 
 onBeforeUnmount(() => {
     observer?.disconnect();
-    console.log('aqui')
-    window.removeEventListener("pwa-install-available", handlePwaInstallAvailable);
-    window.removeEventListener("pwa-installed", handlePwaInstalled);
+
+    window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.removeEventListener("appinstalled", handleAppInstalled);
 });
 </script>
 
