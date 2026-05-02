@@ -105,6 +105,18 @@ const isVideo = (path) => {
     return videoExtensions.includes(extension);
 };
 
+const mediaLoading = ref(true);
+
+watch(expandModalVisible, (newValue) => {
+    if (newValue) {
+        mediaLoading.value = true;
+    }
+});
+
+const handleMediaLoaded = () => {
+    mediaLoading.value = false;
+};
+
 // WebSocket real-time
 onMounted(() => {
     console.log("Iniciando escucha de WebSockets...");
@@ -225,6 +237,8 @@ onMounted(() => {
                                         class="post-media"
                                         :class="{ loaded: post.isLoaded }"
                                         @load="post.isLoaded = true"
+                                        loading="lazy"
+                                        decoding="async"
                                     />
 
                                     <!-- Overlay expansión -->
@@ -364,26 +378,39 @@ onMounted(() => {
             class="expand-dialog"
         >
             <div v-if="selectedPost" class="expanded-post">
-                <!-- Media expandida -->
+                <!-- Media expandida con Skeleton -->
                 <div class="expanded-media">
+                    <!-- Skeleton: Solo se muestra mientras mediaLoading sea true -->
+                    <Skeleton
+                        v-if="mediaLoading"
+                        width="100%"
+                        height="450px"
+                        class="expanded-skeleton"
+                    />
+
+                    <!-- Video -->
                     <video
                         v-if="isVideo(selectedPost.path)"
                         :src="`/storage/img/social/${selectedPost.path}`"
                         class="expanded-video"
+                        :class="{ 'hidden-media': mediaLoading }"
                         controls
                         autoplay
+                        @loadeddata="handleMediaLoaded"
                     ></video>
 
+                    <!-- Imagen -->
                     <img
                         v-else
                         :src="`/storage/img/social/${selectedPost.path}`"
                         class="expanded-image"
+                        :class="{ 'hidden-media': mediaLoading }"
+                        @load="handleMediaLoaded"
                     />
                 </div>
 
                 <!-- Contenido del post expandido -->
                 <div class="expanded-content">
-                    <!-- Autor -->
                     <div class="expanded-header">
                         <div class="author-section">
                             <Avatar
@@ -402,7 +429,6 @@ onMounted(() => {
 
                     <Divider />
 
-                    <!-- Título y descripción -->
                     <div class="expanded-text">
                         <h3 class="expanded-title">{{ selectedPost.title }}</h3>
                         <p class="expanded-description">
@@ -412,7 +438,6 @@ onMounted(() => {
 
                     <Divider />
 
-                    <!-- Estadísticas -->
                     <div class="expanded-stats">
                         <span class="stat-item">
                             <i class="pi pi-heart-fill"></i>
@@ -420,12 +445,8 @@ onMounted(() => {
                         </span>
                     </div>
 
-                    <!-- Likers en modal expandido -->
                     <div
-                        v-if="
-                            selectedPost.likers &&
-                            selectedPost.likers.length > 0
-                        "
+                        v-if="selectedPost.likers?.length > 0"
                         class="expanded-likers"
                     >
                         <div class="expanded-likers-label">Le dieron like:</div>
@@ -441,24 +462,20 @@ onMounted(() => {
                                     size="small"
                                     class="avatar-small"
                                 />
-                                <span class="liker-name">
-                                    {{ liker.name }}
-                                </span>
+                                <span class="liker-name">{{ liker.name }}</span>
                                 <span
                                     v-if="
                                         index < selectedPost.likers.length - 1
                                     "
                                     class="liker-separator"
+                                    >•</span
                                 >
-                                    •
-                                </span>
                             </div>
                         </div>
                     </div>
 
                     <Divider />
 
-                    <!-- Acciones en el modal -->
                     <div class="expanded-actions">
                         <Button
                             @click="toggleLike(selectedPost)"
@@ -473,18 +490,6 @@ onMounted(() => {
                                 { liked: selectedPost.user_liked },
                             ]"
                         />
-
-                        <!-- <Button
-                            icon="pi pi-comment"
-                            label="Comentar"
-                            class="action-button-expanded"
-                        />
-
-                        <Button
-                            icon="pi pi-share-alt"
-                            label="Compartir"
-                            class="action-button-expanded"
-                        /> -->
                     </div>
                 </div>
             </div>
@@ -1068,5 +1073,28 @@ onMounted(() => {
         max-width: 100vw !important;
         margin: 0 !important;
     }
+}
+
+.hidden-media {
+    display: none;
+}
+
+.expanded-media {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f4f4f4; /* Fondo neutro mientras carga */
+    min-height: 300px;
+}
+
+.expanded-skeleton {
+    border-radius: 8px;
+}
+
+.expanded-image,
+.expanded-video {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
 }
 </style>
