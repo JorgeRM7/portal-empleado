@@ -1,19 +1,28 @@
-// Este evento se dispara cuando el Service Worker se instala por primera vez
+const CACHE_NAME = 'mi-portal-rh-v1';
+const OFFLINE_URL = '/offline'; // Opcional: una ruta simple para errores de red
+
 self.addEventListener('install', (event) => {
-    console.log('Service Worker: Instalado');
-    // Fuerza al Service Worker que está en espera a convertirse en el activo
     self.skipWaiting();
+    // Pre-cachear recursos críticos si lo deseas
 });
 
-// Este evento se activa cuando el Service Worker toma el control de la página
 self.addEventListener('activate', (event) => {
-    console.log('Service Worker: Activado');
-    return self.clients.claim();
+    event.waitUntil(self.clients.claim());
 });
 
-// El evento fetch es obligatorio para que el navegador considere que es una PWA
 self.addEventListener('fetch', (event) => {
-    // Por ahora, simplemente deja que las peticiones sigan su curso normal
-    // Aquí es donde en el futuro podrías programar el modo offline (Cache)
-    event.respondWith(fetch(event.request));
+    // Solo cacheamos peticiones GET (no las de Firebase o API dinámicas)
+    if (event.request.method !== 'GET') return;
+
+    event.respondWith(
+        fetch(event.request)
+            .catch(() => {
+                return caches.match(event.request);
+            })
+    );
+});
+
+// Mantén aquí tu lógica de Firebase Push que ya tenías
+self.addEventListener('push', function(event) {
+    // ... tu código de notificaciones actual
 });

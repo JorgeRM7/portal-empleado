@@ -22,17 +22,18 @@ const showWarningNotifications = ref(false);
 const isPermanentlyBlocked = ref(false);
 const messaging = getMessaging();
 const deferredPrompt = ref(null);
+const showInstallModal = ref(false);
 
 const acceptTerms = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    // Si es iOS y no está "instalada" la app
+    // 1. Validación para iOS
     if (isIOS && !window.navigator.standalone) {
         toast.add({
             severity: 'warn',
             summary: 'Atención usuario de iPhone',
             detail: 'Para recibir notificaciones, pulsa el botón compartir y selecciona "Añadir a la pantalla de inicio".',
-            life: 8000
+            life: 10000
         });
         return;
     }
@@ -40,63 +41,87 @@ const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
     if (!userId) return;
 
-    // Revisamos el estado actual del permiso
+    // 2. Revisar si las notificaciones están bloqueadas permanentemente
     if (Notification.permission === 'denied') {
         isPermanentlyBlocked.value = true;
         showWarningNotifications.value = true;
+        // Opcional: Podrías permitir que acepte términos aunque no reciba notificaciones
+        // confirmSelection(null);
         return;
     }
 
-    const permission = await Notification.requestPermission();
+    try {
+        // 3. Solicitar permiso de notificación
+        const permission = await Notification.requestPermission();
 
-    if (permission === 'granted') {
-        const tokenReal = await obtenerTokenReal();
-        if (tokenReal) {
-            confirmSelection(tokenReal);
+        if (permission === 'granted') {
+            // 4. Si acepta, intentamos obtener el token
+            const tokenReal = await obtenerTokenReal();
+
+            if (tokenReal) {
+                // Enviamos el token al servidor
+                confirmSelection(tokenReal);
+            } else {
+                // Error al generar el token (ej. Firebase/Red)
+                toast.add({
+                    severity: 'error',
+                    summary: 'Error de Configuración',
+                    detail: 'No pudimos generar tu identificador de notificaciones. Intenta de nuevo.',
+                    life: 4000
+                });
+            }
         } else {
-            toast.add({
-                severity: 'error',
-                summary: 'Error de Red',
-                detail: 'No pudimos conectar con el servidor de notificaciones. Intenta de nuevo.',
-                life: 4000
-            });
+            // El usuario rechazó o cerró el permiso
+            isPermanentlyBlocked.value = (permission === 'denied');
+            showWarningNotifications.value = true;
         }
-    } else {
-        isPermanentlyBlocked.value = (permission === 'denied');
-        showWarningNotifications.value = true;
+    } catch (error) {
+        console.error("Error en el proceso de aceptación:", error);
     }
 };
 
 const confirmSelection = (token) => {
+    // Usamos el ID del usuario autenticado para la ruta
     router.put(route('term-conditions.update', { term_condition: page.props.auth.user.id }), {
-        device_token: token
+        device_token: token // Este token se guardará en la tabla user_device_tokens
     }, {
         onBefore: () => { loadingTerms.value = true; },
         onSuccess: () => {
             showTermsModal.value = false;
             showWarningNotifications.value = false;
+
+            // Recargamos datos de sesión para actualizar el estado de terms_condition en el frontend
             router.reload({ only: ['auth'], preserveState: false });
 
-            // --- LÓGICA DE ACCESO DIRECTO AQUÍ ---
+            installApp();
+
+            // 5. Lógica de Instalación de PWA (Solo si el evento fue capturado)
             if (deferredPrompt.value) {
-                // Si el navegador capturó el evento (Android / Chrome)
                 deferredPrompt.value.prompt();
                 deferredPrompt.value.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
-                        console.log('Usuario aceptó instalar el acceso directo');
+                        console.log('El usuario instaló la App');
                     }
-                    deferredPrompt.value = null; // Limpiamos el evento
+                    deferredPrompt.value = null;
                 });
             }
 
             toast.add({
                 severity: 'success',
-                summary: '¡Éxito!',
-                detail: 'Has aceptado los términos. Ya puedes navegar.',
+                summary: '¡Configuración Completa!',
+                detail: 'Términos aceptados y notificaciones activadas.',
                 life: 4000
             });
         },
-        onFinish: () => { loadingTerms.value = false; }
+        onFinish: () => { loadingTerms.value = false; },
+        onError: () => {
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Hubo un problema al guardar tus datos. Intenta nuevamente.',
+                life: 4000
+            });
+        }
     });
 };
 
@@ -186,28 +211,37 @@ function isOutsideClicked(event) {
 }
 
 onMounted(() => {
+    // Capturamos el evento de instalación
     window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevenir que el navegador lo muestre automáticamente
         e.preventDefault();
+        // Guardamos el evento para dispararlo después
         deferredPrompt.value = e;
     });
-    // onMessage(messaging, (payload) => {
-    //     console.log('Mensaje recibido en primer plano:', payload);
 
-    //     if (Notification.permission === "granted") {
-    //         new Notification(payload.notification.title, {
-    //             body: payload.notification.body,
-    //             icon: '/logo.png',
-    //         });
-    //     }
-
-    //     toast.add({
-    //         severity: 'info',
-    //         summary: payload.notification.title || 'Aviso de Portal RH',
-    //         detail: payload.notification.body || 'Tienes una nueva actualización.',
-    //         life: 6000
-    //     });
-    // });
+    window.addEventListener('appinstalled', () => {
+        deferredPrompt.value = null;
+        showInstallModal.value = false;
+        console.log('PWA instalada con éxito');
+    });
 });
+
+const installApp = async () => {
+    if (!deferredPrompt.value) return;
+
+    // Mostramos el prompt del navegador
+    deferredPrompt.value.prompt();
+
+    // Esperamos la respuesta del usuario
+    const { outcome } = await deferredPrompt.value.userChoice;
+
+    if (outcome === 'accepted') {
+        console.log('Usuario aceptó la instalación');
+    }
+
+    deferredPrompt.value = null;
+    showInstallModal.value = false;
+};
 </script>
 
 <template>
