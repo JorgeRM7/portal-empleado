@@ -22,26 +22,12 @@ class TermConditionController
     {
         $employee = Employee::find($id);
 
-        if (!$employee) {
-            return back()->withErrors(['message' => 'Empleado no encontrado.']);
-        }
+    if (!$employee) {
+        return back()->withErrors(['message' => 'Empleado no encontrado.']);
+    }
 
-        $employee->update(['terms_condition' => 1]);
+    $employee->update(['terms_condition' => 1]);
 
-        if ($request->has('device_token') && $request->device_token != null) {
-
-            DB::table('user_employees_device_tokens')->updateOrInsert(
-                [
-                    'employee_id' => $request->user()->id,
-                    'device_token' => $request->device_token
-                ],
-                [
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]
-            );
-        }
-
-        return back()->with('success', 'Todo actualizado correctamente.');
+    return back()->with('success', 'Terminos aceptados correctamente.');
     }
 }
