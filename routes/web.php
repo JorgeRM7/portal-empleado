@@ -19,6 +19,8 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\TermConditionController;
 use App\Http\Controllers\CommunityController;
 
+use App\Http\Controllers\DeviceTokensController;
+
 
 // -----------------------------------------------------
 // ROOT / LOGIN
@@ -122,6 +124,10 @@ Route::middleware([
 
     Route::resource('term-conditions', TermConditionController::class)->names([
         'index' => 'term-conditions'
+    ]);
+
+    Route::resource('device-tokens', DeviceTokensController::class)->names([
+        'index' => 'device-tokens'
     ]);
 
     Route::get('/posts', [PostController::class, 'index'])
