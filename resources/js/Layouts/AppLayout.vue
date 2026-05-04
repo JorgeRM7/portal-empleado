@@ -34,6 +34,7 @@ const getOrGenerateDeviceId = () => {
     return deviceId;
 };
 
+
 const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
     if (!userId) return;

@@ -43,15 +43,7 @@ class DeviceTokensController
             ], 401);
         }
 
-        // DeviceToken::withTrashed()->updateOrCreate(
-        //     [
-        //         'device_token' => $request->token
-        //     ],
-        //     [
-        //         'employee_id' => $user->id,
-        //         'deleted_at' => null
-        //     ]
-        // );
+        // DeviceToken::where('device_token', $request->token)->delete();
 
         DeviceToken::withTrashed()->updateOrCreate(
             [
