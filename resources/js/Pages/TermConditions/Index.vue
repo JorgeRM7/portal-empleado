@@ -393,7 +393,7 @@ const sections = ref([0, 1, 2, 3, 4]);
                         </template>
                         <template #content>
                             <h3
-                                class="text-lg font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2"
+                                class="text-lg font-semibold mb-3 flex items-center gap-2"
                             >
                                 <i
                                     class="pi pi-arrow-right text-blue-600 dark:text-blue-400"
@@ -418,7 +418,7 @@ const sections = ref([0, 1, 2, 3, 4]);
                         </template>
                         <template #content>
                             <h3
-                                class="text-lg font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2"
+                                class="text-lg font-semibold mb-3 flex items-center gap-2"
                             >
                                 <i
                                     class="pi pi-refresh text-amber-600 dark:text-amber-400"
