@@ -9,10 +9,9 @@ import Toast from "@/Components/Toast.vue";
 import Assistant from "@/Components/Assistant.vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
-import InactivityTimer from '@/Components/InactivityTimer.vue';
+import InactivityTimer from "@/Components/InactivityTimer.vue";
 import { obtenerTokenReal } from "../firebase";
 import { getMessaging, onMessage } from "firebase/messaging";
-
 
 const page = usePage();
 const loadingTerms = ref(false);
@@ -25,15 +24,15 @@ const deferredPrompt = ref(null);
 const showInstallModal = ref(false);
 
 const getOrGenerateDeviceId = () => {
-    let deviceId = localStorage.getItem('my_device_id');
+    let deviceId = localStorage.getItem("my_device_id");
     if (!deviceId) {
         // Genera un ID único basado en la fecha y un número aleatorio
-        deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('my_device_id', deviceId);
+        deviceId =
+            "dev_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("my_device_id", deviceId);
     }
     return deviceId;
 };
-
 
 const acceptTerms = async () => {
     const userId = page.props.auth?.user?.id;
@@ -42,19 +41,21 @@ const acceptTerms = async () => {
     try {
         loadingTerms.value = true;
 
-        await router.put(route('term-conditions.update', { term_condition: userId }), {});
+        await router.put(
+            route("term-conditions.update", { term_condition: userId }),
+            {},
+        );
 
         showTermsModal.value = false;
 
         toast.add({
-            severity: 'success',
-            summary: 'Términos aceptados',
-            detail: 'Ahora puedes activar las notificaciones.',
-            life: 4000
+            severity: "success",
+            summary: "Términos aceptados",
+            detail: "Ahora puedes activar las notificaciones.",
+            life: 4000,
         });
 
         await setupNotifications();
-
     } catch (error) {
         console.error(error);
     } finally {
@@ -65,26 +66,27 @@ const acceptTerms = async () => {
 const setupNotifications = async () => {
     showWarningNotifications.value = false;
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isIOS =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
     if (isIOS && !window.navigator.standalone) {
         toast.add({
-            severity: 'warn',
-            summary: 'Atención usuario de iPhone',
-            detail: 'Para recibir notificaciones, agrega la app a pantalla de inicio.',
-            life: 10000
+            severity: "warn",
+            summary: "Atención usuario de iPhone",
+            detail: "Para recibir notificaciones, agrega la app a pantalla de inicio.",
+            life: 10000,
         });
         return;
     }
 
-    if (Notification.permission === 'denied') {
+    if (Notification.permission === "denied") {
         isPermanentlyBlocked.value = true;
         showWarningNotifications.value = true;
         return;
     }
 
     try {
-        if (Notification.permission === 'granted') {
+        if (Notification.permission === "granted") {
             const tokenReal = await obtenerTokenReal();
 
             if (!tokenReal) return;
@@ -96,24 +98,23 @@ const setupNotifications = async () => {
 
         const permission = await Notification.requestPermission();
 
-        if (permission === 'granted') {
+        if (permission === "granted") {
             const tokenReal = await obtenerTokenReal();
 
             if (tokenReal) {
                 await saveDeviceToken(tokenReal);
             } else {
                 toast.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'No se pudo generar el token.',
-                    life: 4000
+                    severity: "error",
+                    summary: "Error",
+                    detail: "No se pudo generar el token.",
+                    life: 4000,
                 });
             }
         } else {
-            isPermanentlyBlocked.value = (permission === 'denied');
+            isPermanentlyBlocked.value = permission === "denied";
             showWarningNotifications.value = true;
         }
-
     } catch (error) {
         console.error(error);
     }
@@ -123,9 +124,9 @@ const saveDeviceToken = async (token) => {
     try {
         const deviceIdentifier = getOrGenerateDeviceId();
 
-        const response = await axios.post(route('device-tokens.store'), {
+        const response = await axios.post(route("device-tokens.store"), {
             token: token,
-            device_id: deviceIdentifier
+            device_id: deviceIdentifier,
         });
 
         // toast.add({
@@ -136,26 +137,31 @@ const saveDeviceToken = async (token) => {
         // });
 
         console.log(response.data.message);
-
     } catch (error) {
         toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.data?.message || 'No se pudo guardar el dispositivo.',
-            life: 4000
+            severity: "error",
+            summary: "Error",
+            detail:
+                error.response?.data?.message ||
+                "No se pudo guardar el dispositivo.",
+            life: 4000,
         });
     }
 };
 
 const logout = () => {
-    router.post(route('logout'), {}, {
-        onBefore: () => {
-            loadingTerms.value = true;
+    router.post(
+        route("logout"),
+        {},
+        {
+            onBefore: () => {
+                loadingTerms.value = true;
+            },
+            onSuccess: () => {
+                console.log("Sesión cerrada.");
+            },
         },
-        onSuccess: () => {
-            console.log("Sesión cerrada.");
-        }
-    });
+    );
 };
 
 watch(
@@ -163,7 +169,7 @@ watch(
     (value) => {
         showTermsModal.value = Number(value) !== 1;
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const { layoutConfig, layoutState, isSidebarActive } = useLayout();
@@ -233,15 +239,15 @@ function isOutsideClicked(event) {
 }
 
 onMounted(() => {
-    window.addEventListener('beforeinstallprompt', (e) => {
+    window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
         deferredPrompt.value = e;
         console.log("Evento de instalación capturado y listo.");
     });
 
-    window.addEventListener('appinstalled', () => {
+    window.addEventListener("appinstalled", () => {
         deferredPrompt.value = null;
-        console.log('PWA instalada con éxito');
+        console.log("PWA instalada con éxito");
     });
 
     const user = page.props.auth?.user;
@@ -255,7 +261,6 @@ onMounted(() => {
     }
 });
 
-
 const installApp = async () => {
     if (!deferredPrompt.value) return;
 
@@ -263,8 +268,8 @@ const installApp = async () => {
 
     const { outcome } = await deferredPrompt.value.userChoice;
 
-    if (outcome === 'accepted') {
-        console.log('Usuario aceptó la instalación');
+    if (outcome === "accepted") {
+        console.log("Usuario aceptó la instalación");
     }
 
     deferredPrompt.value = null;
@@ -282,12 +287,19 @@ const installApp = async () => {
                 <slot />
             </div> -->
             <div class="layout-main">
-                <div :class="{ 'pointer-events-none opacity-50': showTermsModal }">
+                <div
+                    :class="{
+                        'pointer-events-none opacity-50': showTermsModal,
+                    }"
+                >
                     <slot />
                 </div>
             </div>
             <app-footer></app-footer>
-            <div v-if="deferredPrompt" class="fixed bottom-8 right-8 z-[9999] animate-bounce-slow">
+            <div
+                v-if="deferredPrompt"
+                class="fixed bottom-8 right-8 z-[9999] animate-bounce-slow"
+            >
                 <Button
                     icon="pi pi-download"
                     severity="success"
@@ -315,11 +327,19 @@ const installApp = async () => {
     >
         <div class="flex flex-col gap-4">
             <div class="p-4 rounded-2xl flex items-start gap-3">
-                <InlineMessage severity="info">Para continuar utilizando el <strong>Mi Portal RH</strong>, es necesario que leas y aceptes los términos de confidencialidad y uso de datos.</InlineMessage>
+                <InlineMessage severity="info"
+                    >Para continuar utilizando el <strong>Mi Portal RH</strong>,
+                    es necesario que leas y aceptes los términos de
+                    confidencialidad y uso de datos.</InlineMessage
+                >
             </div>
 
-            <div class="p-6 rounded-xl border border-gray-100 dark:border-gray-700 max-h-[350px] overflow-y-auto text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                <h3 class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+            <div
+                class="p-6 rounded-xl border border-gray-100 dark:border-gray-700 max-h-[350px] overflow-y-auto text-sm leading-relaxed text-gray-600 dark:text-gray-300"
+            >
+                <h3
+                    class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"
+                >
                     <i class="pi pi-shield text-emerald-500"></i>
                     Aviso de Privacidad y Confidencialidad
                 </h3>
@@ -327,35 +347,56 @@ const installApp = async () => {
                 <ul class="flex flex-col gap-4 list-none p-0">
                     <li class="flex gap-3">
                         <i class="pi pi-user-focus mt-1 text-blue-500"></i>
-                        <span><strong>Propiedad de la Información:</strong> Reconoces que los datos personales y laborales mostrados en este portal te pertenecen. La plataforma actúa únicamente como un medio informativo para facilitar tu acceso a ellos.</span>
+                        <span
+                            >En cumplimiento con la Ley Federal de Protección de
+                            Datos Personales en Posesión de los Particulares, se
+                            informa que los datos personales recabados a través
+                            de Mi Portal RH serán utilizados para la
+                            administración de la relación laboral, incluyendo la
+                            gestión de incidencias, vacaciones, permisos,
+                            tiempos extra, nómina y cumplimiento de obligaciones
+                            legales</span
+                        >
                     </li>
 
                     <li class="flex gap-3">
-                        <i class="pi pi-eye-slash mt-1 text-orange-500"></i>
-                        <span><strong>Finalidad No Lucrativa:</strong> Este portal tiene fines estrictamente informativos y administrativos. Se prohíbe el uso de la información aquí contenida para cualquier fin comercial o de lucro ajeno a la relación laboral.</span>
+                        Se podrán tratar datos de identificación, laborales, de
+                        contacto y, en su caso, datos sensibles como información
+                        médica derivada de incapacidades.
                     </li>
 
                     <li class="flex gap-3">
                         <i class="pi pi-comments mt-1 text-purple-500"></i>
-                        <span><strong>Canales de Quejas:</strong> Contamos con un sistema de quejas y sugerencias. Te garantizamos que el proceso de reporte es <strong>completamente anónimo</strong>, diseñado para proteger tu integridad y fomentar un ambiente laboral seguro.</span>
-                    </li>
-
-                    <li class="flex gap-3">
-                        <i class="pi pi-lock mt-1 text-emerald-500"></i>
-                        <span><strong>Protección de Datos:</strong> Nos comprometemos a no compartir, vender ni utilizar tu información personal para fines distintos a los informativos internos de la organización.</span>
+                        <span
+                            >El uso del portal implica la aceptación del
+                            tratamiento de sus datos personales conforme a este
+                            aviso. El Aviso de Privacidad Integral se encuentra
+                            disponible para su consulta dentro del
+                            portal.|</span
+                        >
                     </li>
                 </ul>
 
-                <div class="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs border border-blue-100 dark:border-blue-800 italic">
-                    Al hacer clic en "Aceptar y continuar", confirmas que has leído y estás de acuerdo con el manejo de tus datos bajo los lineamientos anteriormente descritos.
+                <div
+                    class="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs border border-blue-100 dark:border-blue-800 italic"
+                >
+                    Al hacer clic en "Aceptar y continuar", confirmas que has
+                    leído y estás de acuerdo con el manejo de tus datos bajo los
+                    lineamientos anteriormente descritos.
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center justify-end gap-3 mt-2">
+            <div
+                class="flex flex-col sm:flex-row items-center justify-end gap-3 mt-2"
+            >
                 <Button
                     label="No acepto"
                     icon="pi pi-sign-out"
-                    :icon="loadingTerms ? 'pi pi-spin pi-spinner' : 'pi pi-sign-out'"
+                    :icon="
+                        loadingTerms
+                            ? 'pi pi-spin pi-spinner'
+                            : 'pi pi-sign-out'
+                    "
                     :loading="loadingTerms"
                     severity="danger"
                     text
@@ -365,7 +406,9 @@ const installApp = async () => {
                 <Button
                     label="Aceptar y continuar"
                     icon="pi pi-check"
-                    :icon="loadingTerms ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+                    :icon="
+                        loadingTerms ? 'pi pi-spin pi-spinner' : 'pi pi-check'
+                    "
                     :loading="loadingTerms"
                     severity="success"
                     @click="acceptTerms"
@@ -389,18 +432,38 @@ const installApp = async () => {
             </div>
 
             <p class="text-sm text-gray-700 dark:text-gray-300">
-                Para continuar en <strong>Mi Portal RH</strong>, debes permitir las notificaciones. Esto nos permite enviarte tus recibos y avisos importantes.
+                Para continuar en <strong>Mi Portal RH</strong>, debes permitir
+                las notificaciones. Esto nos permite enviarte tus recibos y
+                avisos importantes.
             </p>
 
-            <div v-if="isPermanentlyBlocked" class=" p-4 rounded-lg border border-blue-200">
+            <div
+                v-if="isPermanentlyBlocked"
+                class="p-4 rounded-lg border border-blue-200"
+            >
                 <p class="text-xs font-bold mb-2 flex items-center gap-2">
                     <i class="pi pi-info-circle"></i> CÓMO ACTIVARLAS:
                 </p>
                 <ol class="text-xs pl-4 list-decimal flex flex-col gap-2">
-                    <li>Haz clic en el icono del <strong>candado (🔒)</strong> o de <strong>ajustes o controles (⊶)</strong> situado a la izquierda de la dirección web en la parte superior.</li>
-                    <li>Si ya habías bloqueado los permisos anteriormente, ahí verás la opción de <strong>Notificaciones</strong> desactivada.</li>
-                    <li>Activa el interruptor de <strong>Notificaciones</strong> para permitir que el portal te envíe avisos.</li>
-                    <li>Cierra ese pequeño menú, regresa aquí y pulsa el botón de abajo.</li>
+                    <li>
+                        Haz clic en el icono del <strong>candado (🔒)</strong> o
+                        de <strong>ajustes o controles (⊶)</strong> situado a la
+                        izquierda de la dirección web en la parte superior.
+                    </li>
+                    <li>
+                        Si ya habías bloqueado los permisos anteriormente, ahí
+                        verás la opción de
+                        <strong>Notificaciones</strong> desactivada.
+                    </li>
+                    <li>
+                        Activa el interruptor de
+                        <strong>Notificaciones</strong> para permitir que el
+                        portal te envíe avisos.
+                    </li>
+                    <li>
+                        Cierra ese pequeño menú, regresa aquí y pulsa el botón
+                        de abajo.
+                    </li>
                 </ol>
             </div>
 
@@ -425,9 +488,19 @@ const installApp = async () => {
 }
 
 @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-    40% {transform: translateY(-10px);}
-    60% {transform: translateY(-5px);}
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
 }
 
 /* Ajuste para que no tape contenido importante en móviles */
