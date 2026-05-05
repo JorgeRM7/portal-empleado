@@ -62,11 +62,11 @@ const options = ref([
 ]);
 
 const otherOptions = ref([
-    { name: "Constancia de Fonacot", code: "Constancia de Fonacot" },
-    { name: "Constancia de Infonavit", code: "Constancia de Infonavit" },
-    { name: "Constancia de Antigüedad", code: "Constancia de Antigüedad" },
-    { name: "Constancia de Visa", code: "Constancia de Visa" },
-    { name: "Constancia Escolar", code: "Constancia Escolar" },
+    { name: "Constancia de Fonacot", code: "FONACOT" },
+    { name: "Constancia de Infonavit", code: "INFONAVIT" },
+    { name: "Constancia de Antigüedad", code: "ANTIGUEDAD" },
+    { name: "Constancia de Visa", code: "VISA" },
+    { name: "Constancia Escolar", code: "ESCOLAR" },
     { name: "Otro", code: "CON-OTR" },
 ]);
 
@@ -376,8 +376,7 @@ const enviarQueja = async () => {
 
     if (
         !selectedOption.value ||
-        (!complaintDescription.value.trim() &&
-            selectedOption.value.code !== "CON")
+        (!descripcionLimpia && selectedOption.value.code !== "CON")
     ) {
         toast.add({
             severity: "warn",
@@ -392,7 +391,7 @@ const enviarQueja = async () => {
         toast.add({
             severity: "error",
             summary: "Lenguaje no permitido",
-            detail: "Por favor, redacta tu ticket sin utilizar lenguaje ofensivo o da click en el botón de Redactar con IA.",
+            detail: "Por favor, redacta tu ticket sin lenguaje ofensivo.",
             life: 4000,
         });
         return;
@@ -403,28 +402,35 @@ const enviarQueja = async () => {
     try {
         const formData = new FormData();
 
+        const esConstancia = selectedOption.value.code === "CON" ? 1 : 0;
+
+        let descripcionFinal = descripcionLimpia;
+        let tipoConstancia = null;
+
+        if (esConstancia) {
+            if (selectedConstancia.value === "CON-OTR") {
+                descripcionFinal = otherSubject.value;
+                tipoConstancia = otherSubject.value;
+            } else {
+                descripcionFinal = selectedConstancia.value;
+                tipoConstancia = selectedConstancia.value;
+            }
+        }
+
         // Datos básicos
         formData.append("asunto_cod", selectedOption.value.code);
         formData.append(
             "asunto_texto",
             selectedOption.value.code === "OTR"
                 ? otherSubject.value
-                : selectedOption.value.name,
+                : selectedOption.value.name
         );
-        formData.append("descripcion", complaintDescription.value);
 
-        if (
-            selectedOption.value.code === "CON" &&
-            selectedConstancia.value != "CON-OTR"
-        ) {
-            formData.append("descripcion", selectedConstancia.value);
-        } else if (
-            selectedOption.value.code === "CON" &&
-            selectedConstancia.value == "CON-OTR"
-        ) {
-            formData.append("descripcion", otherSubject.value);
-        }
+        formData.append("descripcion", descripcionFinal);
+        formData.append("es_constancia", esConstancia);
+        formData.append("tipo_constancia", tipoConstancia);
 
+        // Archivos
         if (files.value.length > 0) {
             files.value.forEach((file) => {
                 formData.append("archivos[]", file);
@@ -436,8 +442,6 @@ const enviarQueja = async () => {
                 "Content-Type": "multipart/form-data",
             },
         });
-
-        console.log(res);
 
         if (res.data.success) {
             toast.add({
@@ -470,6 +474,7 @@ const enviarQueja = async () => {
         sending.value = false;
     }
 };
+
 
 const limpiarFormulario = () => {
     selectedOption.value = null;

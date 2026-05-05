@@ -9,7 +9,12 @@ import Button from "primevue/button";
 import Message from "primevue/message";
 import Dialog from "primevue/dialog";
 
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+
+const blocked = ref(false);
+const remainingTime = ref(0);
+let interval = null;
+
 
 defineProps({
     status: String,
@@ -22,10 +27,54 @@ const form = useForm({
 });
 
 const submitForm = () => {
+    if (blocked.value) return;
+
     form.post(route("login"), {
+        onError: (errors) => {
+            const msg = errors.email || "";
+
+            // Detecta bloqueo
+            if (msg.includes("Bloqueado")) {
+                blocked.value = true;
+
+                // extraer segundos del mensaje
+                const match = msg.match(/\d+/);
+                if (match) {
+                    remainingTime.value = parseInt(match[0]);
+                    startCountdown();
+                }
+            }
+        },
         onFinish: () => form.reset("password"),
     });
 };
+
+const startCountdown = () => {
+    clearInterval(interval);
+
+    interval = setInterval(() => {
+        if (remainingTime.value > 0) {
+            remainingTime.value--;
+        } else {
+            blocked.value = false;
+            clearInterval(interval);
+        }
+    }, 1000);
+};
+
+watch(remainingTime, (val) => {
+    if (val > 0) {
+        localStorage.setItem("login_block_time", val);
+    } else {
+        localStorage.removeItem("login_block_time");
+    }
+});
+
+// const submitForm = () => {
+//     form.post(route("login"), {
+//         onFinish: () => form.reset("password"),
+//     });
+// };
 
 /**
  * Tema claro / oscuro
@@ -150,6 +199,14 @@ onMounted(() => {
     if (!isStandalone.value) {
         showInstallButton.value = true;
     }
+
+    const saved = localStorage.getItem("login_block_time");
+
+    if (saved) {
+        remainingTime.value = parseInt(saved);
+        blocked.value = true;
+        startCountdown();
+    }
 });
 
 onBeforeUnmount(() => {
@@ -257,14 +314,33 @@ onBeforeUnmount(() => {
                             </small>
                         </div>
 
+                        <Message
+                            v-if="blocked"
+                            severity="error"
+                            :closable="false"
+                        >
+                            Demasiados intentos. Intenta nuevamente en
+                            {{ Math.floor(remainingTime / 60) }}:{{ String(remainingTime % 60).padStart(2, '0') }}
+                            o contacta a RH.
+                        </Message>
+
                         <!-- Submit -->
-                        <Button
+                        <!-- <Button
                             type="submit"
                             label="Entrar"
                             icon="pi pi-sign-in"
                             class="w-full"
                             :loading="form.processing"
                             :disabled="form.processing"
+                        /> -->
+
+                        <Button
+                            type="submit"
+                            label="Entrar"
+                            icon="pi pi-sign-in"
+                            class="w-full"
+                            :loading="form.processing"
+                            :disabled="form.processing || blocked"
                         />
 
                         <!-- Instalar PWA / Crear acceso directo -->

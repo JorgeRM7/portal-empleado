@@ -18,6 +18,7 @@ const toast = useToast();
 // Inertia expone el usuario autenticado en page.props.auth.user
 // Ajusta los campos según tu modelo User de Laravel
 const user = computed(() => page.props.auth?.user ?? {});
+const blocked = ref(false);
 
 const initials = computed(() => {
     const name = user.value.employee.full_name ?? "";
@@ -51,12 +52,29 @@ const submitPassword = () => {
             });
         },
         onError: (errors) => {
-            toast.add({
-                severity: "error",
-                summary: "Error al actualizar",
-                detail: errors.password,
-                life: 3500,
-            });
+            const msg = errors.current_password || errors.password || "";
+
+            if (msg.includes("Demasiados intentos")) {
+                blocked.value = true;
+
+                // 🔥 limpiar errores visuales
+                passwordForm.clearErrors();
+
+                toast.add({
+                    severity: "error",
+                    summary: "Bloqueado",
+                    detail: msg,
+                    life: 4000,
+                });
+
+            } else {
+                toast.add({
+                    severity: "error",
+                    summary: "Error al actualizar",
+                    detail: msg,
+                    life: 3000,
+                });
+            }
         },
         onFinish: () => {
             passwordLoading.value = false;
@@ -95,11 +113,7 @@ const logout = () => router.post(route("logout"));
                             shape="circle"
                             class="hero-avatar"
                         /> -->
-                        <img
-                            :src="employeePhoto"
-                            alt="Foto de perfil"
-                            class="hero-avatar"
-                        />
+                        <img :src="employeePhoto" alt="Foto de perfil" class="hero-avatar" />
                     </div>
                     <div class="hero-text">
                         <p class="user-name">
@@ -121,7 +135,7 @@ const logout = () => router.post(route("logout"));
                         <span class="lbl">Nombre completo</span>
                         <span class="val">{{
                             user.employee?.full_name ?? "—"
-                        }}</span>
+                            }}</span>
                     </div>
                     <Divider />
                     <div class="info-row">
@@ -135,15 +149,15 @@ const logout = () => router.post(route("logout"));
                             {{
                                 user.employee?.entry_date
                                     ? new Date(
-                                          user.employee.entry_date.slice(
-                                              0,
-                                              10,
-                                          ) + "T00:00:00",
-                                      ).toLocaleDateString("es-MX", {
-                                          year: "numeric",
-                                          month: "long",
-                                          day: "numeric",
-                                      })
+                                        user.employee.entry_date.slice(
+                                            0,
+                                            10,
+                                        ) + "T00:00:00",
+                                    ).toLocaleDateString("es-MX", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                    })
                                     : "—"
                             }}
                         </span>
@@ -156,26 +170,18 @@ const logout = () => router.post(route("logout"));
                 <p class="section-label"><i class="pi pi-cog"></i> Cuenta</p>
                 <div class="action-list">
                     <button class="action-row" @click="passwordDialog = true">
-                        <span class="action-icon blue"
-                            ><i class="pi pi-lock"></i
-                        ></span>
+                        <span class="action-icon blue"><i class="pi pi-lock"></i></span>
                         <span class="action-text">
                             <span class="action-main">Cambiar contraseña</span>
-                            <span class="action-hint"
-                                >Actualiza tu contraseña de acceso</span
-                            >
+                            <span class="action-hint">Actualiza tu contraseña de acceso</span>
                         </span>
                         <i class="pi pi-chevron-right chevron"></i>
                     </button>
                     <Divider />
                     <button class="action-row" @click="logoutConfirm = true">
-                        <span class="action-icon red"
-                            ><i class="pi pi-sign-out"></i
-                        ></span>
+                        <span class="action-icon red"><i class="pi pi-sign-out"></i></span>
                         <span class="action-text">
-                            <span class="action-main danger-text"
-                                >Cerrar sesión</span
-                            >
+                            <span class="action-main danger-text">Cerrar sesión</span>
                             <span class="action-hint">Salir de tu cuenta</span>
                         </span>
                         <i class="pi pi-chevron-right chevron"></i>
@@ -185,88 +191,51 @@ const logout = () => router.post(route("logout"));
         </div>
 
         <!-- ══ DIALOG: Cambiar contraseña ═══════════════════════════════════ -->
-        <Dialog
-            v-model:visible="passwordDialog"
-            header="Cambiar contraseña"
-            modal
-            :style="{ width: '380px' }"
-            :draggable="false"
-        >
+        <Dialog v-model:visible="passwordDialog" header="Cambiar contraseña" modal :style="{ width: '380px' }"
+            :draggable="false">
             <div class="pwd-form">
+                <div v-if="blocked" class="p-3 mb-2 bg-red-100 text-red-700 rounded text-sm">
+                    Has excedido el número de intentos. Por favor revisa con RH.
+                </div>
                 <label>Contraseña actual</label>
-                <Password
-                    v-model="passwordForm.current_password"
-                    :feedback="false"
-                    toggleMask
-                    placeholder="••••••••"
-                    class="w-full"
-                    inputClass="w-full"
-                />
+                <Password v-model="passwordForm.current_password" :feedback="false" toggleMask placeholder="••••••••"
+                    class="w-full" inputClass="w-full" />
                 <span class="text-red-500 text-sm">{{
                     passwordForm.errors.updatePassword?.current_password
-                }}</span>
+                    }}</span>
                 <label>Nueva contraseña</label>
-                <Password
-                    v-model="passwordForm.password"
-                    toggleMask
-                    placeholder="••••••••"
-                    class="w-full"
-                    inputClass="w-full"
-                />
+                <Password v-model="passwordForm.password" toggleMask placeholder="••••••••" class="w-full"
+                    inputClass="w-full" />
                 <span class="text-red-500 text-sm">{{
                     passwordForm.errors.updatePassword?.password
-                }}</span>
+                    }}</span>
                 <label>Confirmar contraseña</label>
-                <Password
-                    v-model="passwordForm.password_confirmation"
-                    :feedback="false"
-                    toggleMask
-                    placeholder="••••••••"
-                    class="w-full"
-                    inputClass="w-full"
-                />
+                <Password v-model="passwordForm.password_confirmation" :feedback="false" toggleMask
+                    placeholder="••••••••" class="w-full" inputClass="w-full" />
             </div>
             <template #footer>
-                <Button
-                    label="Cancelar"
-                    text
-                    severity="secondary"
-                    @click="passwordDialog = false"
-                />
+                <Button label="Cancelar" text severity="secondary" @click="passwordDialog = false" />
+                <!-- <Button label="Guardar" icon="pi pi-check" :loading="passwordLoading" @click="submitPassword" /> -->
                 <Button
                     label="Guardar"
                     icon="pi pi-check"
                     :loading="passwordLoading"
+                    :disabled="blocked"
                     @click="submitPassword"
                 />
             </template>
         </Dialog>
 
         <!-- ══ DIALOG: Confirmar logout ══════════════════════════════════════ -->
-        <Dialog
-            v-model:visible="logoutConfirm"
-            header="¿Cerrar sesión?"
-            modal
-            :style="{ width: '340px' }"
-            :draggable="false"
-        >
+        <Dialog v-model:visible="logoutConfirm" header="¿Cerrar sesión?" modal :style="{ width: '340px' }"
+            :draggable="false">
             <p class="logout-msg">
                 Tu sesión será terminada. Podrás volver a iniciar sesión cuando
                 quieras.
             </p>
             <template #footer>
-                <Button
-                    label="Cancelar"
-                    text
-                    severity="secondary"
-                    @click="logoutConfirm = false"
-                />
-                <Button
-                    label="Cerrar sesión"
-                    severity="danger"
-                    icon="pi pi-sign-out"
-                    @click="logout"
-                />
+                <Button label="Cancelar" text severity="secondary" @click="logoutConfirm = false" />
+                <Button label="Cerrar sesión" severity="danger" icon="pi pi-sign-out" @click="logout" />
             </template>
         </Dialog>
     </AppLayout>
@@ -289,17 +258,20 @@ const logout = () => router.post(route("logout"));
     overflow: hidden;
     padding: 2.75rem 2rem 2.5rem;
 }
+
 .hero-bg {
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
 }
+
 .orb {
     position: absolute;
     border-radius: 50%;
     filter: blur(55px);
     opacity: 0.4;
 }
+
 .orb-1 {
     width: 240px;
     height: 240px;
@@ -307,6 +279,7 @@ const logout = () => router.post(route("logout"));
     top: -80px;
     right: -40px;
 }
+
 .orb-2 {
     width: 160px;
     height: 160px;
@@ -326,13 +299,12 @@ const logout = () => router.post(route("logout"));
     flex-shrink: 0;
     padding: 3px;
     border-radius: 10%;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.55),
-        rgba(255, 255, 255, 0.08)
-    );
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.55),
+            rgba(255, 255, 255, 0.08));
     box-shadow: 0 0 22px rgba(99, 102, 241, 0.5);
 }
+
 :deep(.hero-avatar) {
     width: 64px !important;
     height: 78px !important;
@@ -345,6 +317,7 @@ const logout = () => router.post(route("logout"));
 .hero-text {
     color: white;
 }
+
 .user-name {
     margin: 0 0 0.2rem;
     font-size: 1.45rem;
@@ -352,11 +325,13 @@ const logout = () => router.post(route("logout"));
     letter-spacing: -0.025em;
     line-height: 1.1;
 }
+
 .user-email {
     margin: 0 0 0.65rem;
     font-size: 0.85rem;
     opacity: 0.72;
 }
+
 :deep(.status-tag .p-tag) {
     font-size: 0.7rem !important;
     background: rgba(34, 197, 94, 0.18) !important;
@@ -383,6 +358,7 @@ const logout = () => router.post(route("logout"));
     align-items: center;
     gap: 0.4rem;
 }
+
 .section-label i {
     font-size: 0.75rem;
 }
@@ -392,9 +368,11 @@ const logout = () => router.post(route("logout"));
     display: flex;
     flex-direction: column;
 }
+
 :deep(.info-rows .p-divider) {
     margin: 0.1rem 0;
 }
+
 .info-row {
     display: flex;
     justify-content: space-between;
@@ -402,11 +380,13 @@ const logout = () => router.post(route("logout"));
     gap: 1rem;
     padding: 0.3rem 0;
 }
+
 .lbl {
     font-size: 0.83rem;
     color: var(--text-color-secondary);
     flex-shrink: 0;
 }
+
 .val {
     font-size: 0.88rem;
     font-weight: 500;
@@ -419,6 +399,7 @@ const logout = () => router.post(route("logout"));
     display: flex;
     flex-direction: column;
 }
+
 :deep(.action-list .p-divider) {
     margin: 0.1rem 0;
 }
@@ -438,6 +419,7 @@ const logout = () => router.post(route("logout"));
         background 0.12s,
         padding 0.12s;
 }
+
 .action-row:hover {
     background: var(--surface-hover);
     padding-left: 0.6rem;
@@ -453,10 +435,12 @@ const logout = () => router.post(route("logout"));
     flex-shrink: 0;
     font-size: 0.88rem;
 }
+
 .action-icon.blue {
     background: #eff6ff;
     color: #2563eb;
 }
+
 .action-icon.red {
     background: #fef2f2;
     color: #dc2626;
@@ -468,19 +452,23 @@ const logout = () => router.post(route("logout"));
     flex-direction: column;
     gap: 0.1rem;
 }
+
 .action-main {
     font-size: 0.88rem;
     font-weight: 600;
     color: var(--text-color);
     line-height: 1.2;
 }
+
 .danger-text {
     color: #dc2626;
 }
+
 .action-hint {
     font-size: 0.76rem;
     color: var(--text-color-secondary);
 }
+
 .chevron {
     font-size: 0.68rem;
     color: var(--text-color-secondary);
@@ -494,6 +482,7 @@ const logout = () => router.post(route("logout"));
     gap: 0.6rem;
     padding: 0.25rem 0 0.5rem;
 }
+
 .pwd-form label {
     font-size: 0.82rem;
     font-weight: 600;
@@ -514,9 +503,11 @@ const logout = () => router.post(route("logout"));
     .hero {
         padding: 2rem 1.25rem;
     }
+
     .user-name {
         font-size: 1.2rem;
     }
+
     .profile-wrap {
         padding: 0 0.75rem 2rem;
     }

@@ -41,9 +41,9 @@ class ComplaintsModuleController
             $files = [];
 
             if ($queja->path_complain && Storage::disk('remote_sftp')->exists($queja->path_complain)) {
-                
+
                 $allFiles = Storage::disk('remote_sftp')->files($queja->path_complain);
-                
+
                 $files = array_map(function ($file) use ($queja) {
                     return [
                         'name' => basename($file),
@@ -54,7 +54,7 @@ class ComplaintsModuleController
                     ];
                 }, $allFiles);
             }
-            
+
             $queja->archivos = $files;
             return $queja;
         });
@@ -67,7 +67,7 @@ class ComplaintsModuleController
     private function getFileType($filename)
     {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        
+
         $types = [
             'pdf' => 'pdf',
             'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image', 'gif' => 'image',
@@ -76,7 +76,7 @@ class ComplaintsModuleController
             'txt' => 'text',
             'zip' => 'zip', 'rar' => 'zip',
         ];
-        
+
         return $types[$extension] ?? 'file';
     }
 
@@ -594,18 +594,23 @@ class ComplaintsModuleController
 
     public function store(Request $request)
     {
+        // dd($request->all());
         // 1️⃣ Validación básica de Laravel
         $validated = $request->validate([
             'asunto_texto' => 'required|string|max:100',
             'asunto_cod' => 'required|string|size:3',
             'archivos' => 'nullable|array|max:5',
             'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240',
-            'descripcion' => 'nullable|required_unless:asunto_cod,CON|string|min:10|max:300',
+            'descripcion' => 'nullable|required_if:es_constancia,0|string|min:10|max:300',
+            'es_constancia' => 'required|boolean',
+            'tipo_constancia' => 'nullable|required_if:es_constancia,1|string|max:150',
         ]);
 
         $asuntoCod = $validated['asunto_cod'];
         $asuntoTexto = $validated['asunto_texto'];
         $textoOriginal = $validated['descripcion'] ?? '';
+        $es_constancia = (int) $validated['es_constancia'];
+        $tipo_constancia = $validated['tipo_constancia'] ?? null;
 
         // 2️⃣ Validación de TEXTO con IA (no bloqueante)
         $validacionTexto = $this->validarTextoConIA($textoOriginal, $asuntoCod, $asuntoTexto);
@@ -678,7 +683,9 @@ class ComplaintsModuleController
             $archivosParaSubir,
             $archivosFlagged,
             $asuntoCod,
-            $sensitiveContent
+            $sensitiveContent,
+            $es_constancia,
+            $tipo_constancia
         ) {
             try {
                 // Crear queja con el flag de contenido sensible
@@ -692,6 +699,8 @@ class ComplaintsModuleController
                     'employee_id'      => Auth::id(),
                     'path_complain'    => null,
                     'sensitive_content' => $sensitiveContent,
+                    'requires_format'   => $es_constancia,
+                    'format_type'       => $tipo_constancia,
                 ]);
 
                 if (!empty($archivosParaSubir)) {

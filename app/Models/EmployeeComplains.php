@@ -22,7 +22,9 @@ class EmployeeComplains extends Model
         'employee_id',
         'path_complain',
         'rate',
-        'sensitive_content'
+        'sensitive_content',
+        'requires_format',
+        'format_type',
     ];
 
     public static function filterComplaints($filtros = [])
@@ -55,7 +57,9 @@ class EmployeeComplains extends Model
                 branch_office_id,
                 status,
                 path_complain,
-                rate
+                rate,
+                format_type,
+                file
             FROM employee_complains
             WHERE deleted_at IS NULL
         ";
