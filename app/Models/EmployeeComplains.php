@@ -59,6 +59,7 @@ class EmployeeComplains extends Model
                 path_complain,
                 rate,
                 format_type,
+                requires_format,
                 file
             FROM employee_complains
             WHERE deleted_at IS NULL

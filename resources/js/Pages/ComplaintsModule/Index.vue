@@ -842,7 +842,7 @@ onMounted(async () => {
                                 rounded
                                 v-tooltip.top="'Ver constancia'"
                                 severity="info"
-                                v-if="slotProps.data.file"
+                                v-if="slotProps.data.requires_format"
                                 @click="verArchivo(slotProps.data.file)"
                             />
                         </div>
