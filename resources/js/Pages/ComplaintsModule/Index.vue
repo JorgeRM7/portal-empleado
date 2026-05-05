@@ -534,6 +534,11 @@ const previewFile = (url, filename) => {
     window.open(url, "_blank");
 };
 
+const verArchivo = (file) => {
+    const url = `/storage/${file}`;
+    window.open(url, "_blank");
+};
+
 onMounted(async () => {
     aplicarFiltros();
 });
@@ -815,10 +820,11 @@ onMounted(async () => {
                     <template #body="slotProps">
                         <Skeleton v-if="loading"></Skeleton>
                         <div v-else>
+
                             <Button
-                                icon="pi pi-check"
+                                icon="pi pi-star"
                                 class="mr-2"
-                                label="Calificar resp."
+                                rounded
                                 v-tooltip.top="'Calificar respuesta'"
                                 severity="success"
                                 v-if="
@@ -830,9 +836,19 @@ onMounted(async () => {
                                     selectedTicket = slotProps.data;
                                 "
                             />
+                            <Button
+                                icon="pi pi-file-pdf"
+                                class="mr-2"
+                                rounded
+                                v-tooltip.top="'Ver constancia'"
+                                severity="info"
+                                v-if="slotProps.data.file"
+                                @click="verArchivo(slotProps.data.file)"
+                            />
                         </div>
                     </template>
                 </Column>
+
                 <Column
                     field="id"
                     header="ID"
