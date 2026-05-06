@@ -458,7 +458,7 @@ const aplicarFiltros = async () => {
         });
 
         rows.value = res.data.data;
-        console.log(rows.value);
+        // console.log(rows.value);
     } catch (error) {
         console.error(error);
     } finally {

@@ -152,7 +152,7 @@ const submit = () => {
     }
 };
 
-console.log(props.payrollType);
+// console.log(props.payrollType);
 </script>
 
 <template>

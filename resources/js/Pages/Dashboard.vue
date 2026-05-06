@@ -171,7 +171,7 @@ const openIncidencesModal = async (id) => {
             };
         });
 
-        console.log(incidencesHistory.value);
+        // console.log(incidencesHistory.value);
     } catch (error) {
         console.error("Error al cargar incidencias", error);
     } finally {

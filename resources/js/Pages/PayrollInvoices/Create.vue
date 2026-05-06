@@ -100,7 +100,7 @@ const uploadFile = async () => {
             },
         });
 
-        console.log(response);
+        // console.log(response);
 
         clearInterval(progressInterval);
         uploadProgress.value = 100;

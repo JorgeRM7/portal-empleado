@@ -311,15 +311,15 @@ const applyFilters = () => {
         [year, week] = otherFilters.value[0].week.split("-W");
     }
 
-    console.log(
-        week,
-        year,
-        employeeFilter.value,
-        includeEliminatedFilter.value,
-        selectedIncidence?.id,
-    );
+    // console.log(
+    //     week,
+    //     year,
+    //     employeeFilter.value,
+    //     includeEliminatedFilter.value,
+    //     selectedIncidence?.id,
+    // );
 
-    console.log(otherFilters.value);
+    // console.log(otherFilters.value);
 
     axios
         .get("/incidences/getIncidences", {
@@ -342,7 +342,7 @@ const applyFilters = () => {
             loading.value = false;
         });
 
-    console.log(otherFilters.value);
+    // console.log(otherFilters.value);
 };
 
 const removeFilter = (filter) => {
@@ -443,11 +443,11 @@ const revisarIncidencias = async (params = {}) => {
     }
 
     if (!empleados || empleados.length < 1) {
-        console.log("❌ Error: No se pudieron determinar los empleados", {
-            params_empleados: params.empleados,
-            selected_length: selected.value?.length,
-            incidence_employee: incidenceToApprove.value?.employee_id,
-        });
+        // console.log("❌ Error: No se pudieron determinar los empleados", {
+        //     params_empleados: params.empleados,
+        //     selected_length: selected.value?.length,
+        //     incidence_employee: incidenceToApprove.value?.employee_id,
+        // });
         showError();
         return;
     }
@@ -477,7 +477,7 @@ const revisarIncidencias = async (params = {}) => {
                         typeof response === "string"
                             ? JSON.parse(response)
                             : response;
-                    console.log(response);
+                    // console.log(response);
                     res.empleadoId = id;
                     res.fechaError = fecha;
                     return res;
@@ -576,20 +576,20 @@ const formatDate = (date) => {
 };
 
 const filterByDate = (value, filter) => {
-    console.log(value, filter);
+    // console.log(value, filter);
     if (!filter) return true;
     if (!value) return false;
 
     const valueDate = typeof value === "string" ? value : formatDate(value);
     const filterDate = filter instanceof Date ? formatDate(filter) : filter;
 
-    console.log(valueDate, filterDate);
+    // console.log(valueDate, filterDate);
 
     return valueDate === filterDate;
 };
 
 const disableApproveRejectButton = computed(() => {
-    console.log(selected.value);
+    // console.log(selected.value);
     return (
         selected.value.length === 0 ||
         selected.value.some((item) => item.approved_at || item.declined_at)
@@ -597,7 +597,7 @@ const disableApproveRejectButton = computed(() => {
 });
 
 const disableDeleteButton = computed(() => {
-    console.log(selected.value);
+    // console.log(selected.value);
     return (
         selected.value.length === 0 ||
         selected.value.some(
@@ -748,7 +748,7 @@ const fetchIncidences = async () => {
 
     const { data } = await axios.get("/incidences/getIncidences");
 
-    console.log(data);
+    // console.log(data);
 
     // const { data: branchOffices } = await axios.get("/branch-offices-user");
 

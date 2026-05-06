@@ -67,7 +67,7 @@ const busyMap = computed(() => {
     const map = new Map();
 
     for (const inc of incidences.value) {
-        console.log("inc", inc);
+        // console.log("inc", inc);
         const start = parseYmdToDate(inc.start_date);
         const end = parseYmdToDate(inc.end_date);
 
@@ -286,7 +286,7 @@ const revisarIncidencias = async (params = {}) => {
 
     empleados.forEach((id) => {
         fechas.forEach((fecha) => {
-            console.log(fecha, id);
+            // console.log(fecha, id);
             let promesa = $.ajax({
                 url: "https://grupo-ortiz.site/apis/Controllers/weeklyAsistenceController.php?op=revisar-turno",
                 method: "POST",
@@ -297,7 +297,7 @@ const revisarIncidencias = async (params = {}) => {
                         typeof response === "string"
                             ? JSON.parse(response)
                             : response;
-                    console.log(response);
+                    // console.log(response);
                     res.empleadoId = id.id;
                     res.fechaError = fecha;
                     return res;
@@ -410,7 +410,7 @@ const getData = async () => {
             },
         })
         .then((response) => {
-            console.log("incidencias por empleado", response.data);
+            // console.log("incidencias por empleado", response.data);
             if (!response.data[employeeId.value][0].id) {
                 incidencesByEmployee.value = {};
                 loading.value = false;
@@ -419,7 +419,7 @@ const getData = async () => {
             incidencesByEmployee.value = response.data;
             loading.value = false;
 
-            console.log(incidencesByEmployee.value[employeeId.value][0]);
+            // console.log(incidencesByEmployee.value[employeeId.value][0]);
 
             form.value.available_txt_hours =
                 incidencesByEmployee.value[employeeId.value][0].total_hours;
@@ -497,7 +497,7 @@ onMounted(async () => {
     await axios
         .get("/incidences/getIncidencesDataLoad")
         .then(async (response) => {
-            console.log(response.data);
+            // console.log(response.data);
             employees.value = response.data.employees;
             schedules.value = response.data.schedules;
             allincidences.value = response.data.allincidences;
@@ -511,7 +511,7 @@ onMounted(async () => {
 
             await getData();
 
-            console.log(typeOptions.value);
+            // console.log(typeOptions.value);
         });
 });
 
