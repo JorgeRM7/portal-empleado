@@ -1130,7 +1130,7 @@ onMounted(() => {
                     </template>
                 </Column>
                 -->
-                <Column
+                <!-- <Column
                     field="employee_id"
                     header="Clave Empleado"
                     :filter="true"
@@ -1178,10 +1178,11 @@ onMounted(() => {
                             placeholder="Buscar por Nombre Empleado"
                         />
                     </template>
-                </Column>
+                </Column> -->
                 <Column
                     field="status"
                     header="Estatus"
+                    sortable
                     :filter="true"
                     columnKey="status"
                     :frozen="frozenColumns.status"
@@ -1216,6 +1217,7 @@ onMounted(() => {
                 <Column
                     field="incidence_name"
                     header="Incidencia"
+                    sortable
                     :filter="true"
                     columnKey="incidence_name"
                     :frozen="frozenColumns.tipo_incidencia"
@@ -1241,6 +1243,7 @@ onMounted(() => {
                 <Column
                     field="validity_from"
                     header="Fecha de inicio"
+                    sortable
                     :filter="true"
                     filterMatchMode="equals"
                     columnKey="validity_from"
@@ -1266,6 +1269,7 @@ onMounted(() => {
                 <Column
                     field="validity_to"
                     header="Fecha de fin"
+                    sortable
                     :filter="true"
                     columnKey="validity_to"
                     :frozen="frozenColumns.fecha_fin"
@@ -1290,6 +1294,7 @@ onMounted(() => {
                 <Column
                     field="days"
                     header="Días"
+                    sortable
                     :filter="true"
                     columnKey="days"
                     :frozen="frozenColumns.dias"
@@ -1307,6 +1312,7 @@ onMounted(() => {
                 <Column
                     field="approved_at"
                     header="Fecha de aprobación"
+                    sortable
                     :filter="true"
                     columnKey="approved_at"
                     :frozen="frozenColumns.fecha_aprobado"
@@ -1331,6 +1337,7 @@ onMounted(() => {
                 <Column
                     field="approved_by"
                     header="Aprobado por"
+                    sortable
                     :filter="true"
                     columnKey="approved_by"
                     :frozen="frozenColumns.aprobado_por"
@@ -1355,6 +1362,7 @@ onMounted(() => {
                 <Column
                     field="declined_at"
                     header="Fecha de rechazo"
+                    sortable
                     :filter="true"
                     columnKey="declined_at"
                     :frozen="frozenColumns.fecha_rechazado"
@@ -1379,6 +1387,7 @@ onMounted(() => {
                 <Column
                     field="declined_by"
                     header="Rechazado por"
+                    sortable
                     :filter="true"
                     columnKey="declined_by"
                     :frozen="frozenColumns.rechazado_por"
@@ -1404,6 +1413,7 @@ onMounted(() => {
                 <Column
                     field="document_number"
                     header="Número de documento"
+                    sortable
                     :filter="true"
                     columnKey="document_number"
                     :frozen="frozenColumns.numero_documento"
@@ -1428,6 +1438,7 @@ onMounted(() => {
                 <Column
                     field="before_date"
                     header="Fecha de adelanto"
+                    sortable
                     :filter="true"
                     columnKey="before_date"
                     :frozen="frozenColumns.fecha_adelanto"
@@ -1452,6 +1463,7 @@ onMounted(() => {
                 <Column
                     field="rest_date"
                     header="Fecha de descanso"
+                    sortable
                     :filter="true"
                     columnKey="rest_date"
                     :frozen="frozenColumns.fecha_descanso"
@@ -1476,6 +1488,7 @@ onMounted(() => {
                 <Column
                     field="created_at"
                     header="Fecha de creación"
+                    sortable
                     :filter="true"
                     columnKey="created_at"
                     :frozen="frozenColumns.fecha_creado"
@@ -1500,6 +1513,7 @@ onMounted(() => {
                 <Column
                     field="hours_txt"
                     header="Horas TXT"
+                    sortable
                     :filter="true"
                     columnKey="hours_txt"
                     :frozen="frozenColumns.horas_txt"
@@ -1524,6 +1538,7 @@ onMounted(() => {
                 <Column
                     field="week_year"
                     header="Año"
+                    sortable
                     :filter="true"
                     columnKey="week_year"
                     :frozen="frozenColumns.año"
@@ -1548,6 +1563,7 @@ onMounted(() => {
                 <Column
                     field="week_number"
                     header="Semana"
+                    sortable
                     :filter="true"
                     columnKey="week_number"
                     :frozen="frozenColumns.semana"
@@ -1572,6 +1588,7 @@ onMounted(() => {
                 <Column
                     field="deleted_by"
                     header="Eliminado por"
+                    sortable
                     :filter="true"
                     columnKey="comment"
                     :frozen="frozenColumns.eliminado_por"
@@ -1580,7 +1597,6 @@ onMounted(() => {
                         display: showColumns.eliminado_por ? '' : 'none',
                     }"
                     :exportable="exportColumns.eliminado_por"
-                    sortable
                 >
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
@@ -1597,6 +1613,7 @@ onMounted(() => {
                 <Column
                     field="comment"
                     header="Observaciones"
+                    sortable
                     :filter="true"
                     columnKey="comment"
                     :frozen="frozenColumns.observaciones"
@@ -1605,7 +1622,6 @@ onMounted(() => {
                         display: showColumns.observaciones ? '' : 'none',
                     }"
                     :exportable="exportColumns.observaciones"
-                    sortable
                 >
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>

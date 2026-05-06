@@ -528,10 +528,7 @@ const formatFileItems = (archivos) => {
     });
 };
 
-// 🔹 Función para vista previa (opcional)
 const previewFile = (url, filename) => {
-    // Implementar modal con iframe para PDF o img para imágenes
-    // Ejemplo simple:
     window.open(url, "_blank");
 };
 
@@ -853,6 +850,7 @@ onMounted(async () => {
                 <Column
                     field="id"
                     header="ID"
+                    sortable
                     :filter="true"
                     :frozen="frozenColumns.id"
                     :style="{
@@ -873,7 +871,7 @@ onMounted(async () => {
                         />
                     </template>
                 </Column>
-                <Column
+                <!-- <Column
                     field="employee_id"
                     header="Clave de empleado"
                     :filter="true"
@@ -895,12 +893,12 @@ onMounted(async () => {
                             placeholder="Buscar por Clave de empleado"
                         />
                     </template>
-                </Column>
+                </Column> -->
                 <Column
                     field="subject"
                     header="Asunto"
-                    :frozen="frozenColumns.asunto"
                     sortable
+                    :frozen="frozenColumns.asunto"
                     :style="{
                         width: '20rem',
                         display: showColumns.asunto ? '' : 'none',
@@ -1079,6 +1077,7 @@ onMounted(async () => {
                 <Column
                     field="archivos"
                     header="Evidencia"
+                    sortable
                     :frozen="frozenColumns.evidencia"
                 >
                     <template #body="{ data }">
@@ -1110,6 +1109,7 @@ onMounted(async () => {
                 <Column
                     field="rate"
                     header="Calificación"
+                    sortable
                     :frozen="frozenColumns.calificacion"
                     :style="{
                         width: '20rem',

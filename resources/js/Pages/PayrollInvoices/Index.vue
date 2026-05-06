@@ -749,6 +749,7 @@ initFilters();
                 <Column
                     field="semana"
                     header="Semana"
+                    sortable
                     :filter="true"
                     columnKey="week"
                     :frozen="frozenColumns.semana"
@@ -777,6 +778,7 @@ initFilters();
                 <Column
                     field="year"
                     header="Año"
+                    sortable
                     :filter="true"
                     columnKey="year"
                     :frozen="frozenColumns.anio"
@@ -801,6 +803,7 @@ initFilters();
                 <Column
                     field="tipo_recibo"
                     header="Tipo de Recibo"
+                    sortable
                     :filter="true"
                     columnKey="payroll_type"
                     :frozen="frozenColumns.tipo_recibo"

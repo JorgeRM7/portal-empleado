@@ -35,35 +35,43 @@ class EmployeeIncidences extends Model
         "rest_date",
         "comment",
         "hours_txt",
-        "deleted_at"
+        "deleted_at",
+        "system",
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($model) {
+            $model->system = 'mi portal rh';
+        });
+    }
 
     public static function getIncidences($branchOfficeId, $weeknumber, $weekyear, $employeeId, $incidenceId, $eliminated){
         $whereBranchOffice = $branchOfficeId != null ? "AND ei.branch_office_id = $branchOfficeId":"";
         $whereEmployeeId = $employeeId != null ? "AND ei.employee_id = $employeeId":"";
         $whereIncidenceId = $incidenceId != null ? "AND ei.incidence_id = $incidenceId":"";
-        $sql = "SELECT 
+        $sql = "SELECT
                     ei.approved_at,
-                    ei.declined_at, 
+                    ei.declined_at,
                     udec.name as declined_by,
                     udel.name as deleted_by,
-                    ei.before_date, 
-                    ei.comment, 
-                    ei.created_at, 
+                    ei.before_date,
+                    ei.comment,
+                    ei.created_at,
                     ei.days,
-                    ei.document_number, 
-                    ei.employee_id, 
-                    ei.expires_at, 
-                    ei.file_path, 
-                    ei.hours_txt, 
-                    ei.id, 
-                    ei.incidence_id, 
-                    ei.validity_from, 
-                    ei.validity_to, 
-                    ei.week_number, 
-                    ei.week_year, 
-                    ei.schedule_id, 
-                    ei.before_date, 
+                    ei.document_number,
+                    ei.employee_id,
+                    ei.expires_at,
+                    ei.file_path,
+                    ei.hours_txt,
+                    ei.id,
+                    ei.incidence_id,
+                    ei.validity_from,
+                    ei.validity_to,
+                    ei.week_number,
+                    ei.week_year,
+                    ei.schedule_id,
+                    ei.before_date,
                     ei.rest_date,
                     i.name as incidence_name,
                     i.color,
@@ -76,9 +84,9 @@ class EmployeeIncidences extends Model
                 LEFT JOIN users u ON ei.approved_by = u.id
                 LEFT JOIN users udel ON ei.deleted_by = udel.id
                 LEFT JOIN users udec ON ei.declined_by = udec.id
-                WHERE ei.deleted_by IS NULL AND ei.deleted_at IS NULL 
-                $whereBranchOffice 
-                $whereEmployeeId 
+                WHERE ei.deleted_by IS NULL AND ei.deleted_at IS NULL
+                $whereBranchOffice
+                $whereEmployeeId
                 $whereIncidenceId
                 ORDER BY ei.created_at DESC";
         return DB::select($sql);
@@ -92,7 +100,7 @@ class EmployeeIncidences extends Model
                     ei.id AS incidence_id,
                     i.name AS type,
                     ei.validity_from AS start_date,
-                    CASE 
+                    CASE
                         WHEN ei.rest_date IS NOT NULL AND ei.rest_date != '' THEN ei.rest_date
                         ELSE ei.validity_to
                     END AS end_date,
@@ -118,12 +126,12 @@ class EmployeeIncidences extends Model
             ->map(fn ($r) => (float) ($r->total_hours ?? 0));
 
         $sqlVacations = "SELECT employee_id, SUM(amount) as total_hours FROM employee_day_vacations WHERE employee_id = $employeeId AND deleted_at IS NULL";
-        
+
         $vacationsTotals = collect(DB::select($sqlVacations))
             ->keyBy('employee_id')
             ->map(fn ($r) => (float) ($r->total_hours ?? 0));
 
-        
+
 
         return collect($rows)->groupBy('employee_id')
             ->map(fn ($rows) => $rows->map(fn ($r) => [
