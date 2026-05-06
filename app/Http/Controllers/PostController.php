@@ -65,6 +65,7 @@ class PostController
                 return [
                     'id'          => $post->id,
                     'title'       => $post->title,
+                    'anonymous'   => $post->anonymous,
                     'description' => $post->description,
                     'path'        => $post->path,
                     'likes_count' => (int) $post->likes()->count(),

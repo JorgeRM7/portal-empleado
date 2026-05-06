@@ -211,6 +211,13 @@ onMounted(() => {
                                                         : "Usuario Anónimo"
                                                 }}
                                             </div>
+                                            <div class="author-position">
+                                                {{
+                                                    post.anonymous == 0
+                                                        ? post.user?.position
+                                                        : ""
+                                                }}
+                                            </div>
                                             <div class="post-time">
                                                 {{ post.created_at }}
                                             </div>

@@ -87,13 +87,29 @@ console.log(props.post);
                                     :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${post.user?.employee_id}.jpg`"
                                     shape="circle"
                                     class="author-avatar"
+                                    v-if="post.anonymous == 0"
                                 />
+                                <Avatar
+                                    icon="pi pi-user"
+                                    shape="circle"
+                                    class="author-avatar"
+                                    v-else
+                                />
+
                                 <div class="author-details">
                                     <div class="author-name">
-                                        {{ post.user?.name }}
+                                        {{
+                                            post.anonymous == 0
+                                                ? post.user?.name
+                                                : "Usuario Anónimo"
+                                        }}
                                     </div>
                                     <div class="author-position">
-                                        {{ post.user?.position }}
+                                        {{
+                                            post.anonymous == 0
+                                                ? post.user?.position
+                                                : ""
+                                        }}
                                     </div>
                                     <div class="post-time">
                                         {{ post.created_at }}
