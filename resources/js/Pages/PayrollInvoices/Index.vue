@@ -196,7 +196,7 @@ const getData = async () => {
 };
 
 const getDocument = (urlPath, invoiceId) => {
-    console.log(invoiceId);
+    // console.log(invoiceId);
     if (urlPath.includes("invoices")) {
         window.open(`payroll-invoices/invoice-d/${invoiceId}`, "_blank");
         return;

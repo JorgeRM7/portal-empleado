@@ -14,7 +14,7 @@ const props = defineProps({
     posts: Array,
 });
 
-console.log(props);
+// console.log(props);
 
 // Reactive data
 const postsList = ref(props.posts.slice(0, 10)); // Mostrar solo los primeros 10
@@ -121,7 +121,7 @@ const handleMediaLoaded = () => {
 
 // WebSocket real-time
 onMounted(() => {
-    console.log("Iniciando escucha de WebSockets...");
+    // console.log("Iniciando escucha de WebSockets...");
 
     // Configurar Intersection Observer para scroll infinito
     setupIntersectionObserver();
@@ -131,35 +131,35 @@ onMounted(() => {
 
         window.Echo.channel("posts")
             .subscribed(() => {
-                console.log("✅ ¡Suscrito con éxito al canal 'posts'!");
+                // console.log("✅ ¡Suscrito con éxito al canal 'posts'!");
             })
             .listen(".LikeUpdated", (e) => {
-                console.log("🔥 ¡EVENTO CAPTURADO!", e);
+                // console.log("🔥 ¡EVENTO CAPTURADO!", e);
 
                 const post = postsList.value.find((p) => p.id == e.postId);
                 if (post) {
                     post.likes_count = parseInt(e.likeCount);
-                    console.log(
-                        `Nuevo conteo para post ${e.postId}: ${e.likeCount}`,
-                    );
+                    // console.log(
+                    //     `Nuevo conteo para post ${e.postId}: ${e.likeCount}`,
+                    // );
                 }
             });
 
         window.Echo.channel("social-wall")
             .subscribed(() => {
-                console.log("✅ ¡Suscrito con éxito al canal 'social-wall'!");
+                // console.log("✅ ¡Suscrito con éxito al canal 'social-wall'!");
             })
             .listen(".PostCreated", (e) => {
-                console.log("🚀 POST NUEVO RECIBIDO:", e.post);
+                // console.log("🚀 POST NUEVO RECIBIDO:", e.post);
                 postsList.value.unshift(e.post);
                 allPosts.value.unshift(e.post); // Agregar también a allPosts
                 currentIndex.value++; // Aumentar el índice
             });
 
-        console.log(
-            "Estado de Echo:",
-            window.Echo.connector.pusher.connection.state,
-        );
+        // console.log(
+        //     "Estado de Echo:",
+        //     window.Echo.connector.pusher.connection.state,
+        // );
     } else {
         console.error("❌ Echo no está definido. Revisa tu bootstrap.js");
     }

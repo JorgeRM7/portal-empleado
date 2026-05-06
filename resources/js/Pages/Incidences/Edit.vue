@@ -122,7 +122,7 @@ const busyMap = computed(() => {
     const map = new Map();
 
     for (const inc of incidences.value) {
-        console.log("inc", inc);
+        // console.log("inc", inc);
         const start = parseYmdToDate(inc.start_date);
         const end = parseYmdToDate(inc.end_date);
 

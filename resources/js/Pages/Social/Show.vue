@@ -62,7 +62,7 @@ const getImageAspectRatio = () => {
     return 100;
 };
 
-console.log(props.post);
+// console.log(props.post);
 </script>
 
 <template>
