@@ -132,7 +132,12 @@ const filteredVacationsHistory = computed(() => {
 });
 
 const formatDate = (date) => {
-    return new Date(date).toLocaleDateString();
+    if (!date) return ''; // puedes cambiar '' por '-' si quieres
+
+    const d = new Date(date);
+    if (isNaN(d)) return '';
+
+    return d.toLocaleDateString();
 };
 
 // const normalizeDateOnly = (date) => {
@@ -166,7 +171,7 @@ const openIncidencesModal = async (id) => {
             };
         });
 
-        // console.log(incidencesHistory.value);
+        console.log(incidencesHistory.value);
     } catch (error) {
         console.error("Error al cargar incidencias", error);
     } finally {
@@ -1018,7 +1023,7 @@ onMounted(() => {
                         }"
                     >
                         <template #body="{ data }">
-                            {{ formatDate(data.declined_at) }}
+                            {{ data.declined_at ? formatDate(data.declined_at) : '' }}
                         </template>
 
                         <template #filter="{ filterModel }">

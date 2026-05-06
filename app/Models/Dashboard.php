@@ -162,7 +162,8 @@ class Dashboard extends Model
                 i.name as incidence_name,
                 i.color,
                 e.full_name,
-                u.name as approved_by
+                u.name as approved_by,
+                i.requires_auth
             FROM employee_incidences ei
             INNER JOIN incidences i ON ei.incidence_id = i.id
             INNER JOIN employees e ON ei.employee_id = e.id
@@ -170,6 +171,7 @@ class Dashboard extends Model
             LEFT JOIN users udel ON ei.deleted_by = udel.id
             LEFT JOIN users udec ON ei.declined_by = udec.id
             WHERE ei.deleted_by IS NULL AND ei.deleted_at IS NULL
+
         ";
 
         if (!empty($ids_empleados)) {
