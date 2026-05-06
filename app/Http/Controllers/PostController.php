@@ -19,6 +19,7 @@ class PostController
             ->map(function ($post) {
                 return [
                     'id'          => $post->id,
+                    'anonymous'   => $post->anonymous,
                     'title'       => $post->title,
                     'description' => $post->description,
                     'path'        => $post->path,
