@@ -136,9 +136,11 @@ Route::middleware([
         ->name('posts.index');
     Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])
         ->name('posts.like');
-    Route::get('/storage/img/social/{path}', [PostController::class, 'show'])
+    Route::get('/storage/img/social/{path}', [PostController::class, 'showImg'])
         ->where('path', '.*')
         ->name('posts.image');
+    Route::get('/posts/{post}/show', [PostController::class, 'show'])
+        ->name('posts.show');
 
 });
 
