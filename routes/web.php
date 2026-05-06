@@ -21,6 +21,8 @@ use App\Http\Controllers\CommunityController;
 
 use App\Http\Controllers\DeviceTokensController;
 
+use Illuminate\Support\Facades\Storage;
+
 
 // -----------------------------------------------------
 // ROOT / LOGIN
@@ -140,5 +142,16 @@ Route::middleware([
 
 });
 
+Route::get('/ver-archivo/{path}', function ($path) {
+    $disk = Storage::disk('remote_sftp');
 
+    if (!$disk->exists($path)) {
+        abort(404);
+    }
+
+    $file = $disk->get($path);
+
+    return response($file, 200)
+        ->header('Content-Type', 'application/pdf');
+})->where('path', '.*');
 
