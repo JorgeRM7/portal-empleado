@@ -522,6 +522,7 @@ const formatFileItems = (archivos) => {
             command: () => {
                 // Abrir en nueva pestaña o forzar descarga
                 window.open(file.url, "_blank");
+
             },
         };
     });
@@ -535,7 +536,7 @@ const previewFile = (url, filename) => {
 };
 
 const verArchivo = (file) => {
-    const url = `/storage/${file}`;
+    const url = `/ver-archivo/${file}`;
     window.open(url, "_blank");
 };
 
@@ -975,7 +976,7 @@ onMounted(async () => {
 
                         <div v-else>
                             <span
-                                v-tooltip.top="data.case"
+                                v-tooltip.top="data.response"
                                 class="cursor-pointer"
                             >
                                 {{ truncateText(data.response, 60) }}
