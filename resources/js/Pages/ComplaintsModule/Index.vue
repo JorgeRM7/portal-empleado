@@ -39,6 +39,13 @@ const deleting = ref(false);
 
 const dates = ref(null);
 const rows = ref([{}]);
+const showDialog = ref(false);
+const dialogText = ref("");
+
+const openDialog = (text) => {
+    dialogText.value = text;
+    showDialog.value = true;
+};
 
 const { sendNotification } = useNotifications();
 
@@ -929,7 +936,7 @@ onMounted(async () => {
                     }"
                     :exportable="exportColumns.queja"
                 >
-                    <template #body="{ data }">
+                    <!-- <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
 
                         <div v-else>
@@ -944,6 +951,27 @@ onMounted(async () => {
                                 v-if="data.case && data.case.length > 60"
                                 class="text-blue-500 ml-2 cursor-pointer"
                                 v-tooltip.bottom="data.case"
+                            >
+                                Leer más
+                            </span>
+                        </div>
+                    </template> -->
+
+                    <template #body="{ data }">
+                        <Skeleton v-if="loading"></Skeleton>
+
+                        <div v-else>
+                            <span
+                                class="cursor-pointer"
+                                @click="openDialog(data.case)"
+                            >
+                                {{ truncateText(data.case, 60) }}
+                            </span>
+
+                            <span
+                                v-if="data.case && data.case.length > 60"
+                                class="text-blue-500 ml-2 cursor-pointer"
+                                @click="openDialog(data.case)"
                             >
                                 Leer más
                             </span>
@@ -969,7 +997,7 @@ onMounted(async () => {
                     }"
                     :exportable="exportColumns.respuesta"
                 >
-                    <template #body="{ data }">
+                    <!-- <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
 
                         <div v-else>
@@ -986,6 +1014,27 @@ onMounted(async () => {
                                 "
                                 class="text-blue-500 ml-2 cursor-pointer"
                                 v-tooltip.bottom="data.response"
+                            >
+                                Leer más
+                            </span>
+                        </div>
+                    </template> -->
+
+                    <template #body="{ data }">
+                        <Skeleton v-if="loading"></Skeleton>
+
+                        <div v-else>
+                            <span
+                                class="cursor-pointer"
+                                @click="openDialog(data.response)"
+                            >
+                                {{ truncateText(data.response, 60) }}
+                            </span>
+
+                            <span
+                                v-if="data.response && data.response.length > 60"
+                                class="text-blue-500 ml-2 cursor-pointer"
+                                @click="openDialog(data.response)"
                             >
                                 Leer más
                             </span>
@@ -1568,6 +1617,16 @@ onMounted(async () => {
                         :disabled="rating === 0"
                     />
                 </template>
+            </Dialog>
+            <Dialog
+                v-model:visible="showDialog"
+                header="Detalle"
+                :style="{ width: '20vw' }"
+                modal
+            >
+                <p style="white-space: pre-line;">
+                    {{ dialogText }}
+                </p>
             </Dialog>
         </div>
     </AppLayout>
