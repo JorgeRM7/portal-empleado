@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { router } from "@inertiajs/vue3";
 import { useToastService } from "@/Stores/toastService";
@@ -244,6 +244,101 @@ function typeLabel(type) {
     return typeOptions.value.find((x) => x.value === type)?.label ?? type;
 }
 
+const revisarIncidencias = async (params = {}) => {
+    toast.add({
+        severity: "info",
+        summary: "Procesando",
+        detail: "Revisión de turnos en proceso...",
+        group: "processing",
+        life: 0,
+        icon: "pi pi-spin pi-spinner",
+    });
+
+    await nextTick();
+
+    const fecha_inicial = form.value.range[0];
+    const fecha_final = form.value.range[1];
+
+    let empleados = [{ id: props.employeeId }];
+
+    if (!fecha_inicial || !fecha_final) {
+        showError();
+        return;
+    }
+
+    if (!empleados || empleados.length < 1) {
+        showError();
+        return;
+    }
+
+    const fechas = [];
+    let fInicio = new Date(fecha_inicial);
+    const fFin = new Date(fecha_final);
+
+    while (fInicio <= fFin) {
+        fechas.push(fInicio.toISOString().split("T")[0]);
+        fInicio.setDate(fInicio.getDate() + 1);
+    }
+
+    loading.value = true;
+
+    let peticiones = [];
+
+    empleados.forEach((id) => {
+        fechas.forEach((fecha) => {
+            console.log(fecha, id);
+            let promesa = $.ajax({
+                url: "https://grupo-ortiz.site/apis/Controllers/weeklyAsistenceController.php?op=revisar-turno",
+                method: "POST",
+                data: { id: id.id, validity_from: fecha },
+            })
+                .then(function (response) {
+                    let res =
+                        typeof response === "string"
+                            ? JSON.parse(response)
+                            : response;
+                    console.log(response);
+                    res.empleadoId = id.id;
+                    res.fechaError = fecha;
+                    return res;
+                })
+                .catch(function () {
+                    return {
+                        estatus: "error",
+                        message: "No se encontró un rol de turno activo",
+                        empleadoId: id.id,
+                        fechaError: fecha,
+                    };
+                });
+
+            peticiones.push(promesa);
+        });
+    });
+
+    Promise.all(peticiones)
+        .then((resultados) => {
+            const errores = resultados.filter(
+                (res) => res && res.estatus === "error",
+            );
+
+            toast.removeGroup("processing");
+
+            if (errores.length > 0) {
+                toast.add({
+                    severity: "warn",
+                    summary: "Proceso completado con advertencias",
+                    detail: `${errores.length} registro(s) presentaron inconvenientes`,
+                });
+            }
+
+            showSuccess();
+        })
+        .catch((err) => {
+            showError();
+            console.error("Error crítico:", err);
+        });
+};
+
 function saveIncidence() {
     form.value.days_to_register = daysEditable.value;
     if (form.value.incidence_id === 23) {
@@ -283,9 +378,12 @@ function saveIncidence() {
     }
     sending.value = true;
     router.post(route("incidences-employee.store"), form.value, {
-        onSuccess: () => {
+        onSuccess: async () => {
             sending.value = false;
             showSuccess();
+            if (GROUPS.DOC.has(form.value.incidence_id)) {
+                await revisarIncidencias();
+            }
         },
         onError: () => {
             sending.value = false;
