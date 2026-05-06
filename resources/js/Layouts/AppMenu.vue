@@ -27,14 +27,14 @@ const rawMenu = ref([
         to: "/complaints",
     },
     {
-        label: "Terminos y Condiciones",
-        icon: "pi pi-file-check",
-        to: "/term-conditions",
-    },
-    {
         label: "Noticias",
         icon: "pi pi-calendar-minus",
         to: "/posts",
+    },
+    {
+        label: "Terminos y Condiciones",
+        icon: "pi pi-file-check",
+        to: "/term-conditions",
     },
 ]);
 
