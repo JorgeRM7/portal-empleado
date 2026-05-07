@@ -11,6 +11,8 @@ use App\Models\Incidence;
 use App\Models\Logs;
 use App\Models\Schedules;
 use App\Models\TxT;
+use App\Models\UserNomina;
+use App\Notifications\IncidenciaRegistrada;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Date;
@@ -172,9 +174,24 @@ class EmployeeIncidencesController
                 "schedule_id"  => $validated['schedule'],
             ]));
 
+            
+            $employee = Employee::find($request->employee_id);
+            $parentIds = $employee->employee_parent_id 
+                ? explode(',', $employee->employee_parent_id) 
+                : [];
+            $parentIds = array_map('trim', $parentIds);
+
+            foreach($parentIds as $parentId){
+                $parent = Employee::find($parentId)->user_id;
+                $user = UserNomina::find($parent);
+                if($user != null){
+                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                }
+            }
+
             Logs::create([
                     'action' => 'INSERT',
-                    'user_id' => Auth::id(),
+                    'user_id' => 'empleado-'.Auth::id(),
                     'table_name' => 'employee_incidences',
                     'date' => Carbon::now(),
                     'relationship_id' => $incidence->id
@@ -206,11 +223,25 @@ class EmployeeIncidencesController
 
             Logs::create([
                     'action' => 'INSERT',
-                    'user_id' => Auth::id(),
+                    'user_id' => 'empleado-'.Auth::id(),
                     'table_name' => 'employee_incidences',
                     'date' => Carbon::now(),
                     'relationship_id' => $incidence->id
                 ]);
+            
+            $employee = Employee::find($request->employee_id);
+            $parentIds = $employee->employee_parent_id 
+                ? explode(',', $employee->employee_parent_id) 
+                : [];
+            $parentIds = array_map('trim', $parentIds);
+
+            foreach($parentIds as $parentId){
+                $parent = Employee::find($parentId)->user_id;
+                $user = UserNomina::find($parent);
+                if($user != null){
+                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                }
+            }
 
             return redirect()->route('/incidences-employee');
         }
@@ -243,11 +274,25 @@ class EmployeeIncidencesController
 
             Logs::create([
                     'action' => 'INSERT',
-                    'user_id' => Auth::id(),
+                    'user_id' => 'empleado-'.Auth::id(),
                     'table_name' => 'employee_incidences',
                     'date' => Carbon::now(),
                     'relationship_id' => $incidence->id
                 ]);
+
+            $employee = Employee::find($request->employee_id);
+            $parentIds = $employee->employee_parent_id 
+                ? explode(',', $employee->employee_parent_id) 
+                : [];
+            $parentIds = array_map('trim', $parentIds);
+
+            foreach($parentIds as $parentId){
+                $parent = Employee::find($parentId)->user_id;
+                $user = UserNomina::find($parent);
+                if($user != null){
+                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                }
+            }
 
             return redirect()->route('/incidences-employee');
         }
@@ -292,9 +337,23 @@ class EmployeeIncidencesController
                     "days"             => $validated['days_to_register'],
                 ], $week));
 
+                $employee = Employee::find($request->employee_id);
+                $parentIds = $employee->employee_parent_id 
+                    ? explode(',', $employee->employee_parent_id) 
+                    : [];
+                $parentIds = array_map('trim', $parentIds);
+
+                foreach($parentIds as $parentId){
+                    $parent = Employee::find($parentId)->user_id;
+                    $user = UserNomina::find($parent);
+                    if($user != null){
+                        $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                    }
+                }
+
                 Logs::create([
                     'action' => 'INSERT',
-                    'user_id' => Auth::id(),
+                    'user_id' => 'empleado-'.Auth::id(),
                     'table_name' => 'employee_incidences',
                     'date' => Carbon::now(),
                     'relationship_id' => $incidence->id
@@ -336,9 +395,23 @@ class EmployeeIncidencesController
             "comment"          => $validated['notes'],
         ], $week));
 
+        $employee = Employee::find($request->employee_id);
+        $parentIds = $employee->employee_parent_id 
+            ? explode(',', $employee->employee_parent_id) 
+            : [];
+        $parentIds = array_map('trim', $parentIds);
+
+        foreach($parentIds as $parentId){
+            $parent = Employee::find($parentId)->user_id;
+            $user = UserNomina::find($parent);
+            if($user != null){
+                $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+            }
+        }
+
         Logs::create([
             'action' => 'INSERT',
-            'user_id' => Auth::id(),
+            'user_id' => 'empleado-'.Auth::id(),
             'table_name' => 'employee_incidences',
             'date' => Carbon::now(),
             'relationship_id' => $incidence->id
@@ -438,7 +511,7 @@ class EmployeeIncidencesController
 
             Logs::create([
                 'action' => 'UPDATE',
-                'user_id' => Auth::id(),
+                'user_id' => 'empleado-'.Auth::id(),
                 'table_name' => 'employee_incidences',
                 'date' => Carbon::now(),
                 'old_data' => json_encode($oldData),
@@ -474,7 +547,7 @@ class EmployeeIncidencesController
 
             Logs::create([
                 'action' => 'UPDATE',
-                'user_id' => Auth::id(),
+                'user_id' => 'empleado-'.Auth::id(),
                 'table_name' => 'employee_incidences',
                 'date' => Carbon::now(),
                 'old_data' => json_encode($oldData),
@@ -514,7 +587,7 @@ class EmployeeIncidencesController
 
             Logs::create([
                 'action' => 'UPDATE',
-                'user_id' => Auth::id(),
+                'user_id' => 'empleado-'.Auth::id(),
                 'table_name' => 'employee_incidences',
                 'date' => Carbon::now(),
                 'old_data' => json_encode($oldData),
@@ -567,7 +640,7 @@ class EmployeeIncidencesController
 
                 Logs::create([
                     'action' => 'UPDATE',
-                    'user_id' => Auth::id(),
+                    'user_id' => 'empleado-'.Auth::id(),
                     'table_name' => 'employee_incidences',
                     'date' => Carbon::now(),
                     'old_data' => json_encode($oldData),
@@ -612,7 +685,7 @@ class EmployeeIncidencesController
 
         Logs::create([
             'action' => 'UPDATE',
-            'user_id' => Auth::id(),
+            'user_id' =>'empleado-'.Auth::id(),
             'table_name' => 'employee_incidences',
             'date' => Carbon::now(),
             'old_data' => json_encode($oldData),
@@ -643,7 +716,7 @@ class EmployeeIncidencesController
 
         Logs::create([
             'action' => 'DELETE',
-            'user_id' => Auth::id(),
+            'user_id' => 'empleado-'.Auth::id(),
             'table_name' => 'employee_incidences',
             'date' => Carbon::now(),
             'relationship_id' => $incidences_employee->id
@@ -688,7 +761,7 @@ class EmployeeIncidencesController
 
         Logs::create([
             'action' => 'APPROVE',
-            'user_id' => Auth::id(),
+            'user_id' => 'empleado-'.Auth::id(),
             'table_name' => 'employee_incidences',
             'date' => Carbon::now(),
             'relationship_id' => $incidence->id
@@ -704,7 +777,7 @@ class EmployeeIncidencesController
         ]);
         Logs::create([
             'action' => 'DECLINED',
-            'user_id' => Auth::id(),
+            'user_id' =>'empleado-'.Auth::id(),
             'table_name' => 'employee_incidences',
             'date' => Carbon::now(),
             'relationship_id' => $incidence->id
@@ -726,7 +799,7 @@ class EmployeeIncidencesController
         foreach ($records as $record) {
             Logs::create([
                 'action' => 'DECLINED',
-                'user_id' => Auth::id(),
+                'user_id' => 'empleado-'.Auth::id(),
                 'table_name' => 'employee_overtimes',
                 'date' => Carbon::now(),
                 'relationship_id' => $record->id
