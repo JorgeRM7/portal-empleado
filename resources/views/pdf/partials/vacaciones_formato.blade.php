@@ -278,10 +278,10 @@
         <div class="value">{{ $desde }} — {{ $hasta }}</div>
         <div style="color: var(--muted); font-size: 10px;">Regresa: {{ $presentarse }}</div>
       </td>
-      <td>
+      {{-- <td>
         <div class="label">Saldo final</div>
         <div class="value accent">{{ $saldo }}</div>
-      </td>
+      </td> --}}
     </tr>
   </table>
 
