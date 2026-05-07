@@ -151,7 +151,7 @@ class EmployeeIncidences extends Model
     public static function getIncidenceById($id_incidence)
     {
         $sql = "SELECT
-            e.id,
+            e.id as employee_id,
             e.full_name as empleado,
             bo.name as empresa,
             d.name as departamento,
@@ -214,5 +214,11 @@ class EmployeeIncidences extends Model
     {
         $sql = "SELECT MIN(week) AS week, MAX(year) AS year from employee_incidences_week_blocked WHERE branch_office_id = $branch_office_id AND estatus = 1";
         return DB::select($sql);
+    }
+
+    public static function getVacations($id){
+        $vacaciones = DB::selectOne("SELECT SUM(amount) AS vacaciones_disponibles FROM `employee_day_vacations` WHERE employee_id =?  AND deleted_at is null" ,[$id]);
+
+        return $vacaciones;
     }
 }

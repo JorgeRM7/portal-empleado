@@ -41,7 +41,7 @@ class Dashboard extends Model
 
         $vacaciones = DB::selectOne("SELECT SUM(amount) AS vacaciones_disponibles FROM `employee_day_vacations` WHERE employee_id =?  AND deleted_at is null" ,[$id]);
 
-        $incidencias_empleado = DB::selectOne("SELECT COUNT(id) AS incidencias_empleado FROM `employee_incidences` WHERE employee_id =? AND expires_at IS NULL", [$id]);
+        $incidencias_empleado = DB::selectOne("SELECT COUNT(id) AS incidencias_empleado FROM `employee_incidences` WHERE employee_id =? AND expires_at IS NULL AND deleted_at IS NULL AND deleted_by IS NULL", [$id]);
 
 
         $asistencia = DB::select("

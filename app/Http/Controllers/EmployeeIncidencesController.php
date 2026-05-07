@@ -53,8 +53,8 @@ class EmployeeIncidencesController
         $day_to_present = Carbon::parse($incidence[0]->hasta)
             ->addDay()
             ->format('d/m/Y');
-
-        $final_total = $incidence[0]->saldo_inicial - $incidence[0]->dias;
+        $vacaciones = EmployeeIncidences::getVacations($incidence[0]->employee_id);
+        $final_total = $vacaciones->vacaciones_disponibles - $incidence[0]->dias;
 
         $data = [
             'folio' => $id_incidence,
@@ -69,7 +69,7 @@ class EmployeeIncidencesController
             'hasta' => $incidence[0]->hasta,
             'presentarse' => $day_to_present,
             'saldo' => $final_total,
-            'saldo_actual' => $incidence[0]->saldo_inicial,
+            'saldo_actual' => $vacaciones->vacaciones_disponibles,
             'hours_txt' => $incidence[0]->horas_txt,
             
         ];
