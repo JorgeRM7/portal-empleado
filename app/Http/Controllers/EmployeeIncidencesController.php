@@ -185,7 +185,7 @@ class EmployeeIncidencesController
                 $parent = Employee::find($parentId)->user_id;
                 $user = UserNomina::find($parent);
                 if($user != null){
-                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id, $employee));
                 }
             }
 
@@ -239,7 +239,7 @@ class EmployeeIncidencesController
                 $parent = Employee::find($parentId)->user_id;
                 $user = UserNomina::find($parent);
                 if($user != null){
-                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id, $employee));
                 }
             }
 
@@ -290,7 +290,7 @@ class EmployeeIncidencesController
                 $parent = Employee::find($parentId)->user_id;
                 $user = UserNomina::find($parent);
                 if($user != null){
-                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                    $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id, $employee));
                 }
             }
 
@@ -347,7 +347,7 @@ class EmployeeIncidencesController
                     $parent = Employee::find($parentId)->user_id;
                     $user = UserNomina::find($parent);
                     if($user != null){
-                        $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                        $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id, $employee));
                     }
                 }
 
@@ -405,7 +405,7 @@ class EmployeeIncidencesController
             $parent = Employee::find($parentId)->user_id;
             $user = UserNomina::find($parent);
             if($user != null){
-                $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id));
+                $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id, $employee));
             }
         }
 

@@ -2,6 +2,9 @@
 
 namespace App\Notifications;
 
+use App\Models\Employee;
+use App\Notifications\Channels\CustomDatabaseChannel;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,7 +18,7 @@ class IncidenciaRegistrada extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct(public string $idIncidence, public string $employeeId)
+    public function __construct(public string $idIncidence, public string $employeeId, public Employee $employee)
     {
         //
     }
@@ -27,7 +30,7 @@ class IncidenciaRegistrada extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return [CustomDatabaseChannel::class];
     }
 
     /**
@@ -56,9 +59,15 @@ class IncidenciaRegistrada extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'mensaje'   => "El empleado \"{$this->employeeId}\" ha registrado la incidencia \"{$this->idIncidence}\"",
-            'idIncidence' => $this->idIncidence,
-            'employeeId'=> $this->employeeId,
+            'titulo'        => "Incidencia Registrada",
+            'descripcion' => "El empleado \"{$this->employeeId}\" ha registrado la incidencia \"{$this->idIncidence}\"",
+            'employee_id'    => $this->employee->id,
+            'branch_office_id' => $this->employee->branch_office_id,
+            'employee_full_name' => $this->employee->full_name,
+            'notification_type' => 'INSERT - Mi Portal RH',
+            'notification_module' => 'Incidencias',
+            'notification_date' => Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s'),
+            
         ];
     }
 
