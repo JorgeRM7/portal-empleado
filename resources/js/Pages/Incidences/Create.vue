@@ -492,6 +492,21 @@ watch(
     },
 );
 
+function getISOWeek(date = new Date()) {
+    const d = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+    const dayNum = d.getUTCDay() || 7; // domingo = 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+    return {
+        year: d.getUTCFullYear(),
+        week: weekNo,
+        iso: `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`,
+    };
+}
+
 onMounted(async () => {
     loading.value = true;
     await axios
@@ -501,8 +516,8 @@ onMounted(async () => {
             employees.value = response.data.employees;
             schedules.value = response.data.schedules;
             allincidences.value = response.data.allincidences;
-            minIsoWeek.value = response.data.lastWeekNumber[0].week;
-            minIsoYear.value = response.data.lastWeekNumber[0].year;
+            minIsoWeek.value = getISOWeek().week;
+            minIsoYear.value = getISOWeek().year;
 
             typeOptions.value = allincidences.value.map((inc) => ({
                 label: inc.name,

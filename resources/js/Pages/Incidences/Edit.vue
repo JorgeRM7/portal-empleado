@@ -446,6 +446,21 @@ watch(
 );
 // =======================================================
 
+function getISOWeek(date = new Date()) {
+    const d = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+    const dayNum = d.getUTCDay() || 7; // domingo = 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+    return {
+        year: d.getUTCFullYear(),
+        week: weekNo,
+        iso: `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`,
+    };
+}
+
 onMounted(() => {
     getData();
 
@@ -453,8 +468,8 @@ onMounted(() => {
         .get("/incidences/getIncidencesDataLoad")
         .then((response) => {
             if (response.data?.lastWeekNumber?.[0]) {
-                minIsoWeek.value = response.data.lastWeekNumber[0].week;
-                minIsoYear.value = response.data.lastWeekNumber[0].year;
+                minIsoWeek.value = getISOWeek().week;
+                minIsoYear.value = getISOWeek().year;
             }
             loading.value = false;
         })
