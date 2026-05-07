@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { router } from "@inertiajs/vue3";
+import { Link, router } from "@inertiajs/vue3";
 import { useToastService } from "@/Stores/toastService";
 import { useToast } from "primevue";
 
@@ -707,6 +707,28 @@ watch(employeeId, () => {
                                         incidencia.
                                     </small>
                                 </div>
+
+                                <Message
+                                    severity="warn"
+                                    icon="pi pi-exclamation-circle"
+                                    class="mb-4"
+                                >
+                                    <div>
+                                        <p>
+                                            Puedes subir incidencias solo de la
+                                            semana actual en adelante, si
+                                            requieres subir incidencias de
+                                            semanas anteriores puedes crear un
+                                            ticket dando click
+                                            <Link
+                                                href="/complaints/create"
+                                                class="text-yellow-700 underline font-bold"
+                                            >
+                                                aqui</Link
+                                            >
+                                        </p>
+                                    </div>
+                                </Message>
 
                                 <!-- Resumen rápido -->
                                 <!-- <div class="flex flex-col gap-2">
