@@ -145,7 +145,7 @@ const installApp = async () => {
 
         const choiceResult = await deferredPrompt.value.userChoice;
 
-        console.log("Resultado instalación:", choiceResult.outcome);
+        // console.log("Resultado instalación:", choiceResult.outcome);
 
         deferredPrompt.value = null;
         showInstallButton.value = false;
@@ -163,14 +163,14 @@ const installApp = async () => {
 const handleBeforeInstallPrompt = (event) => {
     event.preventDefault();
 
-    console.log("beforeinstallprompt disparado");
+    // console.log("beforeinstallprompt disparado");
 
     deferredPrompt.value = event;
     showInstallButton.value = true;
 };
 
 const handleAppInstalled = () => {
-    console.log("App instalada correctamente");
+    // console.log("App instalada correctamente");
 
     deferredPrompt.value = null;
     showInstallButton.value = false;

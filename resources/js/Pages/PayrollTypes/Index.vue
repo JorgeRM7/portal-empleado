@@ -96,7 +96,7 @@ const toggleAccionesMasivas = (event) => {
     op.value.toggle(event);
 };
 
-console.log(props.payrollTypes);
+// console.log(props.payrollTypes);
 </script>
 
 <template>

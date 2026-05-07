@@ -239,14 +239,14 @@ const initFilters = () => {
 };
 
 const fetchAttendanceInfo = async (employeeId, date) => {
-    console.log(employeeId, date);
+    // console.log(employeeId, date);
 
     if (employeeId && date) {
         const response = await axios.get(
             `/api/txts/search-employee-data?date=${date}&employee_id=${employeeId}`,
         );
         attendanceData.value = response.data[0];
-        console.log(response.data);
+        // console.log(response.data);
     }
 };
 
@@ -310,9 +310,9 @@ const calculateOvertime = (requestedMoment = null, requestedHours = null) => {
         // Retorna TRUE solo si lo que calculó el sistema es MAYOR o IGUAL a lo que pide el usuario
         // Ejemplo: Sistema calculó 2 horas, usuario pide 2 -> TRUE
         // Ejemplo: Sistema calculó 1 hora, usuario pide 2 -> FALSE
-        console.log(
-            `Validando: Pide ${requestedHours}h vs Sistema ${systemCalculatedHours}h (${requestedMoment})`,
-        );
+        // console.log(
+        //     `Validando: Pide ${requestedHours}h vs Sistema ${systemCalculatedHours}h (${requestedMoment})`,
+        // );
         return systemCalculatedHours >= requestedHours;
     }
 
@@ -410,7 +410,7 @@ const applyFilters = async () => {
         (department) => department.id === departmentFilter.value,
     );
 
-    console.log(selectedBranchOffice);
+    // console.log(selectedBranchOffice);
 
     otherFilters.value[0].employee_id = employeeFilter.value;
     otherFilters.value[0].week = weekFilter.value;
@@ -426,15 +426,15 @@ const applyFilters = async () => {
         [year, week] = otherFilters.value[0].week.split("-W");
     }
 
-    console.log(
-        selectedBranchOffice?.id,
-        week,
-        year,
-        statusFilter.value,
-        employeeFilter.value,
-        departmentFilter.value,
-        eliminatedFilter.value,
-    );
+    // console.log(
+    //     selectedBranchOffice?.id,
+    //     week,
+    //     year,
+    //     statusFilter.value,
+    //     employeeFilter.value,
+    //     departmentFilter.value,
+    //     eliminatedFilter.value,
+    // );
 
     await axios
         .get("/api/txts", {
@@ -512,7 +512,7 @@ const fetchTxt = async () => {
                 eliminated: false,
             },
         });
-        console.log(response.data);
+        // console.log(response.data);
         txts.value = response.data;
         txts.value = response.data.map((txt) => ({
             ...txt,
@@ -872,7 +872,7 @@ onMounted(() => {
                                     () => {
                                         txtToDelete = data.id;
                                         deleteDialog = true;
-                                        console.log(txtToDelete.id);
+                                        // console.log(txtToDelete.id);
                                     }
                                 "
                                 v-if="

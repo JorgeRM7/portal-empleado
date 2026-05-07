@@ -137,7 +137,7 @@ const deleteItem = async () => {
         rows.value = rows.value.filter(row => row.id !== itemToDelete.value.id);
 
     } catch (error) {
-        console.log(error.response?.data);
+        // console.log(error.response?.data);
         loading.value = false;
         showError();
     }
@@ -146,7 +146,7 @@ const deleteItem = async () => {
 </script>
 
 <template>
-    <AppLayout :title="'Tipos de recibos'"> 
+    <AppLayout :title="'Tipos de recibos'">
         <div class="card">
             <Toolbar>
                 <template #start>
@@ -160,7 +160,7 @@ const deleteItem = async () => {
                     />
                 </template>
                 <template #end>
-                    
+
                     <Link :href="route('payroll-invoice-types.create')">
                         <Button
                             label="Crear"
@@ -375,7 +375,7 @@ const deleteItem = async () => {
                         <span v-else>{{ data.id }}</span>
                     </template>
                 </Column>
-                
+
                 <Column
                     field="name"
                     header="Nombre"
@@ -425,7 +425,7 @@ const deleteItem = async () => {
                         display: showColumns.Numero ? '' : 'none',
                     }"
                     :exportable="exportColumns.Numero"
-                    
+
                 >
                     <template #body="{ data }">
                         <Skeleton v-if="loading"></Skeleton>
@@ -458,10 +458,10 @@ const deleteItem = async () => {
                             :severity="data.active == true ? 'success' : 'danger'"
                         />
                     </template>
-                    
+
                 </Column>
             </DataTable>
-            
+
             <Dialog
                 v-model:visible="columnsDialog"
                 :style="{ width: '450px' }"
@@ -507,9 +507,9 @@ const deleteItem = async () => {
                 :style="{ width: '600px' }"
                 header="Confirmar eliminación"
                 :modal="true"
-            >    
+            >
                 <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
-                   
+
                     <div class="flex items-center">
                         <i
                             class="pi pi-exclamation-triangle text-red-600 text-3xl mr-3"

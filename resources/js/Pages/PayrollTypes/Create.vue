@@ -173,7 +173,7 @@ const submit = () => {
     }
 };
 
-console.log(props.keys);
+// console.log(props.keys);
 </script>
 
 <template>

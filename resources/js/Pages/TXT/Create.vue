@@ -19,7 +19,7 @@ const selectedBranchOffice = ref(
     JSON.parse(localStorage.getItem("selectedBranchOffice")),
 );
 
-console.log(selectedBranchOffice.value.id);
+// console.log(selectedBranchOffice.value.id);
 
 const form = useForm({
     moment: null,
@@ -48,14 +48,14 @@ const formatDate = (date) => {
 };
 
 const fetchAttendanceInfo = async () => {
-    console.log(selectedEmployee.value, selectedDate.value);
+    // console.log(selectedEmployee.value, selectedDate.value);
     loading.value = true;
 
     if (selectedEmployee.value && selectedDate.value) {
         const response = await axios.get(
             `/api/txts/search-employee-data?date=${formatDate(selectedDate.value)}&employee_id=${selectedEmployee.value.id}`,
         );
-        console.log(response.data);
+        // console.log(response.data);
         attendanceData.value = response.data[0];
         noData.value = response.data.length === 0;
         calculateOvertime();
@@ -68,7 +68,7 @@ const getEmployees = async () => {
     const response = await axios.get(
         `/api/employee-branchOffices?branchOfficeId=${selectedBranchOffice.value.id}`,
     );
-    console.log(response.data);
+    // console.log(response.data);
     employees.value = response.data;
 
     loading.value = false;
@@ -135,7 +135,7 @@ const calculateOvertime = () => {
     form.moment = calculatedMoment;
     form.hours = totalHours > 0 ? totalHours : 0;
 
-    console.log(calculatedMoment, totalHours);
+    // console.log(calculatedMoment, totalHours);
 };
 
 watch([selectedEmployee, selectedDate], () => {
