@@ -29,6 +29,13 @@ const initials = computed(() => {
         .join("");
 });
 
+// ── Cambiar crreo ───────────────────────────────────────────────────────
+const emailDialog = ref(false);
+const emailLoading = ref(false);
+const emailForm = useForm({
+    new_email: "",
+});
+
 // ── Cambiar contraseña ───────────────────────────────────────────────────────
 const passwordDialog = ref(false);
 const passwordLoading = ref(false);
@@ -37,6 +44,41 @@ const passwordForm = useForm({
     password: "",
     password_confirmation: "",
 });
+
+const submitEmail = () => {
+    emailLoading.value = true;
+
+    emailForm.put(route('user-email.update'), {
+        preserveScroll: true,
+
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Correo actualizado',
+                detail: 'Tu correo fue actualizado correctamente',
+                life: 3000
+            });
+
+            emailDialog.value = false;
+
+            emailForm.reset();
+            emailForm.clearErrors();
+        },
+
+        onError: () => {
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'No se pudo actualizar el correo',
+                life: 3000
+            });
+        },
+
+        onFinish: () => {
+            emailLoading.value = false;
+        }
+    });
+};
 
 const submitPassword = () => {
     passwordLoading.value = true;
@@ -169,6 +211,15 @@ const logout = () => router.post(route("logout"));
             <div class="info-card">
                 <p class="section-label"><i class="pi pi-cog"></i> Cuenta</p>
                 <div class="action-list">
+                    <button class="action-row" @click="emailDialog = true">
+                        <span class="action-icon blue"><i class="pi pi-at"></i></span>
+                        <span class="action-text">
+                            <span class="action-main">Cambiar correo/email</span>
+                            <span class="action-hint">Actualiza tu correo de acceso</span>
+                        </span>
+                        <i class="pi pi-chevron-right chevron"></i>
+                    </button>
+                    <Divider />
                     <button class="action-row" @click="passwordDialog = true">
                         <span class="action-icon blue"><i class="pi pi-lock"></i></span>
                         <span class="action-text">
@@ -189,6 +240,40 @@ const logout = () => router.post(route("logout"));
                 </div>
             </div>
         </div>
+
+        <!-- ══ DIALOG: Cambiar Correo ═══════════════════════════════════ -->
+        <Dialog v-model:visible="emailDialog" header="Cambiar Correo" modal :style="{ width: '380px' }"
+            :draggable="false">
+            <div class="pwd-form">
+                <div class="pwd-form flex flex-col gap-4">
+                    <div class="flex flex-col gap-2">
+                        <label for="new_email" class="font-semibold text-sm">
+                            Nuevo correo electrónico
+                        </label>
+
+                        <InputText
+                            id="new_email"
+                            v-model="emailForm.new_email"
+                            type="email"
+                            placeholder="ejemplo@correo.com"
+                            autocomplete="off"
+                            class="w-full"
+                        />
+
+                        <small
+                            v-if="emailForm.errors.new_email"
+                            class="text-red-500"
+                        >
+                            {{ emailForm.errors.new_email }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Cancelar" text severity="secondary" @click="emailDialog = false" />
+                <Button label="Guardar" icon="pi pi-check" :loading="emailLoading" @click="submitEmail" />
+            </template>
+        </Dialog>
 
         <!-- ══ DIALOG: Cambiar contraseña ═══════════════════════════════════ -->
         <Dialog v-model:visible="passwordDialog" header="Cambiar contraseña" modal :style="{ width: '380px' }"

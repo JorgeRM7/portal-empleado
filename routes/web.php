@@ -48,6 +48,9 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
+    Route::put('/user/email', [UserController::class, 'updateEmail'])
+        ->name('user-email.update');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/show/{id}', [DashboardController::class, 'show'])->name('dashboard.show');
     Route::get('/dashboard/vacaciones/{id}', [DashboardController::class, 'vacacionesDetalle'])
