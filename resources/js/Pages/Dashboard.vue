@@ -706,7 +706,7 @@ onMounted(() => {
                             <div>
                                 <h4 class="m-0">Tabla de Vacaciones</h4>
                                 <Tag
-                                    :value="'Total: ' + employeeVacations?.vacaciones_disponibles + ' Días'"
+                                    :value="'Dias Disponibles: ' + employeeVacations?.vacaciones_disponibles "
                                     icon="pi pi-sun"
                                     severity="info"
                                 />

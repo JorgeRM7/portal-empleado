@@ -29,7 +29,7 @@ class UserController
     public function create()
     {
         $branchOffices = BranchOffice::select('id', 'code')->get();
-        
+
         return Inertia::render('Users/Create', [
             'branchOffices' => $branchOffices,
         ]);
@@ -105,7 +105,7 @@ class UserController
     }
 
     public function update(Request $request, User $user){
-        
+
         $validate = $request->validate([
             'username' => 'required|string|max:255',
             'name' => 'required|string|max:255',
@@ -213,35 +213,35 @@ class UserController
         ]);
 
         $user = User::findOrFail($data['user_id']);
-        
+
         // Separar permisos a asignar y a revocar
         $toAssign = [];
         $toRevoke = [];
-        
+
         foreach ($data['permissions'] as $item) {
             $permission = Permission::where('name', $item['permission'])->first();
             if (!$permission) continue;
-            
+
             if ($item['assigned']) {
                 $toAssign[] = $permission;
             } else {
                 $toRevoke[] = $permission;
             }
         }
-        
+
         // Asignar permisos
         if (!empty($toAssign)) {
             $user->givePermissionTo($toAssign);
         }
-        
+
         // Revocar permisos
         if (!empty($toRevoke)) {
             $user->revokePermissionTo($toRevoke);
         }
-        
+
         // Limpiar cache de permisos
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-        
+
         return back()->with('success', 'Permisos actualizados correctamente');
     }
 
@@ -252,7 +252,7 @@ class UserController
             'user' => $user,
             'idEmployee' => $idEmployee
         ]);
-    } 
+    }
 
     public function destroyMultiple(Request $request){
 
@@ -279,6 +279,34 @@ class UserController
             })
             ->limit(20)
             ->get(['id','username']);
+    }
+
+    public function updateEmail(Request $request)
+    {
+        $request->validate([
+            'new_email' => 'required|email|max:255|unique:user_employees,email',
+        ], [
+            'new_email.unique' => 'Este correo ya está registrado.',
+            'new_email.email' => 'Ingresa un correo válido.',
+            'new_email.required' => 'El correo es obligatorio.',
+        ]);
+
+        $user = Auth::user();
+
+        // actualizar employees
+        Employee::where('id', $user->id)
+            ->update([
+                'email' => $request->new_email
+            ]);
+
+        // actualizar user_employees
+        DB::table('user_employees')
+            ->where('employee_id', $user->id)
+            ->update([
+                'email' => $request->new_email
+            ]);
+
+        return back()->with('success', 'Correo actualizado correctamente');
     }
 
 }
