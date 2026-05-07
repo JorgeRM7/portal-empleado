@@ -61,6 +61,7 @@ class IncidenciaRegistrada extends Notification
         return [
             'titulo'        => "Incidencia Registrada",
             'descripcion' => "El empleado \"{$this->employeeId}\" ha registrado la incidencia \"{$this->idIncidence}\"",
+            'notifiable_type' => 'App\Models\User',
             'employee_id'    => $this->employee->id,
             'branch_office_id' => $this->employee->branch_office_id,
             'employee_full_name' => $this->employee->full_name,
