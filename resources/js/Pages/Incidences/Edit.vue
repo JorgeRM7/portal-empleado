@@ -123,6 +123,9 @@ const busyMap = computed(() => {
 
     for (const inc of incidences.value) {
         // console.log("inc", inc);
+        if (inc.incidence_id === currentIncidenceId.value) {
+            continue;
+        }
         const start = parseYmdToDate(inc.start_date);
         const end = parseYmdToDate(inc.end_date);
 
@@ -657,6 +660,7 @@ watch(
                                         class="w-full"
                                         :loading="loading"
                                         :disabled="loading"
+                                        translate="no"
                                     />
                                     <small class="text-gray-500">
                                         Los campos se ajustan según la

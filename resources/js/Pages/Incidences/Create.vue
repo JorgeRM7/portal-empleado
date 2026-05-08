@@ -701,6 +701,7 @@ watch(employeeId, () => {
                                         class="w-full"
                                         :loading="loading"
                                         :disabled="loading"
+                                        translate="no"
                                     />
                                     <small class="text-gray-500">
                                         Los campos se ajustan según la
