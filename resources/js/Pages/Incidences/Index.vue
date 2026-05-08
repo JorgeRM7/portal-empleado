@@ -1666,6 +1666,7 @@ onMounted(() => {
                             showClear
                             placeholder="Selecciona una incidencia"
                             class="w-full"
+                            translate="no"
                         />
                     </div>
 
