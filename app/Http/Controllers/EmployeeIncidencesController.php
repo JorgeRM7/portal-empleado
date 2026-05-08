@@ -104,7 +104,7 @@ class EmployeeIncidencesController
         if($employee->branch_office_id != 19){
             $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->whereNotIn('id', [12,24,25,41])->get();
         }else{
-            $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
+            $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->orWhere('id', 72)->get();
         }
         $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($employee->branch_office_id);
 
