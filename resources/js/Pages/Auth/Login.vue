@@ -270,6 +270,7 @@ onBeforeUnmount(() => {
                     <form
                         @submit.prevent="submitForm"
                         class="flex flex-col gap-4"
+                        autocomplete="off"
                     >
                         <!-- Email -->
                         <div>
@@ -279,7 +280,7 @@ onBeforeUnmount(() => {
 
                             <InputText
                                 v-model="form.email"
-                                autocomplete="username"
+                                autocomplete="off"
                                 placeholder="Usuario o Email"
                                 class="w-full"
                                 :invalid="!!form.errors.email"
@@ -301,7 +302,7 @@ onBeforeUnmount(() => {
                                 v-model="form.password"
                                 :feedback="false"
                                 toggleMask
-                                autocomplete="current-password"
+                                autocomplete="new-password"
                                 placeholder="••••••••"
                                 class="w-full"
                                 inputClass="w-full"
