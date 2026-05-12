@@ -715,13 +715,13 @@ class WeeklyAssistenceService
         $campo_status  = $data['day_status'];
         $campo_data    = $data['data_status'];
 
-        if ( $incidence_id == 1) {
-            $tiempo_extra_doble  = $data['horario']['tiempo_extra_doble'];
-            $tiempo_extra_triple = $data['horario']['tiempo_extra_triple'];
-        } else {
-            $tiempo_extra_doble  = 0;
-            $tiempo_extra_triple = 0;
-        }
+        // if ( $incidence_id == 1) {
+        //     $tiempo_extra_doble  = $data['horario']['tiempo_extra_doble'];
+        //     $tiempo_extra_triple = $data['horario']['tiempo_extra_triple'];
+        // } else {
+        //     $tiempo_extra_doble  = 0;
+        //     $tiempo_extra_triple = 0;
+        // }
 
         // if ($incidence_id == 19) {
 
@@ -748,8 +748,8 @@ class WeeklyAssistenceService
             "Horario" => $data['horario']['nombre_horario'],
             "Entrada" => $data['horario']['hora_entrada'],
             "Salida" => $data['horario']['hora_salida'],
-            "Horas dobles"  => $tiempo_extra_doble,
-            "Horas triples" => $tiempo_extra_triple,
+            // "Horas dobles"  => $tiempo_extra_doble,
+            // "Horas triples" => $tiempo_extra_triple,
             "Nocturno" => $data['horario']['es_turno_nocturno'],
             "Checadas" => $hikcentral,
             "sunday_premium" => $data['sunday_premium'] ?? 0,
