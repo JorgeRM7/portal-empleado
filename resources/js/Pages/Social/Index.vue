@@ -188,7 +188,10 @@ onMounted(() => {
                     >
                         <Card class="post-card">
                             <!-- Header del post -->
-                            <template #title>
+                            <template #title> </template>
+
+                            <!-- Imagen/Video del post -->
+                            <template #header>
                                 <div class="post-header">
                                     <div class="author-info">
                                         <Avatar
@@ -227,10 +230,11 @@ onMounted(() => {
                                         </div>
                                     </div>
                                 </div>
-                            </template>
-
-                            <!-- Imagen/Video del post -->
-                            <template #header>
+                                <p
+                                    class="post-description mb-5 whitespace-pre-line"
+                                >
+                                    {{ post.description }}
+                                </p>
                                 <div
                                     class="post-media-container"
                                     @click="expandPost(post)"
@@ -274,11 +278,7 @@ onMounted(() => {
                             </template>
 
                             <!-- Descripción -->
-                            <template #content>
-                                <p class="post-description">
-                                    {{ post.description }}
-                                </p>
-                            </template>
+                            <template #content> </template>
 
                             <!-- Footer con interacciones -->
                             <template #footer>
