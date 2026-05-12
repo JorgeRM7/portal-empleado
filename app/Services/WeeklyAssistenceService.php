@@ -755,6 +755,9 @@ class WeeklyAssistenceService
             "sunday_premium" => $data['sunday_premium'] ?? 0,
         ], JSON_UNESCAPED_UNICODE);
 
+        if( $incidence_id == 0){
+            $datos = NULL;
+        }
         
         $updateData = [
             $campo_status => $incidence_id,
