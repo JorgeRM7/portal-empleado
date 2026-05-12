@@ -192,7 +192,7 @@ onMounted(() => {
 
                             <!-- Imagen/Video del post -->
                             <template #header>
-                                <div class="post-header">
+                                <div class="post-header p-5">
                                     <div class="author-info">
                                         <Avatar
                                             :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${post.user?.employee_id}.jpg`"
@@ -227,12 +227,11 @@ onMounted(() => {
                                         </div>
                                     </div>
                                 </div>
-                                <Divider />
-                                <h1 class="post-title">
+                                <h1 class="post-title px-5">
                                     {{ post.title }}
                                 </h1>
                                 <p
-                                    class="post-description mb-5 whitespace-pre-line"
+                                    class="post-description mb-5 whitespace-pre-line p-5"
                                 >
                                     {{ post.description }}
                                 </p>

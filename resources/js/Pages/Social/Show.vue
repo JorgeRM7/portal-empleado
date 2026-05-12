@@ -84,7 +84,7 @@ const getImageAspectRatio = () => {
 
                     <!-- Imagen/Video del post -->
                     <template #header>
-                        <div class="post-header">
+                        <div class="post-header p-5">
                             <div class="author-info">
                                 <Avatar
                                     :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${post.user?.employee_id}.jpg`"
