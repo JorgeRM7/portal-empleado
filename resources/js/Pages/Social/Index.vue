@@ -224,12 +224,13 @@ onMounted(() => {
                                             <div class="post-time">
                                                 {{ post.created_at }}
                                             </div>
-                                            <div class="post-title">
-                                                {{ post.title }}
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
+                                <Divider />
+                                <h1 class="post-title">
+                                    {{ post.title }}
+                                </h1>
                                 <p
                                     class="post-description mb-5 whitespace-pre-line"
                                 >
@@ -277,11 +278,9 @@ onMounted(() => {
                                 </div>
                             </template>
 
-                            <!-- Descripción -->
-                            <template #content> </template>
-
                             <!-- Footer con interacciones -->
                             <template #footer>
+                                <Divider />
                                 <div class="post-footer">
                                     <div class="likes-counter">
                                         <i class="pi pi-heart-fill"></i>
@@ -630,9 +629,11 @@ onMounted(() => {
 }
 
 .post-title {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 2px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+    line-height: 1.3;
 }
 
 /* Media container */
