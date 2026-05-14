@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\EmployeeIncidencesController;
 use App\Models\Views;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ use Spatie\Permission\Models\Permission;
 
 
 
-
+Route::post('/ai-assistant', [ChatController::class, 'processVoiceCommand']);
 
 
 

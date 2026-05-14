@@ -1,6 +1,6 @@
 <?php
 
-
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -144,6 +144,8 @@ Route::middleware([
         ->name('posts.image');
     Route::get('/posts/{post}/show', [PostController::class, 'show'])
         ->name('posts.show');
+    
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat');
 
 });
 

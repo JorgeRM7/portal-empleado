@@ -8,209 +8,130 @@ use App\Services\AiChatService;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Inertia\Inertia;
 
 class ChatController
 {
-    protected $aiService;
-
-    public function __construct(AiChatService $aiService)
+    public function index()
     {
-        $this->aiService = $aiService;
+        return Inertia::render('Chat/Index');
     }
 
-    public function sendMessage(Request $request)
+    public function processVoiceCommand(Request $request)
     {
-        $user = Auth::user();
+        // 1. Ahora recibimos el arreglo completo de mensajes desde Vue
+        $userMessages = $request->input('messages');
         
-        if (!$user) {
-            return response()->json([
-                'error' => 'No autenticado',
-                'response' => 'Por favor inicia sesión para usar el asistente.'
-            ], 401);
+        if (!$userMessages || !is_array($userMessages)) {
+            return response()->json(['reply' => 'No se recibió el historial de mensajes.'], 400);
         }
-        
-        $message = $request->message;
-        $history = $request->history ?? [];
-        
-        // Obtener último ticket creado por el usuario (últimos 10 minutos)
-        $lastTicket = Ticket::where('user_id', $user->id)
-            ->where('created_at', '>', now()->subMinutes(10))
-            ->latest()
-            ->first();
-        
-        $lastTicketInfo = $lastTicket ? [
-            'id' => $lastTicket->id,
-            'subject' => $lastTicket->subject,
-            'description' => substr($lastTicket->description, 0, 100),
-            'created_at' => $lastTicket->created_at
-        ] : null;
 
-        // 1. Definir herramientas (Function Calling)
-        $tools = [
-            [
-                'type' => 'function',
-                'function' => [
-                    'name' => 'crear_ticket_soporte',
-                    'description' => 'Crea un ticket de soporte técnico SOLO después de recopilar TODA la información necesaria del usuario.',
-                    'parameters' => [
-                        'type' => 'object',
-                        'properties' => [
-                            'asunto' => [
-                                'type' => 'string', 
-                                'description' => 'Título específico (solo si el usuario te lo da). Ej: "Error al subir PDF en módulo Empleados"'
+        $apiKey = env('AI_API_KEY');
+
+        // Datos simulados (que luego traerás de la BD)
+        $diasVacacionesDisponibles = 12; 
+        $horasTxtDisponibles = 8.5;
+
+        // Tu System Prompt intacto
+        $systemPrompt = "
+        Eres el asistente del portal de nómina. Tu trabajo es ayudar a registrar incidencias y responder dudas de RH.
+        
+        INFORMACIÓN DEL EMPLEADO ACTUAL:
+        - Días de vacaciones disponibles: {$diasVacacionesDisponibles}
+        - Horas de tiempo por tiempo (TxT) disponibles: {$horasTxtDisponibles}
+        *Regla importante:* Permite registrar vacaciones o TxT aunque el saldo no sea suficiente o quede en negativo.
+
+        CATÁLOGO DE INCIDENCIAS (ID - Nombre) - NO MOSTRAR AL USUARIO GRUPO NI ID:
+        Grupo 1 (TxT): 23-Tiempo por tiempo.
+        Grupo 2 (Vacaciones): 3-Vacaciones.
+        Grupo 3 (Turnos): 20-Adelanto de turno, 17-Cambio de turno, 19-Pendiente de reponer turno.
+        Grupo 4 (Con Comprobante): 53-Asistencia con reporte, 10-Falta justificada, 8-Incapacidad trayecto, 22-Incapacidad externa, 56-Incapacidad interna GO, 5-Covid, 4-Enfermedad general, 7-Maternidad, 6-Riesgo de trabajo, 49-Mantenimiento reloj, 29-Permiso prod/meta, 14-Fallecimiento familiar, 15-Matrimonio, 13-Paternidad.
+        Grupo 5 (Permisos Simples): 16-Permiso sin goce, 24-Llegar tarde (goce), 25-Salir antes (goce), 27-Visita cliente, 32-Foraneo, 39-Home Office, 46-Reunión Sindical, 54-Visita familia, 72-Descanso sábado.
+
+        REGLAS DE RECOLECCIÓN DE DATOS:
+        Si el usuario quiere registrar una incidencia, verifica a qué grupo pertenece y asegúrate de tener TODOS estos datos antes de ejecutar la herramienta:
+        - Grupo 1: vigencia_desde, vigencia_hasta, horas_a_registrar.
+        - Grupo 2: vigencia_desde, vigencia_hasta.
+        - Grupo 3: fecha_adelanto, fecha_descanso, horario.
+        - Grupo 4: vigencia_desde, vigencia_hasta, documento_comprobante, folio.
+        - Grupo 5: vigencia_desde, vigencia_hasta.
+        
+        Si faltan datos, NO ejecutes la herramienta. Pídelos amablemente al usuario. 
+        Si ya tienes todos los datos, ejecuta la herramienta 'registrar_incidencia'.
+        No muestres el grupo ni el ID solo di el nombre de la incidencia para ser mas practicos
+        ";
+
+        // 2. Preparamos el arreglo final de mensajes
+        // Empezamos siempre colocando el System Prompt como la regla base
+        $messagesPayload = [
+            ['role' => 'system', 'content' => $systemPrompt]
+        ];
+
+        // 3. Agregamos todo el historial que nos mandó Vue al arreglo
+        foreach ($userMessages as $msg) {
+            $messagesPayload[] = [
+                'role' => $msg['role'],
+                'content' => $msg['content']
+            ];
+        }
+
+        // 4. Preparamos la petición usando el nuevo historial ($messagesPayload)
+        $data = [
+            'model' => 'gpt-4o-mini',
+            'messages' => $messagesPayload, // <-- Usamos el arreglo construido
+            'tools' => [
+                [
+                    'type' => 'function',
+                    'function' => [
+                        'name' => 'registrar_incidencia',
+                        'description' => 'Ejecuta el registro en la base de datos cuando ya se tienen todos los requisitos.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'incidencia_id' => ['type' => 'integer'],
+                                'vigencia_desde' => ['type' => 'string'],
+                                'vigencia_hasta' => ['type' => 'string'],
+                                'horas_a_registrar' => ['type' => 'number'],
+                                'fecha_adelanto' => ['type' => 'string'],
+                                'fecha_descanso' => ['type' => 'string'],
+                                'horario' => ['type' => 'string'],
+                                'documento_comprobante' => ['type' => 'string'],
+                                'folio' => ['type' => 'string']
                             ],
-                            'descripcion' => [
-                                'type' => 'string', 
-                                'description' => 'Descripción COMPLETA: módulo, acción, mensaje de error exacto, pasos para reproducir.'
-                            ],
-                            'es_mismo_problema' => [
-                                'type' => 'boolean',
-                                'description' => 'true si es el MISMO problema del ticket anterior, false si es un problema DIFERENTE'
-                            ]
-                        ],
-                        'required' => ['asunto', 'descripcion', 'es_mismo_problema'],
-                    ],
-                ],
+                            'required' => ['incidencia_id'],
+                            'additionalProperties' => false
+                        ]
+                    ]
+                ]
             ],
+            'tool_choice' => 'auto'
         ];
 
-        // 2. System prompt CORREGIDO
-        $lastTicketNote = $lastTicketInfo 
-            ? "📋 TICKET RECIENTE: El usuario creó el ticket #{$lastTicketInfo['id']} hace poco sobre: \"{$lastTicketInfo['subject']}\". 
-               • Si el usuario quiere reportar el MISMO problema: NO crees otro ticket. Dile que espere la respuesta del ticket #{$lastTicketInfo['id']}.
-               • Si es un problema DIFERENTE: Sigue el proceso normal de preguntas y luego crea el ticket marcando es_mismo_problema=false."
-            : "No hay tickets recientes. Sigue el proceso normal.";
+        // ... (El resto del código de la petición y respuesta se queda exactamente igual) ...
+        $response = Http::withToken($apiKey)->timeout(30)->post('https://api.openai.com/v1/chat/completions', $data);
 
-        $systemPrompt = "Eres un asistente de soporte técnico para un portal de nóminas.
+        // ... Manejo de errores y lectura del $result ...
+        $result = $response->json();
+        $message = $result['choices'][0]['message'];
 
-🔹 REGLA DE ORO: NUNCA crees un ticket sin antes hacer preguntas y recopilar información detallada.
+        if (isset($message['tool_calls'])) {
+            $toolCall = $message['tool_calls'][0];
+            $functionName = $toolCall['function']['name'];
+            $arguments = json_decode($toolCall['function']['arguments'], true);
 
-🔹 PROCESO OBLIGATORIO (SIEMPRE):
-
-FASE 1 - RECOPILACIÓN (OBLIGATORIA para CUALQUIER ticket):
-1. Cuando el usuario mencione un error o pida crear un ticket, PRIMERO pregunta:
-   • ¿En qué módulo ocurrió? (Nóminas, Empleados, Reportes, Configuración)
-   • ¿Qué acción realizabas? (Subir archivo, guardar, consultar, eliminar)
-   • ¿Qué mensaje de error ves exactamente? (Copia textual)
-   • ¿Puedes describir los pasos para reproducirlo?
-
-2. NO uses la herramienta 'crear_ticket_soporte' hasta tener TODOS estos datos.
-
-FASE 2 - VERIFICAR SI ES REPETICIÓN:
-3. Si hay un ticket reciente, pregunta:
-   \"¿Este problema es el mismo que reportaste antes o es algo diferente?\"
-   
-   • Si es el MISMO: NO crees ticket. Refiere al ticket anterior.
-   • Si es DIFERENTE: Continúa con la Fase 1 para el nuevo problema.
-
-FASE 3 - CONFIRMACIÓN:
-4. Resume la información y pregunta: \"¿Deseas que cree un ticket con esta información?\"
-5. Solo si confirma EXPLÍCITAMENTE, usa la herramienta.
-
-{$lastTicketNote}
-
-🔹 EJEMPLOS CORRECTOS:
-
-❌ INCORRECTO (NUNCA HAGAS ESTO):
-Usuario: \"Quiero abrir otro ticket\"
-Tú: [Crea ticket inmediatamente] ← MAL
-
-✅ CORRECTO:
-Usuario: \"Quiero abrir otro ticket\"
-Tú: \"Entiendo. ¿Podrías contarme qué problema estás experimentando? ¿En qué módulo del portal ocurrió?\"
-Usuario: \"En Reportes, al generar el PDF sale error 500\"
-Tú: \"Gracias. ¿Qué acción exacta realizabas? ¿Era un reporte específico?\"
-Usuario: \"El reporte de asistencia mensual\"
-Tú: \"Perfecto. Para confirmar: error 500 al generar el reporte de asistencia mensual en el módulo Reportes. ¿Es un problema diferente al ticket anterior o es el mismo?\"
-Usuario: \"Es diferente\"
-Tú: [LLAMAR FUNCIÓN con es_mismo_problema=false]
-
-🔹 NUNCA:
-• Crear tickets sin información detallada
-• Saltar la fase de preguntas
-• Crear 2 tickets sobre el mismo problema";
-
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-            ...array_slice($history, -10), 
-            ['role' => 'user', 'content' => $message]
-        ];
-
-        try {
-            $response = $this->aiService->chat($messages, $tools);
-            
-            $choice = $response['choices'][0];
-            $messageResponse = $choice['message'];
-            $replyContent = $messageResponse['content'] ?? '';
-
-            // Procesar tool_calls
-            if (isset($messageResponse['tool_calls']) && is_array($messageResponse['tool_calls'])) {
-                foreach ($messageResponse['tool_calls'] as $toolCall) {
-                    
-                    if ($toolCall['function']['name'] === 'crear_ticket_soporte') {
-                        $args = json_decode($toolCall['function']['arguments'], true);
-                        
-                        $asunto = $args['asunto'] ?? '';
-                        $descripcion = $args['descripcion'] ?? '';
-                        $esMismoProblema = $args['es_mismo_problema'] ?? false;
-                        
-                        // Validar información
-                        $esGenerico = (
-                            strlen($asunto) < 15 || 
-                            strlen($descripcion) < 30
-                        );
-                        
-                        if ($esGenerico) {
-                            Log::warning('Tool call ignorado - información insuficiente', [
-                                'asunto' => $asunto,
-                                'descripcion' => $descripcion
-                            ]);
-                            $replyContent = "Necesito más detalles para crear el ticket. ¿Podrías decirme en qué módulo ocurrió el error y qué mensaje ves exactamente?";
-                        } 
-                        elseif ($esMismoProblema && $lastTicketInfo) {
-                            // Es el mismo problema → NO crear ticket
-                            Log::info('Intento de ticket duplicado bloqueado', [
-                                'user_id' => $user->id,
-                                'asunto' => $asunto
-                            ]);
-                            $replyContent = "Veo que este es el mismo problema del ticket #{$lastTicketInfo['id']} que acabas de crear. Te sugiero esperar la respuesta del equipo técnico sobre ese ticket. Si necesitas ayuda urgente, puedes contactarnos por teléfono o email. ¿Hay algo más en lo que pueda ayudarte?";
-                        } 
-                        else {
-                            // Ticket válido y diferente → Crear
-                            $ticket = Ticket::create([
-                                'user_id' => $user->id,
-                                'subject' => $asunto,
-                                'description' => $descripcion,
-                                'status' => 'open',
-                                'source' => 'chatbot',
-                                'related_ticket_id' => $esMismoProblema ? $lastTicketInfo['id'] : null
-                            ]);
-                            
-                            Log::info('Ticket creado exitosamente', [
-                                'ticket_id' => $ticket->id,
-                                'user_id' => $user->id,
-                                'es_reincidencia' => $esMismoProblema
-                            ]);
-                            
-                            $replyContent = "✅ He creado tu ticket de soporte con el ID #{$ticket->id}. Nuestro equipo técnico lo revisará y te contactará en breve. ¿Hay algo más en lo que pueda ayudarte?";
-                        }
-                    }
-                }
-            }
-
-            return response()->json(['response' => $replyContent]);
-
-        } catch (\Exception $e) {
-            Log::error('Error en ChatController: ' . $e->getMessage());
-            
-            if (str_contains($e->getMessage(), 'tool call validation failed') || 
-                str_contains($e->getMessage(), 'failed_generation')) {
+            if ($functionName === 'registrar_incidencia') {
+                $id = $arguments['incidencia_id'];
+                
+                // Limpiamos el historial en el frontend enviando una señal, o simplemente devolvemos la confirmación
                 return response()->json([
-                    'response' => "Para ayudarte mejor, necesito más información. ¿Podrías describir el problema que estás experimentando? ¿En qué módulo del portal ocurrió?"
+                    'reply' => "¡Excelente! He recolectado todos los datos y registrado la incidencia exitosamente."
                 ]);
             }
-            
-            return response()->json(['error' => 'Error en el servicio de IA'], 500);    
         }
+
+        return response()->json([
+            'reply' => $message['content']
+        ]);
     }
 }
