@@ -7,6 +7,7 @@ use App\Models\EmployeeDayVacation;
 use App\Models\EmployeeIncidences;
 use App\Models\Incidence;
 use App\Models\Logs;
+use App\Models\Schedules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\AiChatService;
@@ -59,12 +60,12 @@ class ChatController
         $dia_actual = Carbon::now('America/Mexico_City')->format('Y-m-d');
         $num_nomina = Auth::user()->id;
 
-        // Datos simulados (que luego traerás de la BD)
         $diasVacacionesDisponibles = EmployeeDayVacation::select('amount')->where('employee_id', $num_nomina)->where('deleted_at', null)->sum('amount'); 
         $horasTxtDisponibles = TxT::select('hours')->where('id', $num_nomina)->where('approved_at','!=', null)->where('deleted_at', null)->sum('hours');
         $nombreEmpleado = Employee::select('full_name')->where('id', $num_nomina)->first();
 
-        // Tu System Prompt intacto
+        $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
+
         $systemPrompt = "
         Eres el asistente del portal de nómina. Tu trabajo es ayudar a registrar incidencias y responder dudas de RH.
 
@@ -95,6 +96,11 @@ class ChatController
         Si faltan datos, NO ejecutes la herramienta. Pídelos amablemente al usuario. 
         Si los datos de la incidencia estan mal. Pide al usuario que los corrija y sobreescribe los que te dio al inicio.
         Si la incidencia es del grupo 1, y el usuario quiere registrar mas de un dia, no lo hagas, dile que no se puede.
+        Si la incidencia es del grupo 3, en el campo de horario dale a que seleccione uno de los siguientes turnos:
+        {$schedules}
+        Muestra todos los turnos, no modifiques la lista, ni omitas ningun turno.
+        Si la incidencia es del grupo 3, y es pendiente de reponer turno, la fecha de adelanto debe de ser menor a la fecha de descanso
+        Si la incidencia es del grupo 3, y es Adelanto de turno, la fecha de descanso debe de ser menor a la fecha de adelanto
         Si ya tienes todos los datos, ejecuta la herramienta 'registrar_incidencia'.
         No muestres el grupo ni el ID solo di el nombre de la incidencia para ser mas practicos
         ";
@@ -152,7 +158,10 @@ class ChatController
                 $incidenceId = (int) $arguments['incidencia_id'];
                 $documentIncidences = [53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13];
 
-                $contador = EmployeeIncidences::validationIncidence($incidenceId, $num_nomina, $arguments['vigencia_desde'], $arguments['vigencia_hasta']);
+                $vigenciaDesde = $arguments['vigencia_desde'] ?? $arguments['fecha_adelanto'];
+                $vigenciaHasta = $arguments['vigencia_hasta'] ?? $arguments['fecha_descanso'];
+
+                $contador = EmployeeIncidences::validationIncidence($incidenceId, $num_nomina, $vigenciaDesde, $vigenciaHasta);
 
                 if($contador > 0){
                     return response()->json([
@@ -257,7 +266,7 @@ class ChatController
             $week = $getWeekData($args['fecha_adelanto']);
             $data = array_merge($data, $week, [
                 'validity_from' => $args['fecha_adelanto'],
-                'validity_to'   => $args['fecha_adelanto'],
+                'validity_to'   => $args['fecha_descanso'],
                 'before_date'   => $args['fecha_adelanto'],
                 'rest_date'     => $args['fecha_descanso'],
                 'schedule_id'   => $args['horario'],
