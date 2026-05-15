@@ -146,6 +146,7 @@ Route::middleware([
         ->name('posts.show');
     
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
+    Route::post('/chat/ai-assistant', [ChatController::class, 'processVoiceCommand']);
 
 });
 

@@ -12,7 +12,6 @@ use Spatie\Permission\Models\Permission;
 
 
 
-Route::post('/ai-assistant', [ChatController::class, 'processVoiceCommand']);
 
 
 

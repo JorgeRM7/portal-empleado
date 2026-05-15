@@ -246,7 +246,7 @@
           <div class="value">{{ $fecha_ingreso }}</div>
         </td>
         <td>
-          <div class="label">Saldo disponible</div>
+          <div class="label">Saldo disponible (hasta la fecha de esta incidencia)</div>
           <div class="value accent">{{ $saldo_actual }} días</div>
         </td>
       </tr>
@@ -267,7 +267,7 @@
   </div>
 
   {{-- Resumen compacto --}}
-  <table class="summary" style="margin-top: 14px;">
+  {{-- <table class="summary" style="margin-top: 14px;">
     <tr>
       <td>
         <div class="label">Días solicitados</div>
@@ -278,12 +278,12 @@
         <div class="value">{{ $desde }} — {{ $hasta }}</div>
         <div style="color: var(--muted); font-size: 10px;">Regresa: {{ $presentarse }}</div>
       </td>
-      {{-- <td>
+      <td>
         <div class="label">Saldo final</div>
         <div class="value accent">{{ $saldo }}</div>
-      </td> --}}
+      </td>
     </tr>
-  </table>
+  </table> --}}
 
   {{-- Firmas --}}
   <table class="signatures">

@@ -11,27 +11,33 @@ const aiResponse = ref("");
 let recognition = null;
 const conversationHistory = ref([]);
 
+// NUEVAS VARIABLES: Para el manejo de subida de archivos
+const requireFile = ref(false);
+const pendingArguments = ref(null);
+const selectedFile = ref(null);
+
 // Configuración del reconocimiento de voz nativo del navegador
 onMounted(() => {
-    // Verificamos si el navegador soporta la API de voz
     const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
-        recognition.lang = "es-MX"; // Configurado para español
-        recognition.continuous = false; // Se detiene automáticamente cuando el usuario hace una pausa
-        recognition.interimResults = false; // Solo devuelve el resultado final
+        recognition.lang = "es-MX";
+        recognition.continuous = false;
+        recognition.interimResults = false;
 
-        // Evento que se dispara cuando el navegador reconoce texto
         recognition.onresult = (event) => {
-            const currentTranscript = event.results[0][0].transcript;
-            transcript.value = currentTranscript;
+            transcript.value = event.results[0][0].transcript;
         };
 
-        // Eventos para controlar el estado del botón
         recognition.onstart = () => (isRecording.value = true);
-        recognition.onend = () => (isRecording.value = false);
+        recognition.onend = () => {
+            isRecording.value = false;
+            if (transcript.value.trim().length > 0) {
+                sendToBackend();
+            }
+        };
         recognition.onerror = (event) => {
             console.error("Error en el reconocimiento de voz:", event.error);
             isRecording.value = false;
@@ -41,7 +47,6 @@ onMounted(() => {
     }
 });
 
-// Función para encender o apagar el micrófono
 const toggleRecording = () => {
     if (!recognition)
         return alert("Reconocimiento de voz no soportado en este navegador.");
@@ -49,46 +54,108 @@ const toggleRecording = () => {
     if (isRecording.value) {
         recognition.stop();
     } else {
-        transcript.value = ""; // Limpiamos el texto anterior
+        transcript.value = "";
         recognition.start();
     }
 };
 
-// Función para enviar el texto a nuestro backend de Laravel
+// Capturar el archivo seleccionado por el usuario
+const handleFileChange = (event) => {
+    selectedFile.value = event.target.files[0];
+};
+
 const sendToBackend = async () => {
     aiResponse.value = "Procesando...";
-
-    // 1. Guardamos lo que el usuario acaba de decir en el historial
     conversationHistory.value.push({ role: "user", content: transcript.value });
 
     try {
-        const response = await fetch("/api/ai-assistant", {
+        const response = await fetch("/chat/ai-assistant", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 Accept: "application/json",
+                "X-CSRF-TOKEN": document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content"),
             },
-            // 2. Enviamos el historial completo, no solo el último mensaje
             body: JSON.stringify({ messages: conversationHistory.value }),
         });
 
         const data = await response.json();
-        aiResponse.value = data.reply;
 
-        // 3. Guardamos la respuesta de la IA en el historial para que lo recuerde la próxima vez
+        // NUEVO: Detectar si el backend solicita un archivo
+        if (data.action === "require_file") {
+            requireFile.value = true;
+            pendingArguments.value = data.arguments; // Guardamos los datos recolectados por la IA
+            aiResponse.value = data.reply;
+            conversationHistory.value.push({
+                role: "assistant",
+                content: data.reply,
+            });
+            transcript.value = "";
+            return; // Detenemos la ejecución aquí
+        }
+
+        aiResponse.value = data.reply;
         conversationHistory.value.push({
             role: "assistant",
             content: data.reply,
         });
-
-        // Limpiamos el cuadro de texto para la siguiente interacción
         transcript.value = "";
     } catch (error) {
         console.error("Error al conectar con el backend:", error);
         aiResponse.value = "Hubo un error al comunicarse con el servidor.";
     }
 };
+
+// NUEVA FUNCIÓN: Enviar el archivo y los argumentos al backend
+const submitFileAndData = async () => {
+    if (!selectedFile.value) {
+        alert("Por favor, selecciona un documento primero.");
+        return;
+    }
+
+    aiResponse.value = "Subiendo documento y registrando incidencia...";
+
+    // Usamos FormData para poder enviar un archivo físico
+    const formData = new FormData();
+    formData.append("document", selectedFile.value);
+    formData.append("is_file_submission", "true"); // Bandera para avisarle al backend
+    formData.append("arguments", JSON.stringify(pendingArguments.value));
+
+    try {
+        const response = await fetch("/chat/ai-assistant", {
+            method: "POST",
+            headers: {
+                Accept: "application/json",
+                "X-CSRF-TOKEN": document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content"),
+                // Nota: Al usar FormData NO enviamos "Content-Type", el navegador lo asigna automáticamente
+            },
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        // Limpiamos la interfaz tras el éxito
+        aiResponse.value = data.reply;
+        requireFile.value = false;
+        pendingArguments.value = null;
+        selectedFile.value = null;
+
+        conversationHistory.value.push({
+            role: "assistant",
+            content: data.reply,
+        });
+    } catch (error) {
+        console.error("Error al subir el archivo:", error);
+        aiResponse.value =
+            "Hubo un error al subir el archivo e intentar guardar.";
+    }
+};
 </script>
+
 <template>
     <AppLayout>
         <div class="p-4 border border-round surface-border">
@@ -99,7 +166,6 @@ const sendToBackend = async () => {
             </p>
 
             <div class="flex gap-2 mb-3">
-                <!-- Botón de PrimeVue para iniciar/detener la grabación -->
                 <Button
                     :icon="
                         isRecording ? 'pi pi-stop-circle' : 'pi pi-microphone'
@@ -107,31 +173,61 @@ const sendToBackend = async () => {
                     :label="isRecording ? 'Escuchando...' : 'Hablar'"
                     :severity="isRecording ? 'danger' : 'primary'"
                     @click="toggleRecording"
+                    :disabled="requireFile"
                 />
 
-                <!-- Botón para enviar el texto al backend -->
                 <Button
                     icon="pi pi-send"
                     label="Enviar a IA"
                     severity="success"
-                    :disabled="!transcript"
+                    :disabled="!transcript || requireFile"
                     @click="sendToBackend"
                 />
             </div>
 
-            <!-- Textarea de PrimeVue para mostrar el texto reconocido -->
+            <!-- Deshabilitamos el textarea si estamos esperando un archivo -->
             <Textarea
                 v-model="transcript"
                 rows="4"
                 cols="50"
                 placeholder="Lo que digas aparecerá aquí..."
                 class="w-full"
+                :disabled="requireFile"
             />
 
-            <!-- Aquí mostraremos la respuesta del backend/IA -->
             <div v-if="aiResponse" class="mt-4 p-3 surface-100 border-round">
                 <strong>Respuesta de la IA:</strong>
-                <p>{{ aiResponse }}</p>
+                <p class="whitespace-pre-line">{{ aiResponse }}</p>
+
+                <!-- NUEVA SECCIÓN: Input de archivo dinámico -->
+                <div
+                    v-if="requireFile"
+                    class="mt-3 p-3 border-1 border-gray-300 border-round surface-0"
+                >
+                    <label class="block font-bold mb-2"
+                        >Adjuntar comprobante:</label
+                    >
+                    <input
+                        type="file"
+                        @change="handleFileChange"
+                        class="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <Button
+                        label="Subir y Finalizar Registro"
+                        icon="pi pi-check"
+                        severity="info"
+                        @click="submitFileAndData"
+                        :disabled="!selectedFile"
+                    />
+
+                    <Button
+                        label="Cancelar"
+                        icon="pi pi-times"
+                        severity="secondary"
+                        class="ml-2"
+                        @click="requireFile = false"
+                    />
+                </div>
             </div>
         </div>
     </AppLayout>

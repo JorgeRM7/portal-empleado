@@ -55,7 +55,7 @@ class EmployeeIncidencesController
         $day_to_present = Carbon::parse($incidence[0]->hasta)
             ->addDay()
             ->format('d/m/Y');
-        $vacaciones = EmployeeIncidences::getVacations($incidence[0]->employee_id);
+        $vacaciones = EmployeeIncidences::getVacations($incidence[0]->employee_id, $incidence[0]->hasta);
         $final_total = $vacaciones->vacaciones_disponibles - $incidence[0]->dias;
 
         $data = [
