@@ -326,7 +326,7 @@ const clearConversation = () => {
                 <!-- Contenedor principal -->
                 <div class="space-y-10 w-full">
                     <!-- Panel de conversación -->
-                    <div class="max-h-96 overflow-y-auto flex flex-col">
+                    <div class="max-h-[500px] overflow-y-auto flex flex-col">
                         <!-- Historial -->
                         <div
                             v-if="conversationHistory.length > 0"
