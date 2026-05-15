@@ -18,6 +18,8 @@ use App\Http\Controllers\PayrollInvoiceController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\TermConditionController;
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\LibraryController;
+
 
 use App\Http\Controllers\DeviceTokensController;
 
@@ -147,6 +149,10 @@ Route::middleware([
     
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
     Route::post('/chat/ai-assistant', [ChatController::class, 'processVoiceCommand']);
+
+    Route::resource('library', LibraryController::class)->names([
+        'index' => '/library'
+    ]);
 
 });
 
