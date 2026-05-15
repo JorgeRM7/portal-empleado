@@ -48,6 +48,7 @@ class ChatController
                 ], 500);
             }
         }
+        
         // 1. Ahora recibimos el arreglo completo de mensajes desde Vue
         $userMessages = $request->input('messages');
         
@@ -64,7 +65,13 @@ class ChatController
         $horasTxtDisponibles = TxT::select('hours')->where('id', $num_nomina)->where('approved_at','!=', null)->where('deleted_at', null)->sum('hours');
         $nombreEmpleado = Employee::select('full_name')->where('id', $num_nomina)->first();
 
+        // OBTENER Y FORMATEAR LOS HORARIOS
         $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
+        $schedulesList = "";
+        foreach($schedules as $schedule) {
+            // Creamos una lista clara para la IA en lugar de un JSON plano
+            $schedulesList .= "- ID: {$schedule->id} | Turno: {$schedule->name} | Horario: {$schedule->entry_time} a {$schedule->leave_time}\n";
+        }
 
         $systemPrompt = "
         Eres el asistente del portal de nómina. Tu trabajo es ayudar a registrar incidencias y responder dudas de RH.
@@ -96,13 +103,17 @@ class ChatController
         Si faltan datos, NO ejecutes la herramienta. Pídelos amablemente al usuario. 
         Si los datos de la incidencia estan mal. Pide al usuario que los corrija y sobreescribe los que te dio al inicio.
         Si la incidencia es del grupo 1, y el usuario quiere registrar mas de un dia, no lo hagas, dile que no se puede.
-        Si la incidencia es del grupo 3, en el campo de horario dale a que seleccione uno de los siguientes turnos:
-        {$schedules}
-        Muestra todos los turnos, no modifiques la lista, ni omitas ningun turno.
-        Si la incidencia es del grupo 3, y es pendiente de reponer turno, la fecha de adelanto debe de ser menor a la fecha de descanso
-        Si la incidencia es del grupo 3, y es Adelanto de turno, la fecha de descanso debe de ser menor a la fecha de adelanto
-        Si ya tienes todos los datos, ejecuta la herramienta 'registrar_incidencia'.
-        No muestres el grupo ni el ID solo di el nombre de la incidencia para ser mas practicos
+        
+        REGLAS DE HORARIOS (Turnos):
+        Si la incidencia requiere un horario, muestra los siguientes turnos para que el usuario elija:
+        {$schedulesList}
+        *MUY IMPORTANTE:* Al ejecutar la herramienta 'registrar_incidencia', en el parámetro 'horario' DEBES ENVIAR ÚNICAMENTE EL NÚMERO DE ID. Jamás envíes el nombre del turno.
+        
+        Si la incidencia es del grupo 3, y es pendiente de reponer turno, primero descansas y despues trabajas, es decir, la fecha de descanso debe ser primero que la de adelanto.
+        Si la incidencia es del grupo 3, y es Adelanto de turno, primero trabajas y después descansas, es decir, la fecha de adelanto debe ser primero que la de descanso.
+        
+        Si ya tienes todos los datos, primero pregunta si esta todo correcto, si la respuesta es afirmativa,ejecuta la herramienta 'registrar_incidencia'.
+        No muestres el grupo ni el ID solo di el nombre de la incidencia para ser mas practicos.
         ";
 
         $messagesPayload = [
@@ -132,7 +143,11 @@ class ChatController
                                 'horas_a_registrar' => ['type' => 'number'],
                                 'fecha_adelanto' => ['type' => 'string'],
                                 'fecha_descanso' => ['type' => 'string'],
-                                'horario' => ['type' => 'string'],
+                                // CAMBIO CLAVE AQUÍ: De 'string' a 'integer'
+                                'horario' => [
+                                    'type' => 'integer', 
+                                    'description' => 'El ID numérico del horario seleccionado. Solo el número.'
+                                ],
                                 'documento_comprobante' => ['type' => 'string'],
                                 'folio' => ['type' => 'string']
                             ],
@@ -158,16 +173,20 @@ class ChatController
                 $incidenceId = (int) $arguments['incidencia_id'];
                 $documentIncidences = [53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13];
 
-                $vigenciaDesde = $arguments['vigencia_desde'] ?? $arguments['fecha_adelanto'];
-                $vigenciaHasta = $arguments['vigencia_hasta'] ?? $arguments['fecha_descanso'];
+                $vigenciaDesde = $arguments['vigencia_desde'] ?? ($arguments['fecha_adelanto'] ?? null);
+                $vigenciaHasta = $arguments['vigencia_hasta'] ?? ($arguments['fecha_descanso'] ?? null);
 
-                $contador = EmployeeIncidences::validationIncidence($incidenceId, $num_nomina, $vigenciaDesde, $vigenciaHasta);
+                // Solo validamos si tenemos fechas válidas
+                if ($vigenciaDesde && $vigenciaHasta) {
+                    $contador = EmployeeIncidences::validationIncidence($incidenceId, $num_nomina, $vigenciaDesde, $vigenciaHasta);
 
-                if($contador > 0){
-                    return response()->json([
-                        'reply' => "Ya tienes una incidencia registrada en esas fechas, por favor intentalo otra vez con otras fechas."
-                    ]);
+                    if($contador > 0){
+                        return response()->json([
+                            'reply' => "Ya tienes una incidencia registrada en esas fechas, por favor intentalo otra vez con otras fechas."
+                        ]);
+                    }
                 }
+
                 // VERIFICACIÓN CLAVE: Si requiere documento y NO viene en el Request
                 if (in_array($incidenceId, $documentIncidences) && !$request->hasFile('document')) {
                     return response()->json([
@@ -244,8 +263,7 @@ class ChatController
                 'document_number' => $args['folio'] ?? null,
             ]);
         }
-
-        if ($incidenceId === 23) { // TxT
+        elseif ($incidenceId === 23) { // TxT
             $week = $getWeekData($args['vigencia_desde']);
             $data = array_merge($data, $week, [
                 'validity_from' => $args['vigencia_desde'],
@@ -262,14 +280,14 @@ class ChatController
                 'days'          => $this->calculateDays($args['vigencia_desde'], $args['vigencia_hasta']),
             ]);
         }
-        elseif (in_array($incidenceId, [20, 19])) { // Turnos
-            $week = $getWeekData($args['fecha_adelanto']);
+        elseif (in_array($incidenceId, [20, 19, 17])) { // Turnos (Agregué el 17 que faltaba en este array según tu catálogo)
+            $week = $getWeekData($args['fecha_adelanto'] ?? $args['vigencia_desde'] ?? date('Y-m-d'));
             $data = array_merge($data, $week, [
-                'validity_from' => $args['fecha_adelanto'],
-                'validity_to'   => $args['fecha_descanso'],
-                'before_date'   => $args['fecha_adelanto'],
-                'rest_date'     => $args['fecha_descanso'],
-                'schedule_id'   => $args['horario'],
+                'validity_from' => $args['fecha_adelanto'] ?? null,
+                'validity_to'   => $args['fecha_descanso'] ?? null,
+                'before_date'   => $args['fecha_adelanto'] ?? null,
+                'rest_date'     => $args['fecha_descanso'] ?? null,
+                'schedule_id'   => $args['horario'] ?? null,
             ]);
         }
         else { // Grupos 4 y 5 (Permisos simples)
@@ -285,7 +303,7 @@ class ChatController
         // 3. Crear registro en BD
         $incidence = EmployeeIncidences::create($data);
 
-        // 4. Notificar a los padres (Tu lógica original)
+        // 4. Notificar a los padres
         $this->notifyEmployeeParents($employee, $incidence);
 
         // 5. Crear Log
