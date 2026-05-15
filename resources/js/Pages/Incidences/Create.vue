@@ -155,6 +155,7 @@ const daysCalculated = computed(() => {
 });
 
 const daysEditable = ref(daysCalculated.value);
+const description = ref("");
 
 watch(daysCalculated, (newVal) => {
     daysEditable.value = newVal;
@@ -162,6 +163,11 @@ watch(daysCalculated, (newVal) => {
 
 const incidenceUI = computed(() => {
     const id = Number(form.value.incidence_id);
+    const selectedIncidence = allincidences.value.find(
+        (incidence) => incidence.id === id,
+    );
+
+    description.value = selectedIncidence?.description;
     if (GROUPS.TXT.has(id)) {
         return {
             key: "TXT",
@@ -512,7 +518,7 @@ onMounted(async () => {
     await axios
         .get("/incidences/getIncidencesDataLoad")
         .then(async (response) => {
-            // console.log(response.data);
+            console.log(response.data);
             employees.value = response.data.employees;
             schedules.value = response.data.schedules;
             allincidences.value = response.data.allincidences;
@@ -729,6 +735,14 @@ watch(employeeId, () => {
                                             >
                                         </p>
                                     </div>
+                                </Message>
+                                <Message
+                                    v-if="description"
+                                    class="mt-2"
+                                    severity="info"
+                                    icon="pi pi-exclamation-circle"
+                                >
+                                    {{ description }}
                                 </Message>
 
                                 <!-- Resumen rápido -->
