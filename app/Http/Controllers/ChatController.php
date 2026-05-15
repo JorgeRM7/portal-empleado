@@ -97,12 +97,17 @@ class ChatController
         - Grupo 1: vigencia_desde, vigencia_hasta, horas_a_registrar (en este grupo solo se puede registrar un dia a la vez, es decir, no puede haber vigencias de dias distintos).
         - Grupo 2: vigencia_desde, vigencia_hasta.
         - Grupo 3: fecha_adelanto, fecha_descanso, horario.
-        - Grupo 4: vigencia_desde, vigencia_hasta, documento_comprobante, folio.
+        - Grupo 4: vigencia_desde, vigencia_hasta, folio.
         - Grupo 5: vigencia_desde, vigencia_hasta.
         
         Si faltan datos, NO ejecutes la herramienta. Pídelos amablemente al usuario. 
         Si los datos de la incidencia estan mal. Pide al usuario que los corrija y sobreescribe los que te dio al inicio.
         Si la incidencia es del grupo 1, y el usuario quiere registrar mas de un dia, no lo hagas, dile que no se puede.
+
+        REGLAS DE INCAPACIDADES:
+        Siempre se debe de especificar el tipo de incapacidad, es decir, si te dicen que quieren registrar una incapacidad, primero preguntas el tipo
+        y despues continuas con lo demas, nunca des por hecho el tipo de incapacidad
+        Si ya tienes datos de la incapacidad, no los vuelvas a pedir.
         
         REGLAS DE HORARIOS (Turnos):
         Si la incidencia requiere un horario, muestra los siguientes turnos para que el usuario elija:
@@ -112,6 +117,7 @@ class ChatController
         Si la incidencia es del grupo 3, y es pendiente de reponer turno, primero descansas y despues trabajas, es decir, la fecha de descanso debe ser primero que la de adelanto.
         Si la incidencia es del grupo 3, y es Adelanto de turno, primero trabajas y después descansas, es decir, la fecha de adelanto debe ser primero que la de descanso.
         
+        Datos que ya tengas, no los pidas repetitivamente, solo una vez es suficiente
         Si ya tienes todos los datos, primero pregunta si esta todo correcto, si la respuesta es afirmativa,ejecuta la herramienta 'registrar_incidencia'.
         No muestres el grupo ni el ID solo di el nombre de la incidencia para ser mas practicos.
         ";
