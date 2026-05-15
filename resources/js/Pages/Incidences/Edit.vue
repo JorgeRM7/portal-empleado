@@ -224,12 +224,19 @@ const daysCalculated = computed(() => {
 });
 
 const daysEditable = ref(daysCalculated.value);
+const description = ref("");
 watch(daysCalculated, (newVal) => {
     daysEditable.value = newVal;
 });
 
 const incidenceUI = computed(() => {
     const id = Number(form.value.incidence_id);
+    const selectedIncidence = props.allincidences.find(
+        (incidence) => incidence.id === id,
+    );
+    console.log(selectedIncidence);
+
+    description.value = selectedIncidence?.description;
     if (GROUPS.TXT.has(id)) {
         return {
             key: "TXT",
@@ -667,6 +674,35 @@ watch(
                                         incidencia.
                                     </small>
                                 </div>
+                                <Message
+                                    severity="warn"
+                                    icon="pi pi-exclamation-circle"
+                                    class="mb-4"
+                                >
+                                    <div>
+                                        <p>
+                                            Puedes subir incidencias solo de la
+                                            semana actual en adelante, si
+                                            requieres subir incidencias de
+                                            semanas anteriores puedes crear un
+                                            ticket dando click
+                                            <Link
+                                                href="/complaints/create"
+                                                class="text-yellow-700 underline font-bold"
+                                            >
+                                                aqui</Link
+                                            >
+                                        </p>
+                                    </div>
+                                </Message>
+                                <Message
+                                    v-if="description"
+                                    class="mt-2"
+                                    severity="info"
+                                    icon="pi pi-exclamation-circle"
+                                >
+                                    {{ description }}
+                                </Message>
 
                                 <!-- Resumen rápido -->
                                 <!-- <div class="flex flex-col gap-2">

@@ -455,7 +455,11 @@ class EmployeeIncidencesController
     {
         $employeeData = Employee::where('id', $incidences_employee->employee_id)->first();
         $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
-        $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
+        if($employeeData->branch_office_id != 19){
+            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->whereNotIn('id', [12,24,25,41, 72])->get();
+        }else{
+            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->orWhere('id', 72)->get();
+        }
         return Inertia::render('Incidences/Edit', [
             'incidence' => $incidences_employee,
             'employeeData' => $employeeData,

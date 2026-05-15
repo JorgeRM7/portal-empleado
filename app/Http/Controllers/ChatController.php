@@ -117,8 +117,10 @@ class ChatController
         Si la incidencia es del grupo 3, y es pendiente de reponer turno, primero descansas y despues trabajas, es decir, la fecha de descanso debe ser primero que la de adelanto.
         Si la incidencia es del grupo 3, y es Adelanto de turno, primero trabajas y después descansas, es decir, la fecha de adelanto debe ser primero que la de descanso.
 
-        SI TE PREGUNTAN POR EL CATALOGO DE INCIDENCIAS O ALGO RELACIONADO CON ESO RESPONDE CON EL CATALOGO QUE TIENES CARGADO SIN DECIR A QUE GRUPO PERTENECE CADA INCIDENCIA
+        SI TE PREGUNTAN POR EL CATALOGO DE INCIDENCIAS O ALGO RELACIONADO CON ESO RESPONDE CON EL CATALOGO QUE TIENES CARGADO SIN DECIR A QUE GRUPO PERTENECE CADA INCIDENCIA Y SIN RESUMIR, DA EL CATALOGO COMPLETO
+        Si te dan solo una fecha, pregunta que si quiere usar esa fecha para ambos casos, de inicio o de fin
         
+        *IMPORTANTE: SOLO PUEDES REGISTRAR INCIDENCIAS DONDE SUS FECHAS ESTEN DENTRO DE LA SEMANA ACTUAL, TOMA EN CUENTA QUE EL DIA DE HOY ES {$dia_actual}*
         Datos que ya tengas, no los pidas repetitivamente, solo una vez es suficiente
         Si ya tienes todos los datos, primero pregunta si esta todo correcto, si la respuesta es afirmativa,ejecuta la herramienta 'registrar_incidencia'.
         No muestres el grupo ni el ID solo di el nombre de la incidencia para ser mas practicos.

@@ -5,7 +5,6 @@ import { useToast } from "primevue/usetoast";
 
 const toast = useToast();
 
-// Variables reactivas
 const isRecording = ref(false);
 const isProcessing = ref(false);
 const transcript = ref("");
@@ -13,23 +12,18 @@ const aiResponse = ref("");
 const conversationHistory = ref([]);
 let recognition = null;
 
-// Manejo de archivos
 const requireFile = ref(false);
 const pendingArguments = ref(null);
 const selectedFile = ref(null);
 const fileName = ref("");
 const fileInput = ref(null);
 
-// Dialog de archivo
 const showFileDialog = ref(false);
 
-// Disclaimer
 const showDisclaimer = ref(true);
 
-// Estados visuales
 const scrollContainer = ref(null);
 
-// Computed para estado del micrófono
 const micState = computed(() => {
     if (isProcessing.value) {
         return {
@@ -48,7 +42,6 @@ const micState = computed(() => {
     return { icon: "pi pi-microphone", label: "Hablar", severity: "primary" };
 });
 
-// Inicializar reconocimiento de voz
 onMounted(() => {
     const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -56,20 +49,28 @@ onMounted(() => {
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.lang = "es-MX";
-        recognition.continuous = false;
-        recognition.interimResults = false;
+
+        recognition.continuous = true;
+
+        recognition.interimResults = true;
 
         recognition.onresult = (event) => {
-            transcript.value = event.results[0][0].transcript;
+            let currentTranscript = "";
+            for (let i = 0; i < event.results.length; i++) {
+                currentTranscript += event.results[i][0].transcript;
+            }
+            transcript.value = currentTranscript;
         };
 
         recognition.onstart = () => (isRecording.value = true);
+
         recognition.onend = () => {
             isRecording.value = false;
             if (transcript.value.trim().length > 0) {
                 sendToBackend();
             }
         };
+
         recognition.onerror = (event) => {
             console.error("Error en reconocimiento de voz:", event.error);
             isRecording.value = false;
@@ -77,7 +78,6 @@ onMounted(() => {
     }
 });
 
-// Auto-scroll al agregar mensajes
 watch(
     () => conversationHistory.value.length,
     () => {
@@ -326,7 +326,7 @@ const clearConversation = () => {
                 <!-- Contenedor principal -->
                 <div class="space-y-10 w-full">
                     <!-- Panel de conversación -->
-                    <div class="overflow-hidden flex flex-col">
+                    <div class="max-h-96 overflow-y-auto flex flex-col">
                         <!-- Historial -->
                         <div
                             v-if="conversationHistory.length > 0"
@@ -385,7 +385,7 @@ const clearConversation = () => {
                                 :auto-resize="true"
                                 rows="2"
                                 placeholder="Escribe tu pregunta..."
-                                class="w-full text-sm"
+                                class="w-full text-sm mt-5"
                                 :disabled="requireFile || isProcessing"
                             />
                         </div>
