@@ -18,8 +18,9 @@ const { isDark } = useLayout();
 const GROUPS = {
     TXT: new Set([23]),
     VAC: new Set([3]),
-    SHIFT: new Set([20, 17, 19]),
+    SHIFT: new Set([20, 19]),
     DOC: new Set([53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13]),
+    SCH: new Set([17]),
 };
 
 const incidenceUI = computed(() => {
@@ -47,6 +48,12 @@ const incidenceUI = computed(() => {
         return {
             key: "SHIFT",
             fields: ["advance_date", "rest_date", "schedule", "notes"],
+        };
+    }
+    if (GROUPS.SCH.has(id)) {
+        return {
+            key: "SCH",
+            fields: ["range", "schedule", "notes"],
         };
     }
     if (GROUPS.DOC.has(id)) {

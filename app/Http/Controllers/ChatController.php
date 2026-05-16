@@ -110,17 +110,17 @@ class ChatController
         Si ya tienes datos de la incapacidad, no los vuelvas a pedir.
         
         REGLAS DE HORARIOS (Turnos):
-        Si la incidencia requiere un horario, muestra los siguientes turnos para que el usuario elija:
+        Si la incidencia requiere un horario, muestra los siguientes turnos para que el usuario elija, no edites la lista ni la resumas, muestra todo:
         {$schedulesList}
         *MUY IMPORTANTE:* Al ejecutar la herramienta 'registrar_incidencia', en el parámetro 'horario' DEBES ENVIAR ÚNICAMENTE EL NÚMERO DE ID. Jamás envíes el nombre del turno.
         
         Si la incidencia es del grupo 3, y es pendiente de reponer turno, primero descansas y despues trabajas, es decir, la fecha de descanso debe ser primero que la de adelanto.
         Si la incidencia es del grupo 3, y es Adelanto de turno, primero trabajas y después descansas, es decir, la fecha de adelanto debe ser primero que la de descanso.
-
+        Si la incidencia es del grupo 3, y es cambio de turno, las fechas van a ser como si fuera una incidencia simple, es decir, solo pide el rango de fechas y aparte el turno al que se va a cambiar, estas fechas van a ser los campos vigencia_desde y vigencia_hasta 
         SI TE PREGUNTAN POR EL CATALOGO DE INCIDENCIAS O ALGO RELACIONADO CON ESO RESPONDE CON EL CATALOGO QUE TIENES CARGADO SIN DECIR A QUE GRUPO PERTENECE CADA INCIDENCIA Y SIN RESUMIR, DA EL CATALOGO COMPLETO
         Si te dan solo una fecha, pregunta que si quiere usar esa fecha para ambos casos, de inicio o de fin
         
-        *IMPORTANTE: SOLO PUEDES REGISTRAR INCIDENCIAS DONDE SUS FECHAS ESTEN DENTRO DE LA SEMANA ACTUAL, TOMA EN CUENTA QUE EL DIA DE HOY ES {$dia_actual}*
+        *IMPORTANTE: SOLO PUEDES REGISTRAR INCIDENCIAS DONDE SUS FECHAS ESTEN DENTRO DE LA SEMANA ACTUAL, TOMA EN CUENTA QUE EL DIA DE HOY ES {$dia_actual}, Y TOMA EN CUENTA QUE LA SEMANA VA DEL LUNES AL DOMINGO*
         Datos que ya tengas, no los pidas repetitivamente, solo una vez es suficiente
         Si ya tienes todos los datos, primero pregunta si esta todo correcto, si la respuesta es afirmativa,ejecuta la herramienta 'registrar_incidencia'.
         No muestres el grupo ni el ID solo di el nombre de la incidencia para ser mas practicos.
@@ -290,13 +290,21 @@ class ChatController
                 'days'          => $this->calculateDays($args['vigencia_desde'], $args['vigencia_hasta']),
             ]);
         }
-        elseif (in_array($incidenceId, [20, 19, 17])) { // Turnos (Agregué el 17 que faltaba en este array según tu catálogo)
+        elseif (in_array($incidenceId, [20, 19])) {
             $week = $getWeekData($args['fecha_adelanto'] ?? $args['vigencia_desde'] ?? date('Y-m-d'));
             $data = array_merge($data, $week, [
                 'validity_from' => $args['fecha_adelanto'] ?? null,
                 'validity_to'   => $args['fecha_descanso'] ?? null,
                 'before_date'   => $args['fecha_adelanto'] ?? null,
                 'rest_date'     => $args['fecha_descanso'] ?? null,
+                'schedule_id'   => $args['horario'] ?? null,
+            ]);
+        }
+        elseif (in_array($incidenceId, [17])) {
+            $week = $getWeekData($args['fecha_adelanto'] ?? $args['vigencia_desde'] ?? date('Y-m-d'));
+            $data = array_merge($data, $week, [
+                'validity_from' => $args['vigencia_desde'] ?? null,
+                'validity_to'   => $args['vigencia_hasta'] ?? null,
                 'schedule_id'   => $args['horario'] ?? null,
             ]);
         }
@@ -331,6 +339,9 @@ class ChatController
     private function calculateDays($from, $to) {
         $d1 = new DateTime($from);
         $d2 = new DateTime($to);
+        if($d1->diff($d2)->days + 1 == 0){
+            return null;
+        }
         return $d1->diff($d2)->days + 1;
     }
 
