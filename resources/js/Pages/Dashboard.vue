@@ -7,12 +7,10 @@ import Tag from "primevue/tag";
 import Divider from "primevue/divider";
 import Skeleton from "primevue/skeleton";
 import Calendar from "primevue/calendar";
-import Tooltip from 'primevue/tooltip';
+import Tooltip from "primevue/tooltip";
 import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
-import { router } from '@inertiajs/vue3';
+import { router } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
-
-
 
 // app.directive('tooltip', Tooltip);
 const toast = useToast();
@@ -21,10 +19,10 @@ const props = defineProps({});
 
 const authUser = computed(() => page.props.auth?.user ?? null);
 const employee = computed(() => authUser.value?.employee ?? null);
-const employeeData = ref (null);
-const employeeVacations = ref (null);
-const employeeIncidences = ref (null);
-const antiguedad = ref (null);
+const employeeData = ref(null);
+const employeeVacations = ref(null);
+const employeeIncidences = ref(null);
+const antiguedad = ref(null);
 const loading = ref(true);
 const attendanceDate = ref(new Date());
 const attendanceData = ref([]);
@@ -43,9 +41,15 @@ const details = ref(null);
 
 const normalizeDateOnly = (date) => {
     if (!date) return null;
-    const d = new Date(date);
-    d.setHours(0,0,0,0);
-    return d;
+
+    if (date instanceof Date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    const dateString =
+        typeof date === "string" ? date.split("T")[0] : String(date);
+    const [year, month, day] = dateString.split("-");
+    return new Date(year, month - 1, day);
 };
 
 const openDetailsModal = (rawDate) => {
@@ -55,18 +59,29 @@ const openDetailsModal = (rawDate) => {
 
     const dayKey = getDayKey(date);
 
-    const formattedDate = date.toLocaleDateString('en-CA');
+    const formattedDate = date.toLocaleDateString("en-CA");
 
     const englishDayMap = {
-        'domingo': 'sunday', 'lunes': 'monday', 'martes': 'tuesday',
-        'miercoles': 'wednesday', 'jueves': 'thursday', 'viernes': 'friday', 'sabado': 'saturday'
+        domingo: "sunday",
+        lunes: "monday",
+        martes: "tuesday",
+        miercoles: "wednesday",
+        jueves: "thursday",
+        viernes: "friday",
+        sabado: "saturday",
     };
 
     const englishKey = englishDayMap[dayKey];
 
     const rawDayData = weekData[`${englishKey}_data`];
 
-    let parsedInfo = { Turno: 'N/A', Horario: 'N/A', Entrada: null, Salida: null, Checadas: [] };
+    let parsedInfo = {
+        Turno: "N/A",
+        Horario: "N/A",
+        Entrada: null,
+        Salida: null,
+        Checadas: [],
+    };
 
     if (rawDayData) {
         try {
@@ -80,12 +95,12 @@ const openDetailsModal = (rawDate) => {
 
     details.value = {
         employee_id: employeeData.value?.id || employee.value?.id,
-        employee_name: employeeData.value?.full_name || 'Empleado',
-        department_name: employeeData.value?.department?.name || 'General',
+        employee_name: employeeData.value?.full_name || "Empleado",
+        department_name: employeeData.value?.department?.name || "General",
         week_number: weekData.week_number,
         week_year: weekData.week_year,
-        incidencia: weekData[`nombre_${dayKey}`] || 'SIN REGISTRO',
-        color: weekData[`color_${dayKey}`] || '#64748b',
+        incidencia: weekData[`nombre_${dayKey}`] || "SIN REGISTRO",
+        color: weekData[`color_${dayKey}`] || "#64748b",
         descripcion_incidencia: `Registro correspondiente al día ${dayKey} de la semana ${weekData.week_number}.`,
         fecha_dia: formattedDate,
         horario: {
@@ -93,7 +108,7 @@ const openDetailsModal = (rawDate) => {
             Horario: parsedInfo.Horario,
             Entrada: parsedInfo.Entrada,
             Salida: parsedInfo.Salida,
-            Checadas: parsedInfo.Checadas || []
+            Checadas: parsedInfo.Checadas || [],
         },
 
         horas_dobles: attendanceExtras?.horas_dobles || 0,
@@ -105,7 +120,6 @@ const openDetailsModal = (rawDate) => {
     modalDetails.value = true;
 };
 
-
 const openVacationsModal = async (id) => {
     if (!id) return;
     vacationsVisible.value = true;
@@ -115,9 +129,9 @@ const openVacationsModal = async (id) => {
         const { data } = await axios.get(`/dashboard/vacaciones/${id}`);
         vacationsHistory.value = data;
 
-        vacationsHistory.value = data.map(item => ({
+        vacationsHistory.value = data.map((item) => ({
             ...item,
-            date: new Date(new Date(item.date).setHours(0,0,0,0))
+            date: normalizeDateOnly(item.date),
         }));
     } catch (error) {
         console.error("Error al cargar vacaciones", error);
@@ -128,14 +142,14 @@ const openVacationsModal = async (id) => {
 
 const filteredVacationsHistory = computed(() => {
     if (!vacationsHistory.value) return [];
-    return vacationsHistory.value.filter(item => item.amount !== 0);
+    return vacationsHistory.value.filter((item) => item.amount !== 0);
 });
 
 const formatDate = (date) => {
-    if (!date) return ''; // puedes cambiar '' por '-' si quieres
+    if (!date) return "";
+    const d = normalizeDateOnly(date);
 
-    const d = new Date(date);
-    if (isNaN(d)) return '';
+    if (!d || isNaN(d)) return "";
 
     return d.toLocaleDateString();
 };
@@ -167,7 +181,7 @@ const openIncidencesModal = async (id) => {
                 declined_at: normalizeDateOnly(incidence.declined_at),
 
                 status: statusInfo.text,
-                status_color: statusInfo.color
+                status_color: statusInfo.color,
             };
         });
 
@@ -188,13 +202,13 @@ const employeePhoto = computed(() => {
         : page.props.auth?.user?.profile_photo_url || "";
 });
 
-
 function obtenerEmpleado() {
     loading.value = true;
 
     let id = employee.value.id;
-    axios.get(`/dashboard/show/${id}`)
-        .then(response => {
+    axios
+        .get(`/dashboard/show/${id}`)
+        .then((response) => {
             // console.log('Datos del empleado:', response.data);
             employeeData.value = response.data.employee;
             // if (!employeeData.value.terms_condition) {
@@ -205,8 +219,8 @@ function obtenerEmpleado() {
             antiguedad.value = response.data.antiguedad;
             attendanceData.value = response.data.asistencia;
         })
-        .catch(error => {
-            console.error('Error al obtener datos:', error);
+        .catch((error) => {
+            console.error("Error al obtener datos:", error);
         })
         .finally(() => {
             loading.value = false;
@@ -214,25 +228,37 @@ function obtenerEmpleado() {
 }
 
 function normalizeDate(date) {
-    if (date instanceof Date) return date;
+    if (date instanceof Date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
     return new Date(date.year, date.month, date.day);
 }
 
 function getWeekNumber(date) {
-    const tempDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const tempDate = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
     const dayNum = tempDate.getUTCDay() || 7;
     tempDate.setUTCDate(tempDate.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(tempDate.getUTCFullYear(), 0, 1));
-    const weekNum = Math.ceil((((tempDate - yearStart) / 86400000) + 1) / 7);
+    const weekNum = Math.ceil(((tempDate - yearStart) / 86400000 + 1) / 7);
 
     return {
         week: weekNum,
-        year: tempDate.getUTCFullYear()
+        year: tempDate.getUTCFullYear(),
     };
 }
 
 function getDayKey(date) {
-    const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    const days = [
+        "domingo",
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+    ];
     return days[date.getDay()];
 }
 
@@ -241,10 +267,13 @@ function getWeekDataByDate(date) {
 
     const { week, year } = getWeekNumber(date);
 
-    return attendanceData.value.find(item =>
-        Number(item.week_number) === Number(week) &&
-        Number(item.week_year) === Number(year)
-    ) || null;
+    return (
+        attendanceData.value.find(
+            (item) =>
+                Number(item.week_number) === Number(week) &&
+                Number(item.week_year) === Number(year),
+        ) || null
+    );
 }
 
 function getDayAttendanceData(rawDate) {
@@ -256,13 +285,13 @@ function getDayAttendanceData(rawDate) {
     const dayKey = getDayKey(date);
 
     const englishDayMap = {
-        'domingo': 'sunday',
-        'lunes': 'monday',
-        'martes': 'tuesday',
-        'miercoles': 'wednesday',
-        'jueves': 'thursday',
-        'viernes': 'friday',
-        'sabado': 'saturday'
+        domingo: "sunday",
+        lunes: "monday",
+        martes: "tuesday",
+        miercoles: "wednesday",
+        jueves: "thursday",
+        viernes: "friday",
+        sabado: "saturday",
     };
 
     const englishKey = englishDayMap[dayKey];
@@ -270,15 +299,15 @@ function getDayAttendanceData(rawDate) {
     let extraDetails = {
         horas_dobles: 0,
         horas_triples: 0,
-        sunday_premium: 0
+        sunday_premium: 0,
     };
 
     if (rawDayData) {
         try {
             const parsed = JSON.parse(rawDayData);
-            extraDetails.horas_dobles = Number(parsed['Horas dobles']) || 0;
-            extraDetails.horas_triples = Number(parsed['Horas triples']) || 0;
-            extraDetails.sunday_premium = Number(parsed['sunday_premium']) || 0;
+            extraDetails.horas_dobles = Number(parsed["Horas dobles"]) || 0;
+            extraDetails.horas_triples = Number(parsed["Horas triples"]) || 0;
+            extraDetails.sunday_premium = Number(parsed["sunday_premium"]) || 0;
         } catch (e) {
             extraDetails.horas_dobles = 0;
             extraDetails.horas_triples = 0;
@@ -290,7 +319,7 @@ function getDayAttendanceData(rawDate) {
         name: weekData[`nombre_${dayKey}`],
         color: weekData[`color_${dayKey}`],
         code: weekData[dayKey],
-        ...extraDetails
+        ...extraDetails,
     };
 }
 
@@ -302,31 +331,31 @@ const filters = ref({
 
     validity_from: {
         operator: FilterOperator.AND,
-        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
     validity_to: {
         operator: FilterOperator.AND,
-        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
     before_date: {
         operator: FilterOperator.AND,
-        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
     rest_date: {
         operator: FilterOperator.AND,
-        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
     expires_at: {
         operator: FilterOperator.AND,
-        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
     approved_at: {
         operator: FilterOperator.AND,
-        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
     declined_at: {
         operator: FilterOperator.AND,
-        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }]
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
 
     // demás normales
@@ -347,10 +376,8 @@ const filtersV = ref({
 
     date: {
         operator: FilterOperator.AND,
-        constraints: [
-            { value: null, matchMode: FilterMatchMode.DATE_IS }
-        ]
-    }
+        constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
+    },
 });
 
 const showColumns = ref({
@@ -380,9 +407,12 @@ const showColumnsV = ref({
     fecha: true,
 });
 
-
 const getStatus = (data) => {
-    if (data.approved_at == null && data.declined_at == null && data.deleted_by == null) {
+    if (
+        data.approved_at == null &&
+        data.declined_at == null &&
+        data.deleted_by == null
+    ) {
         return { color: "primary", text: "Pendiente" };
     } else if (data.approved_at != null) {
         return { color: "success", text: "Aprobado" };
@@ -399,7 +429,8 @@ const weeklyTotals = computed(() => {
     const month = attendanceDate.value.getMonth();
 
     const firstDayOfMonth = new Date(year, month, 1);
-    const startOffset = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
+    const startOffset =
+        firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
     const startDate = new Date(firstDayOfMonth);
     startDate.setDate(firstDayOfMonth.getDate() - startOffset);
 
@@ -434,12 +465,11 @@ onMounted(() => {
     <AppLayout title="Dashboard">
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
             <div class="xl:col-span-12">
-                <div
-                    class="card border-none shadow-sm rounded-3xl"
-                >
+                <div class="card border-none shadow-sm rounded-3xl">
                     <div class="relative p-6 md:p-8">
-                        <div class="flex flex-col xl:flex-row xl:items-center gap-6">
-
+                        <div
+                            class="flex flex-col xl:flex-row xl:items-center gap-6"
+                        >
                             <div class="flex justify-center xl:justify-start">
                                 <div
                                     class="w-24 h-24 md:w-28 md:h-28 rounded-3xl overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-lg dark:bg-slate-800 shrink-0"
@@ -447,24 +477,34 @@ onMounted(() => {
                                     <img
                                         class="w-full h-full object-cover"
                                         :src="employeePhoto"
-                                        @error="(e) => (e.target.src = $page.props.auth.user?.profile_photo_url)"
+                                        @error="
+                                            (e) =>
+                                                (e.target.src =
+                                                    $page.props.auth.user?.profile_photo_url)
+                                        "
                                         alt="Foto de perfil"
                                     />
                                 </div>
                             </div>
                             <div class="flex-1">
-
                                 <h1 class="text-2xl md:text-3xl font-semibold">
                                     Bienvenid@, {{ employeeData?.full_name }}
                                 </h1>
 
                                 <p class="mt-2 text-sm md:text-base">
-                                    Consulta tu información laboral, asistencia y accesos rápidos desde un solo lugar.
+                                    Consulta tu información laboral, asistencia
+                                    y accesos rápidos desde un solo lugar.
                                 </p>
 
-                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
-                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
-                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                <div
+                                    class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-5"
+                                >
+                                    <div
+                                        class="rounded-2xl border border-slate-200 px-4 py-3"
+                                    >
+                                        <div
+                                            class="text-xs text-slate-500 dark:text-slate-400"
+                                        >
                                             Empleado
                                         </div>
                                         <p class="font-semibold">
@@ -472,8 +512,12 @@ onMounted(() => {
                                         </p>
                                     </div>
 
-                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
-                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                    <div
+                                        class="rounded-2xl border border-slate-200 px-4 py-3"
+                                    >
+                                        <div
+                                            class="text-xs text-slate-500 dark:text-slate-400"
+                                        >
                                             Puesto
                                         </div>
                                         <p class="font-semibold">
@@ -481,8 +525,12 @@ onMounted(() => {
                                         </p>
                                     </div>
 
-                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
-                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                    <div
+                                        class="rounded-2xl border border-slate-200 px-4 py-3"
+                                    >
+                                        <div
+                                            class="text-xs text-slate-500 dark:text-slate-400"
+                                        >
                                             Departamento
                                         </div>
                                         <p class="font-semibold">
@@ -490,8 +538,12 @@ onMounted(() => {
                                         </p>
                                     </div>
 
-                                    <div class="rounded-2xl border border-slate-200 px-4 py-3">
-                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                    <div
+                                        class="rounded-2xl border border-slate-200 px-4 py-3"
+                                    >
+                                        <div
+                                            class="text-xs text-slate-500 dark:text-slate-400"
+                                        >
                                             Fecha de entrada
                                         </div>
                                         <p class="font-semibold">
@@ -507,41 +559,68 @@ onMounted(() => {
 
             <div class="xl:col-span-12">
                 <div class="card border-none shadow-sm rounded-3xl">
-                    <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+                    <div
+                        class="flex items-center justify-between flex-wrap gap-3 mb-5"
+                    >
                         <div>
-                            <h3 class="text-xl font-semibold mb-1">Accesos rápidos</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">
+                            <h3 class="text-xl font-semibold mb-1">
+                                Accesos rápidos
+                            </h3>
+                            <p
+                                class="text-sm text-slate-500 dark:text-slate-400"
+                            >
                                 Información frecuente para tu operación diaria.
                             </p>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        <div class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-                            <div class="flex items-start justify-between gap-4 h-full">
-                                <div class="flex flex-col justify-between h-full w-full">
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+                    >
+                        <div
+                            class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                        >
+                            <div
+                                class="flex items-start justify-between gap-4 h-full"
+                            >
+                                <div
+                                    class="flex flex-col justify-between h-full w-full"
+                                >
                                     <div>
                                         <h4 class="font-semibold mb-1">
                                             Antigüedad
                                         </h4>
 
                                         <template v-if="loading">
-                                            <Skeleton width="10rem" height="2rem" class="mb-2"></Skeleton>
+                                            <Skeleton
+                                                width="10rem"
+                                                height="2rem"
+                                                class="mb-2"
+                                            ></Skeleton>
                                         </template>
                                         <template v-else>
-                                            <p class="text-2xl md:text-3xl font-bold">
+                                            <p
+                                                class="text-2xl md:text-3xl font-bold"
+                                            >
                                                 {{ antiguedad }}
                                             </p>
                                         </template>
                                     </div>
 
-                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
-                                        Tiempo acumulado desde tu fecha de ingreso a la empresa.
+                                    <p
+                                        class="text-sm text-slate-500 dark:text-slate-400 mt-3"
+                                    >
+                                        Tiempo acumulado desde tu fecha de
+                                        ingreso a la empresa.
                                     </p>
                                 </div>
 
-                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 dark:bg-blue-500/10 shrink-0">
-                                    <i class="pi pi-calendar text-blue-600 dark:text-blue-400 !text-xl"></i>
+                                <div
+                                    class="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 dark:bg-blue-500/10 shrink-0"
+                                >
+                                    <i
+                                        class="pi pi-calendar text-blue-600 dark:text-blue-400 !text-xl"
+                                    ></i>
                                 </div>
                             </div>
                         </div>
@@ -550,30 +629,49 @@ onMounted(() => {
                             @click="openVacationsModal(employee?.id)"
                             class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer active:scale-95"
                         >
-                            <div class="flex items-start justify-between gap-4 h-full">
-                                <div class="flex flex-col justify-between h-full w-full">
+                            <div
+                                class="flex items-start justify-between gap-4 h-full"
+                            >
+                                <div
+                                    class="flex flex-col justify-between h-full w-full"
+                                >
                                     <div>
                                         <h4 class="font-semibold mb-1">
                                             Vacaciones
                                         </h4>
 
                                         <template v-if="loading">
-                                            <Skeleton width="6rem" height="2rem" class="mb-2"></Skeleton>
+                                            <Skeleton
+                                                width="6rem"
+                                                height="2rem"
+                                                class="mb-2"
+                                            ></Skeleton>
                                         </template>
                                         <template v-else>
-                                            <p class="text-2xl md:text-3xl font-bold">
-                                                {{ employeeVacations?.vacaciones_disponibles }}
+                                            <p
+                                                class="text-2xl md:text-3xl font-bold"
+                                            >
+                                                {{
+                                                    employeeVacations?.vacaciones_disponibles
+                                                }}
                                             </p>
                                         </template>
                                     </div>
 
-                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
-                                        Consulta los días disponibles o el estatus actual de tus vacaciones.
+                                    <p
+                                        class="text-sm text-slate-500 dark:text-slate-400 mt-3"
+                                    >
+                                        Consulta los días disponibles o el
+                                        estatus actual de tus vacaciones.
                                     </p>
                                 </div>
 
-                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/10 shrink-0">
-                                    <i class="pi pi-briefcase text-emerald-600 dark:text-emerald-400 !text-xl"></i>
+                                <div
+                                    class="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/10 shrink-0"
+                                >
+                                    <i
+                                        class="pi pi-briefcase text-emerald-600 dark:text-emerald-400 !text-xl"
+                                    ></i>
                                 </div>
                             </div>
                         </div>
@@ -582,30 +680,50 @@ onMounted(() => {
                             @click="openIncidencesModal(employee?.id)"
                             class="rounded-3xl border border-slate-200 p-5 min-h-[150px] h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer active:scale-95"
                         >
-                            <div class="flex items-start justify-between gap-4 h-full">
-                                <div class="flex flex-col justify-between h-full w-full">
+                            <div
+                                class="flex items-start justify-between gap-4 h-full"
+                            >
+                                <div
+                                    class="flex flex-col justify-between h-full w-full"
+                                >
                                     <div>
                                         <h4 class="font-semibold mb-1">
                                             Incidencias
                                         </h4>
 
                                         <template v-if="loading">
-                                            <Skeleton width="5rem" height="2rem" class="mb-2"></Skeleton>
+                                            <Skeleton
+                                                width="5rem"
+                                                height="2rem"
+                                                class="mb-2"
+                                            ></Skeleton>
                                         </template>
                                         <template v-else>
-                                            <p class="text-2xl md:text-3xl font-bold ">
-                                                {{ employeeIncidences?.incidencias_empleado }}
+                                            <p
+                                                class="text-2xl md:text-3xl font-bold"
+                                            >
+                                                {{
+                                                    employeeIncidences?.incidencias_empleado
+                                                }}
                                             </p>
                                         </template>
                                     </div>
 
-                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
-                                        Revisa movimientos, registros o incidencias relacionadas con tu actividad.
+                                    <p
+                                        class="text-sm text-slate-500 dark:text-slate-400 mt-3"
+                                    >
+                                        Revisa movimientos, registros o
+                                        incidencias relacionadas con tu
+                                        actividad.
                                     </p>
                                 </div>
 
-                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-orange-100 dark:bg-orange-500/10 shrink-0">
-                                    <i class="pi pi-exclamation-circle text-orange-600 dark:text-orange-400 !text-xl"></i>
+                                <div
+                                    class="w-12 h-12 rounded-2xl flex items-center justify-center bg-orange-100 dark:bg-orange-500/10 shrink-0"
+                                >
+                                    <i
+                                        class="pi pi-exclamation-circle text-orange-600 dark:text-orange-400 !text-xl"
+                                    ></i>
                                 </div>
                             </div>
                         </div>
@@ -615,10 +733,16 @@ onMounted(() => {
             <!-- {{ attendanceData }} -->
             <div class="xl:col-span-12">
                 <div class="card border-none shadow-sm rounded-3xl">
-                    <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+                    <div
+                        class="flex items-center justify-between flex-wrap gap-3 mb-5"
+                    >
                         <div>
-                            <h3 class="text-xl font-semibold mb-1">Calendario de asistencia</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">
+                            <h3 class="text-xl font-semibold mb-1">
+                                Calendario de asistencia
+                            </h3>
+                            <p
+                                class="text-sm text-slate-500 dark:text-slate-400"
+                            >
                                 Vista rápida de tu comportamiento mensual.
                             </p>
                         </div>
@@ -634,16 +758,32 @@ onMounted(() => {
                         >
                             <template #date="{ date }">
                                 <div class="attendance-day-cell">
-                                    <span class="day-number">{{ date.day }}</span>
+                                    <span class="day-number">{{
+                                        date.day
+                                    }}</span>
 
                                     <template v-if="getDayAttendanceData(date)">
                                         <div
                                             class="attendance-tag"
-                                            :style="{ backgroundColor: getDayAttendanceData(date)?.color}"
-                                            v-tooltip.top="getDayAttendanceData(date)?.name"
+                                            :style="{
+                                                backgroundColor:
+                                                    getDayAttendanceData(date)
+                                                        ?.color,
+                                            }"
+                                            v-tooltip.top="
+                                                getDayAttendanceData(date)?.name
+                                            "
                                         >
-                                            <span class="text-full">{{ getDayAttendanceData(date)?.code }}</span>
-                                            <span class="text-short">{{ getDayAttendanceData(date)?.code || getDayAttendanceData(date)?.name?.substring(0, 2) }}</span>
+                                            <span class="text-full">{{
+                                                getDayAttendanceData(date)?.code
+                                            }}</span>
+                                            <span class="text-short">{{
+                                                getDayAttendanceData(date)
+                                                    ?.code ||
+                                                getDayAttendanceData(
+                                                    date,
+                                                )?.name?.substring(0, 2)
+                                            }}</span>
                                         </div>
 
                                         <!-- <div class="extra-columns-container">
@@ -674,10 +814,10 @@ onMounted(() => {
             :style="{ width: '70rem', maxWidth: '95vw' }"
             :breakpoints="{
                 '768px': '90vw',
-                '640px': '100vw'
+                '640px': '100vw',
             }"
             :pt="{
-                root: { class: 'm-0' }
+                root: { class: 'm-0' },
             }"
             class="p-fluid"
         >
@@ -698,7 +838,6 @@ onMounted(() => {
                     :globalFilterFields="['amount', 'seniority', 'date']"
                     currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} vacaciones"
                 >
-
                     <template #header>
                         <div
                             class="flex flex-wrap gap-2 items-end justify-between mb-6"
@@ -706,7 +845,10 @@ onMounted(() => {
                             <div>
                                 <h4 class="m-0">Tabla de Vacaciones</h4>
                                 <Tag
-                                    :value="'Dias Disponibles: ' + employeeVacations?.vacaciones_disponibles "
+                                    :value="
+                                        'Dias Disponibles: ' +
+                                        employeeVacations?.vacaciones_disponibles
+                                    "
                                     icon="pi pi-sun"
                                     severity="info"
                                 />
@@ -736,7 +878,11 @@ onMounted(() => {
                     >
                         <template #body="{ data }">
                             <Skeleton v-if="loading"></Skeleton>
-                            <Tag v-else :value="data.amount + ' días'" severity="success" />
+                            <Tag
+                                v-else
+                                :value="data.amount + ' días'"
+                                severity="success"
+                            />
                         </template>
                         <template #filter="{ filterModel }">
                             <InputText
@@ -781,10 +927,10 @@ onMounted(() => {
             :style="{ width: '70rem', maxWidth: '95vw' }"
             :breakpoints="{
                 '768px': '90vw',
-                '640px': '100vw'
+                '640px': '100vw',
             }"
             :pt="{
-                root: { class: 'm-0' }
+                root: { class: 'm-0' },
             }"
             class="p-fluid"
         >
@@ -818,7 +964,7 @@ onMounted(() => {
                         'declined_by',
                         'deleted_by',
                         'approved_by',
-                        'approved_at'
+                        'approved_at',
                     ]"
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                     currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} datos de Incidencias"
@@ -868,7 +1014,7 @@ onMounted(() => {
                                     { label: 'Pendiente', value: 'Pendiente' },
                                     { label: 'Aprobado', value: 'Aprobado' },
                                     { label: 'Rechazado', value: 'Rechazado' },
-                                    { label: 'Eliminado', value: 'Eliminado' }
+                                    { label: 'Eliminado', value: 'Eliminado' },
                                 ]"
                                 optionLabel="label"
                                 optionValue="value"
@@ -1023,7 +1169,11 @@ onMounted(() => {
                         }"
                     >
                         <template #body="{ data }">
-                            {{ data.declined_at ? formatDate(data.declined_at) : '' }}
+                            {{
+                                data.declined_at
+                                    ? formatDate(data.declined_at)
+                                    : ""
+                            }}
                         </template>
 
                         <template #filter="{ filterModel }">
@@ -1274,11 +1424,11 @@ onMounted(() => {
         >
             <template v-if="details">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                     <div class="flex flex-col gap-4">
-
                         <div class="rounded-xl shadow-sm border p-4">
-                            <div class="flex flex-col items-center text-center gap-3">
+                            <div
+                                class="flex flex-col items-center text-center gap-3"
+                            >
                                 <img
                                     :src="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${details?.employee_id}.jpg`"
                                     alt="Foto"
@@ -1286,7 +1436,9 @@ onMounted(() => {
                                 />
 
                                 <div class="w-full">
-                                    <h3 class="text-lg font-bold uppercase tracking-wide break-words">
+                                    <h3
+                                        class="text-lg font-bold uppercase tracking-wide break-words"
+                                    >
                                         ({{ details?.employee_id }})
                                         {{ details?.employee_name }}
                                     </h3>
@@ -1296,17 +1448,33 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-3 text-sm mt-4 pt-4 border-t border-gray-100">
+                            <div
+                                class="grid grid-cols-3 text-sm mt-4 pt-4 border-t border-gray-100"
+                            >
                                 <div class="text-center">
-                                    <p class="text-[10px] font-bold uppercase">Fecha</p>
-                                    <p class="truncate">{{ details?.horario?.Checadas?.[0]?.access_date ?? details.fecha_dia }}</p>
+                                    <p class="text-[10px] font-bold uppercase">
+                                        Fecha
+                                    </p>
+                                    <p class="truncate">
+                                        {{
+                                            details?.horario?.Checadas?.[0]
+                                                ?.access_date ??
+                                            details.fecha_dia
+                                        }}
+                                    </p>
                                 </div>
-                                <div class="text-center border-x border-gray-100">
-                                    <p class="text-[10px] font-bold uppercase">Semana</p>
+                                <div
+                                    class="text-center border-x border-gray-100"
+                                >
+                                    <p class="text-[10px] font-bold uppercase">
+                                        Semana
+                                    </p>
                                     <p>{{ details?.week_number ?? "0" }}</p>
                                 </div>
                                 <div class="text-center">
-                                    <p class="text-[10px] font-bold uppercase">Año</p>
+                                    <p class="text-[10px] font-bold uppercase">
+                                        Año
+                                    </p>
                                     <p>{{ details?.week_year ?? "2026" }}</p>
                                 </div>
                             </div>
@@ -1315,32 +1483,68 @@ onMounted(() => {
                         <div class="rounded-xl shadow-sm border p-4">
                             <div class="grid grid-cols-2 gap-y-4 text-sm">
                                 <div>
-                                    <p class="font-bold text-[10px] uppercase mb-1">Turno</p>
-                                    <p class="text-gray-800 leading-tight">{{ details?.horario?.Turno || "N/A" }}</p>
+                                    <p
+                                        class="font-bold text-[10px] uppercase mb-1"
+                                    >
+                                        Turno
+                                    </p>
+                                    <p class="text-gray-800 leading-tight">
+                                        {{ details?.horario?.Turno || "N/A" }}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p class="font-bold text-[10px] uppercase mb-1">Horario</p>
-                                    <p class="text-gray-800 leading-tight">{{ details?.horario?.Horario || "N/A" }}</p>
+                                    <p
+                                        class="font-bold text-[10px] uppercase mb-1"
+                                    >
+                                        Horario
+                                    </p>
+                                    <p class="text-gray-800 leading-tight">
+                                        {{ details?.horario?.Horario || "N/A" }}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p class="font-bold text-[10px] uppercase mb-1">Entrada</p>
-                                    <p class="text-green-600 font-bold text-base">{{ details?.horario?.Entrada || "N/A" }}</p>
+                                    <p
+                                        class="font-bold text-[10px] uppercase mb-1"
+                                    >
+                                        Entrada
+                                    </p>
+                                    <p
+                                        class="text-green-600 font-bold text-base"
+                                    >
+                                        {{ details?.horario?.Entrada || "N/A" }}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p class="font-bold text-[10px] uppercase mb-1">Salida</p>
-                                    <p class="text-red-600 font-bold text-base">{{ details.horario?.Salida || "N/A" }}</p>
+                                    <p
+                                        class="font-bold text-[10px] uppercase mb-1"
+                                    >
+                                        Salida
+                                    </p>
+                                    <p class="text-red-600 font-bold text-base">
+                                        {{ details.horario?.Salida || "N/A" }}
+                                    </p>
                                 </div>
                             </div>
                             <div class="mt-4">
-                                <Badge value="Turno diurno" severity="secondary" class="text-[10px] px-2 py-1" />
+                                <Badge
+                                    value="Turno diurno"
+                                    severity="secondary"
+                                    class="text-[10px] px-2 py-1"
+                                />
                             </div>
                         </div>
 
                         <div class="rounded-xl shadow-sm border p-4">
-                            <h4 class="font-bold text-[10px] uppercase mb-2">Incidencia</h4>
+                            <h4 class="font-bold text-[10px] uppercase mb-2">
+                                Incidencia
+                            </h4>
                             <Badge
                                 :value="details?.incidencia"
-                                :style="{ backgroundColor: details?.color || '#3b82f6', color: '#fff' }"
+                                :style="{
+                                    backgroundColor:
+                                        details?.color || '#3b82f6',
+                                    color: '#fff',
+                                }"
                                 class="mb-3 px-3 py-1 text-xs"
                             />
                             <p class="text-sm leading-relaxed break-words">
@@ -1350,33 +1554,73 @@ onMounted(() => {
                     </div>
 
                     <div class="flex flex-col h-full">
-                        <div class="rounded-xl shadow-sm border flex flex-col h-full overflow-hidden">
-
-                            <div class="px-4 py-3 border-b font-bold text-xs uppercase tracking-wider">
+                        <div
+                            class="rounded-xl shadow-sm border flex flex-col h-full overflow-hidden"
+                        >
+                            <div
+                                class="px-4 py-3 border-b font-bold text-xs uppercase tracking-wider"
+                            >
                                 Historial de checadas
                             </div>
 
-                            <div class="p-4 flex-1 overflow-y-auto max-h-[450px]">
+                            <div
+                                class="p-4 flex-1 overflow-y-auto max-h-[450px]"
+                            >
                                 <div class="space-y-5">
-                                    <div v-for="(item, index) in details?.horario?.Checadas || []" :key="index" class="flex items-start gap-3 relative">
-
+                                    <div
+                                        v-for="(item, index) in details?.horario
+                                            ?.Checadas || []"
+                                        :key="index"
+                                        class="flex items-start gap-3 relative"
+                                    >
                                         <div
-                                            v-if="index < (details?.horario?.Checadas?.length - 1)"
+                                            v-if="
+                                                index <
+                                                details?.horario?.Checadas
+                                                    ?.length -
+                                                    1
+                                            "
                                             class="absolute left-4 top-8 bottom-[-20px] w-px"
                                         ></div>
 
-                                        <div class="w-8 h-8 flex items-center justify-center rounded-full bg-purple-50 border border-purple-100 z-10 flex-shrink-0">
-                                            <i class="pi pi-clock text-purple-500 text-xs"></i>
+                                        <div
+                                            class="w-8 h-8 flex items-center justify-center rounded-full bg-purple-50 border border-purple-100 z-10 flex-shrink-0"
+                                        >
+                                            <i
+                                                class="pi pi-clock text-purple-500 text-xs"
+                                            ></i>
                                         </div>
 
-                                        <div class="flex-1 rounded-lg p-3 border border-gray-100">
-                                            <p class="text-[10px] font-bold uppercase mb-2">Registro {{ index + 1 }}</p>
-                                            <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-                                                <span class="flex items-center gap-1">
-                                                    <span class="opacity-70">📅</span> <b>{{ item?.access_date }}</b>
+                                        <div
+                                            class="flex-1 rounded-lg p-3 border border-gray-100"
+                                        >
+                                            <p
+                                                class="text-[10px] font-bold uppercase mb-2"
+                                            >
+                                                Registro {{ index + 1 }}
+                                            </p>
+                                            <div
+                                                class="flex flex-wrap gap-x-4 gap-y-2 text-sm"
+                                            >
+                                                <span
+                                                    class="flex items-center gap-1"
+                                                >
+                                                    <span class="opacity-70"
+                                                        >📅</span
+                                                    >
+                                                    <b>{{
+                                                        item?.access_date
+                                                    }}</b>
                                                 </span>
-                                                <span class="flex items-center gap-1">
-                                                    <span class="opacity-70">⏰</span> <b>{{ item?.access_time }}</b>
+                                                <span
+                                                    class="flex items-center gap-1"
+                                                >
+                                                    <span class="opacity-70"
+                                                        >⏰</span
+                                                    >
+                                                    <b>{{
+                                                        item?.access_time
+                                                    }}</b>
                                                 </span>
                                             </div>
                                         </div>
@@ -1394,7 +1638,12 @@ onMounted(() => {
                                         <template #icon>
                                             <i class="pi pi-clock mr-1"></i>
                                         </template>
-                                        <span>Horas Extra Dobles: <b>{{ details?.horas_dobles || 0 }}</b></span>
+                                        <span
+                                            >Horas Extra Dobles:
+                                            <b>{{
+                                                details?.horas_dobles || 0
+                                            }}</b></span
+                                        >
                                     </Tag>
 
                                     <Tag
@@ -1403,17 +1652,22 @@ onMounted(() => {
                                         class="flex-1 min-w-[100px] !py-2 !text-[10px] uppercase"
                                     >
                                         <template #icon>
-                                            <i class="pi pi-percentage mr-1"></i>
+                                            <i
+                                                class="pi pi-percentage mr-1"
+                                            ></i>
                                         </template>
-                                        <span>Prima Dominical: <b>{{ details?.sunday_premium || 0 }}</b></span>
+                                        <span
+                                            >Prima Dominical:
+                                            <b>{{
+                                                details?.sunday_premium || 0
+                                            }}</b></span
+                                        >
                                     </Tag>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
-
             </template>
 
             <template #footer>
@@ -1425,7 +1679,6 @@ onMounted(() => {
                 />
             </template>
         </Dialog>
-
     </AppLayout>
 </template>
 <style>
@@ -1505,8 +1758,12 @@ onMounted(() => {
 }
 
 /* Control de visibilidad */
-.text-short { display: none; }
-.text-full { display: inline; }
+.text-short {
+    display: none;
+}
+.text-full {
+    display: inline;
+}
 
 .text-full {
     display: inline-block;
@@ -1577,9 +1834,15 @@ onMounted(() => {
     color: #64748b;
 }
 
-.col-item.has-value:nth-child(1) { color: #f59e0b; }
-.col-item.has-value:nth-child(2) { color: #ef4444; }
-.col-item.has-value:nth-child(3) { color: #8b5cf6; }
+.col-item.has-value:nth-child(1) {
+    color: #f59e0b;
+}
+.col-item.has-value:nth-child(2) {
+    color: #ef4444;
+}
+.col-item.has-value:nth-child(3) {
+    color: #8b5cf6;
+}
 
 .attendance-day-cell {
     min-height: 100px;
@@ -1587,9 +1850,15 @@ onMounted(() => {
 }
 
 /* 1. PONER GRIS LIGERO (MODO CLARO) */
-.custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-datepicker-day-selected,
+.custom-calendar.p-datepicker
+    .p-datepicker-calendar
+    td
+    > span.p-datepicker-day-selected,
 .custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-highlight,
-.custom-calendar.p-datepicker .p-datepicker-calendar td > span[aria-selected="true"] {
+.custom-calendar.p-datepicker
+    .p-datepicker-calendar
+    td
+    > span[aria-selected="true"] {
     background-color: #f1f5f9 !important;
     color: #1e293b !important;
     box-shadow: none !important;
@@ -1599,8 +1868,16 @@ onMounted(() => {
 }
 
 /* 2. AJUSTE PARA MODO OSCURO */
-.dark .custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-datepicker-day-selected,
-.dark .custom-calendar.p-datepicker .p-datepicker-calendar td > span.p-highlight {
+.dark
+    .custom-calendar.p-datepicker
+    .p-datepicker-calendar
+    td
+    > span.p-datepicker-day-selected,
+.dark
+    .custom-calendar.p-datepicker
+    .p-datepicker-calendar
+    td
+    > span.p-highlight {
     background-color: rgba(255, 255, 255, 0.1) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
     color: #f8fafc !important;
@@ -1617,5 +1894,4 @@ onMounted(() => {
 .dark .custom-calendar .extra-columns-container {
     border-top-color: rgba(255, 255, 255, 0.1) !important;
 }
-
 </style>
