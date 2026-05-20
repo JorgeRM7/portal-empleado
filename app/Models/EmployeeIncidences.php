@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -216,9 +217,72 @@ class EmployeeIncidences extends Model
         return DB::select($sql);
     }
 
-    public static function getVacations($id){
-        $vacaciones = DB::selectOne("SELECT SUM(amount) AS vacaciones_disponibles FROM `employee_day_vacations` WHERE employee_id =?  AND deleted_at is null" ,[$id]);
+    public static function getVacations($id, $date){
+        $vacaciones = DB::selectOne("SELECT SUM(amount) AS vacaciones_disponibles FROM `employee_day_vacations` WHERE employee_id =? AND deleted_at is null  AND employee_day_vacations.date <= '$date' " ,[$id]);
 
         return $vacaciones;
+    }
+
+    public static function validationIncidence($incidencia_id, $employee_id, $fecha_inicio, $fecha_fin){
+        if ($incidencia_id == 19 || $incidencia_id == 20) {
+
+            $sql_validacion = "
+                SELECT COUNT(id) AS contador
+                FROM employee_incidences
+                WHERE employee_id = $employee_id
+                    AND expires_at IS NULL
+                    AND (
+                        (incidence_id IN (19, 20) AND rest_date = '$fecha_fin')
+                        OR (incidence_id NOT IN (19, 20) 
+                            AND '$fecha_fin' BETWEEN validity_from AND validity_to
+                        )
+                    ) AND deleted_by IS NULL
+            ";
+
+        } else {
+        
+            $sql_validacion = "
+                SELECT COUNT(id) AS contador 
+                FROM `employee_incidences`
+                WHERE employee_id = $employee_id
+                  AND expires_at IS NULL
+                  AND (
+                      ('$fecha_inicio' BETWEEN validity_from AND validity_to)
+                      OR ('$fecha_fin' BETWEEN validity_from AND validity_to)
+                      OR (validity_from BETWEEN '$fecha_inicio' AND '$fecha_fin')
+                      OR (validity_to BETWEEN '$fecha_inicio' AND '$fecha_fin')
+                  ) AND deleted_by IS NULL
+                  AND incidence_id != 19
+            ";
+
+        }
+
+        return DB::select($sql_validacion)[0]->contador;
+    }
+
+    public static function getSchedule($employee_id){
+        $hoy = date("Y-m-d H:i:s");
+        $semana = Carbon::now()->isoWeek;
+        $anio = Carbon::now()->isoWeekYear;
+
+        $dias_mapa = [
+            'Monday'    => 'monday_data',
+            'Tuesday'   => 'tuesday_data',
+            'Wednesday' => 'wednesday_data',
+            'Thursday'  => 'thursday_data',
+            'Friday'    => 'friday_data',
+            'Saturday'  => 'saturday_data',
+            'Sunday'    => 'sunday_data'
+        ];
+        
+        $nombre_dia_ingles = date('l', strtotime($hoy));
+        $campo_objetivo = $dias_mapa[$nombre_dia_ingles];
+
+        $sql_comp_turno = "SELECT JSON_UNQUOTE(JSON_EXTRACT($campo_objetivo, '$.Horario')) AS horario 
+                               FROM weekly_assistances 
+                               WHERE employee_id = $employee_id 
+                               AND week_number = $semana AND week_year = $anio";
+
+        return DB::select($sql_comp_turno);
     }
 }

@@ -32,6 +32,11 @@ const rawMenu = ref([
         to: "/posts",
     },
     {
+        label: "Biblioteca",
+        icon: "pi pi-video",
+        to: "/library",
+    },
+    {
         label: "Terminos y Condiciones",
         icon: "pi pi-file-check",
         to: "/term-conditions",

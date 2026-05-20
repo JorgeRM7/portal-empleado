@@ -80,8 +80,11 @@ const getImageAspectRatio = () => {
                 <!-- Post Card -->
                 <Card class="post-detail-card">
                     <!-- Header del post -->
-                    <template #title>
-                        <div class="post-header">
+                    <template #title> </template>
+
+                    <!-- Imagen/Video del post -->
+                    <template #header>
+                        <div class="post-header p-5">
                             <div class="author-info">
                                 <Avatar
                                     :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${post.user?.employee_id}.jpg`"
@@ -117,10 +120,6 @@ const getImageAspectRatio = () => {
                                 </div>
                             </div>
                         </div>
-                    </template>
-
-                    <!-- Imagen/Video del post -->
-                    <template #header>
                         <div
                             class="post-media-container"
                             :style="{

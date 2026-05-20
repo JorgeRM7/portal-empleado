@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\BranchOffice;
+use App\Models\Employee;
 use App\Models\User;
 use App\Models\UserNomina;
 use Illuminate\Support\Facades\Http;
@@ -777,7 +778,10 @@ class ComplaintsModuleController
                         'type'                 => 'ASIGNACION'
                     ]);
 
+                    $idEmployee = Auth::id();
+
                     $user = UserNomina::find($userId);
+                    $employee = Employee::find($idEmployee);
                     if ($user) {
                         $user->notify(new TicketAssignment('Ticket', $queja->id));
                     }

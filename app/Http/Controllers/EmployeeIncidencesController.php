@@ -55,7 +55,7 @@ class EmployeeIncidencesController
         $day_to_present = Carbon::parse($incidence[0]->hasta)
             ->addDay()
             ->format('d/m/Y');
-        $vacaciones = EmployeeIncidences::getVacations($incidence[0]->employee_id);
+        $vacaciones = EmployeeIncidences::getVacations($incidence[0]->employee_id, $incidence[0]->hasta);
         $final_total = $vacaciones->vacaciones_disponibles - $incidence[0]->dias;
 
         $data = [
@@ -102,9 +102,9 @@ class EmployeeIncidencesController
         $employee = Employee::select('branch_office_id')->where('id', $employee_id)->first();
         $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
         if($employee->branch_office_id != 19){
-            $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->whereNotIn('id', [12,24,25,41])->get();
+            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->whereNotIn('id', [12,24,25,41, 72])->get();
         }else{
-            $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
+            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->orWhere('id', 72)->get();
         }
         $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($employee->branch_office_id);
 
@@ -136,6 +136,7 @@ class EmployeeIncidencesController
     public function store(Request $request)
     {
         //dd($request->all());
+        $employee_id = Auth::id();
         $incidenceId = (int) $request->incidence_id;
 
         $getWeekData = function (string $date) {
@@ -209,6 +210,18 @@ class EmployeeIncidencesController
                 'days_to_register'  => 'required',
             ]);
 
+            $schedule_name = EmployeeIncidences::getSchedule($employee_id);
+
+            $vacations = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->get();
+
+            $days = 0;
+
+            if($vacations[0]->vacations === null){
+                $days = $validated['days_to_register'];
+            }else{
+                $days = (float) $validated['days_to_register'] * (float) $vacations[0]->vacations;
+            }
+
             $week = $getWeekData($validated['range'][0]);
 
             $incidence = EmployeeIncidences::create(array_merge([
@@ -218,7 +231,7 @@ class EmployeeIncidencesController
                 "validity_to"      => $validated['range'][1],
                 "branch_office_id" => $request->branch_office_id,
                 "comment"          => $validated['notes'],
-                "days"             => $validated['days_to_register'],
+                "days"             => $days,
             ], $week));
 
             Logs::create([
@@ -455,7 +468,11 @@ class EmployeeIncidencesController
     {
         $employeeData = Employee::where('id', $incidences_employee->employee_id)->first();
         $schedules = Schedules::select('id','name', 'entry_time', 'leave_time')->get();
-        $allincidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
+        if($employeeData->branch_office_id != 19){
+            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->whereNotIn('id', [12,24,25,41, 72])->get();
+        }else{
+            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->orWhere('id', 72)->get();
+        }
         return Inertia::render('Incidences/Edit', [
             'incidence' => $incidences_employee,
             'employeeData' => $employeeData,

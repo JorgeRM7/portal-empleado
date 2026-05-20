@@ -1,6 +1,6 @@
 <?php
 
-
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +18,8 @@ use App\Http\Controllers\PayrollInvoiceController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\TermConditionController;
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\LibraryController;
+
 
 use App\Http\Controllers\DeviceTokensController;
 
@@ -144,6 +146,13 @@ Route::middleware([
         ->name('posts.image');
     Route::get('/posts/{post}/show', [PostController::class, 'show'])
         ->name('posts.show');
+    
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat');
+    Route::post('/chat/ai-assistant', [ChatController::class, 'processVoiceCommand']);
+
+    Route::resource('library', LibraryController::class)->names([
+        'index' => '/library'
+    ]);
 
 });
 

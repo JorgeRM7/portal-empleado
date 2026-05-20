@@ -188,8 +188,11 @@ onMounted(() => {
                     >
                         <Card class="post-card">
                             <!-- Header del post -->
-                            <template #title>
-                                <div class="post-header">
+                            <template #title> </template>
+
+                            <!-- Imagen/Video del post -->
+                            <template #header>
+                                <div class="post-header p-5">
                                     <div class="author-info">
                                         <Avatar
                                             :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${post.user?.employee_id}.jpg`"
@@ -221,16 +224,17 @@ onMounted(() => {
                                             <div class="post-time">
                                                 {{ post.created_at }}
                                             </div>
-                                            <div class="post-title">
-                                                {{ post.title }}
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </template>
-
-                            <!-- Imagen/Video del post -->
-                            <template #header>
+                                <h1 class="post-title px-5">
+                                    {{ post.title }}
+                                </h1>
+                                <p
+                                    class="post-description mb-5 whitespace-pre-line p-5"
+                                >
+                                    {{ post.description }}
+                                </p>
                                 <div
                                     class="post-media-container"
                                     @click="expandPost(post)"
@@ -273,15 +277,9 @@ onMounted(() => {
                                 </div>
                             </template>
 
-                            <!-- Descripción -->
-                            <template #content>
-                                <p class="post-description">
-                                    {{ post.description }}
-                                </p>
-                            </template>
-
                             <!-- Footer con interacciones -->
                             <template #footer>
+                                <Divider />
                                 <div class="post-footer">
                                     <div class="likes-counter">
                                         <i class="pi pi-heart-fill"></i>
@@ -630,9 +628,11 @@ onMounted(() => {
 }
 
 .post-title {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 2px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+    line-height: 1.3;
 }
 
 /* Media container */

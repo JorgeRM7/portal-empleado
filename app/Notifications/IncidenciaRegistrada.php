@@ -66,9 +66,9 @@ class IncidenciaRegistrada extends Notification
             'branch_office_id' => $this->employee->branch_office_id,
             'employee_full_name' => $this->employee->full_name,
             'notification_type' => 'INSERT - Mi Portal RH',
-            'notification_module' => 'Incidencias',
+            'notification_module' => 'Incidencias por Empleado',
             'notification_date' => Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s'),
-            
+            'relationship_id' => $this->idIncidence
         ];
     }
 
