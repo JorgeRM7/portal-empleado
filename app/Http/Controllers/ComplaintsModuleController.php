@@ -783,12 +783,12 @@ class ComplaintsModuleController
                     $user = UserNomina::find($userId);
                     $employee = Employee::find($idEmployee);
                     if ($user) {
-                        $user->notify(new TicketAssignment('Ticket', $queja->id));
+                        $user->notify(new TicketAssignment('Tickets', $queja->id));
                     }
                 }
 
                 // 🔹 CONSTRUIR RESPUESTA CON FEEDBACK
-                $message = 'Ticket registrada correctamente';
+                $message = 'Ticket registrado correctamente';
                 $warnings = [];
 
                 // Feedback sobre edición de texto
