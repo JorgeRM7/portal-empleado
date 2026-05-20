@@ -26,6 +26,8 @@ class CustomDatabaseChannel
             'type_notification' => $data['notification_type'] ?? null,
             'module'            => $data['notification_module'] ?? null,
             'notification_date' => $data['notification_date'] ?? null,
+            'title'             => $data['titulo'] ?? null,
+            'relationship_id'   => $data['relationship_id'] ?? null
         ]);
     }
 }

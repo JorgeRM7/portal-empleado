@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -257,5 +258,31 @@ class EmployeeIncidences extends Model
         }
 
         return DB::select($sql_validacion)[0]->contador;
+    }
+
+    public static function getSchedule($employee_id){
+        $hoy = date("Y-m-d H:i:s");
+        $semana = Carbon::now()->isoWeek;
+        $anio = Carbon::now()->isoWeekYear;
+
+        $dias_mapa = [
+            'Monday'    => 'monday_data',
+            'Tuesday'   => 'tuesday_data',
+            'Wednesday' => 'wednesday_data',
+            'Thursday'  => 'thursday_data',
+            'Friday'    => 'friday_data',
+            'Saturday'  => 'saturday_data',
+            'Sunday'    => 'sunday_data'
+        ];
+        
+        $nombre_dia_ingles = date('l', strtotime($hoy));
+        $campo_objetivo = $dias_mapa[$nombre_dia_ingles];
+
+        $sql_comp_turno = "SELECT JSON_UNQUOTE(JSON_EXTRACT($campo_objetivo, '$.Horario')) AS horario 
+                               FROM weekly_assistances 
+                               WHERE employee_id = $employee_id 
+                               AND week_number = $semana AND week_year = $anio";
+
+        return DB::select($sql_comp_turno);
     }
 }

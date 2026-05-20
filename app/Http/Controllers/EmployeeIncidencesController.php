@@ -136,6 +136,7 @@ class EmployeeIncidencesController
     public function store(Request $request)
     {
         //dd($request->all());
+        $employee_id = Auth::id();
         $incidenceId = (int) $request->incidence_id;
 
         $getWeekData = function (string $date) {
@@ -209,6 +210,18 @@ class EmployeeIncidencesController
                 'days_to_register'  => 'required',
             ]);
 
+            $schedule_name = EmployeeIncidences::getSchedule($employee_id);
+
+            $vacations = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->get();
+
+            $days = 0;
+
+            if($vacations[0]->vacations === null){
+                $days = $validated['days_to_register'];
+            }else{
+                $days = (float) $validated['days_to_register'] * (float) $vacations[0]->vacations;
+            }
+
             $week = $getWeekData($validated['range'][0]);
 
             $incidence = EmployeeIncidences::create(array_merge([
@@ -218,7 +231,7 @@ class EmployeeIncidencesController
                 "validity_to"      => $validated['range'][1],
                 "branch_office_id" => $request->branch_office_id,
                 "comment"          => $validated['notes'],
-                "days"             => $validated['days_to_register'],
+                "days"             => $days,
             ], $week));
 
             Logs::create([
