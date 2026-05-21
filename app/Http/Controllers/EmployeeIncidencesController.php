@@ -310,7 +310,7 @@ class EmployeeIncidencesController
             return redirect()->route('/incidences-employee');
         }
 
-        $documentIncidences = [53,10,8,22,56,5,4,7,6,49,29,14,15,13];
+        $documentIncidences = [10,8,22,5,4,7,6,49,29,14,15,13];
 
         if (in_array($incidenceId, $documentIncidences, true)) {
             $validated = $request->validate([
@@ -350,6 +350,89 @@ class EmployeeIncidencesController
                     "days"             => $validated['days_to_register'],
                 ], $week));
 
+                $employee = Employee::find($request->employee_id);
+                $parentIds = $employee->employee_parent_id 
+                    ? explode(',', $employee->employee_parent_id) 
+                    : [];
+                $parentIds = array_map('trim', $parentIds);
+
+                foreach($parentIds as $parentId){
+                    $parent = Employee::find($parentId)->user_id;
+                    $user = UserNomina::find($parent);
+                    if($user != null){
+                        $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id, $employee));
+                    }
+                }
+
+                Logs::create([
+                    'action' => 'INSERT',
+                    'user_id' => 'empleado-'.Auth::id(),
+                    'table_name' => 'employee_incidences',
+                    'date' => Carbon::now(),
+                    'relationship_id' => $incidence->id
+                ]);
+
+            } catch (\Throwable $e) {
+                Log::error('SFTP failure', [
+                    'message' => $e->getMessage(),
+                    'root'    => config('filesystems.disks.remote_sftp.root'),
+                    'host'    => config('filesystems.disks.remote_sftp.host'),
+                ]);
+                throw $e;
+            }
+
+            
+
+            return redirect()->route('/incidences-employee');
+        }
+
+        $documentIncidencesNoNumber = [53,56];
+
+        if (in_array($incidenceId, $documentIncidencesNoNumber, true)) {
+
+            $validated = $request->validate([
+                'employee_id'       => 'required',
+                'incidence_id'      => 'required',
+                'document'          => 'required',
+                'branch_office_id'  => 'required',
+                'notes'             => 'nullable',
+                'range'             => 'required',
+                'days_to_register'  => 'required',
+            ]);
+
+            try {
+                $disk = Storage::disk('remote_sftp');
+
+                $dir = 'incidences/' . date('Y/m');
+                $disk->makeDirectory($dir);
+
+                $file = $request->file('document');
+                $filename = uniqid('inc_', true).'.'.$file->getClientOriginalExtension();
+                $remotePath = $dir.'/'.$filename;
+
+                $disk->put($remotePath, file_get_contents($file->getRealPath()));
+
+                $week = $getWeekData($validated['range'][0]);
+
+                $incidence = EmployeeIncidences::create(array_merge([
+                    "employee_id"       => $validated['employee_id'],
+                    "incidence_id"      => $validated['incidence_id'],
+                    "validity_from"     => $validated['range'][0],
+                    "validity_to"       => $validated['range'][1],
+                    "branch_office_id"  => $request->branch_office_id,
+                    "comment"           => $validated['notes'],
+                    "file_path"         => $remotePath,
+                    "document_number"   => 'NA',
+                    "days"             => $validated['days_to_register'],
+                ], $week));
+
+                Logs::create([
+                    'action' => 'INSERT',
+                    'user_id' => Auth::id(),
+                    'table_name' => 'employee_incidences',
+                    'date' => Carbon::now(),
+                    'relationship_id' => $incidence->id
+                ]);
                 $employee = Employee::find($request->employee_id);
                 $parentIds = $employee->employee_parent_id 
                     ? explode(',', $employee->employee_parent_id) 

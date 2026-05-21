@@ -239,9 +239,7 @@ const canSave = computed(() => {
         return hasRange && form.value.days_available != null;
     }
     if (ui === "DOC") {
-        return (
-            hasRange && !!form.value.document && !!form.value.document_number
-        );
+        return hasRange && !!form.value.document;
     }
     return hasRange; // DEFAULT
 });
@@ -345,6 +343,8 @@ const revisarIncidencias = async (params = {}) => {
         });
 };
 
+const errors = ref({});
+
 function saveIncidence() {
     form.value.days_to_register = daysEditable.value;
     if (form.value.incidence_id === 23) {
@@ -391,9 +391,10 @@ function saveIncidence() {
                 await revisarIncidencias();
             }
         },
-        onError: () => {
+        onError: (e) => {
             sending.value = false;
             showError();
+            errors.value = e;
         },
     });
 }
@@ -1073,6 +1074,12 @@ watch(employeeId, () => {
                                         v-model="form.document_number"
                                         class="w-full"
                                     />
+                                    <span
+                                        class="text-red-500 text-sm"
+                                        v-if="errors.document_number"
+                                    >
+                                        El folio es requerido</span
+                                    >
                                 </div>
                             </div>
 
