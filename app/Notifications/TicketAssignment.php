@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notification;
 class TicketAssignment extends Notification
 {
     use Queueable;
-    
+
 
     /**
      * Create a new notification instance.
@@ -59,7 +59,7 @@ class TicketAssignment extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'titulo'    => "Nueva Ticket Asignado",
+            'titulo'    => "Nuevo Ticket Asignado",
             'descripcion'   => "Se te ha asignado el ticket con ID \"{$this->registroId}\"",
             'modulo'    => $this->modulo,
             'registroId'=> $this->registroId,
@@ -73,8 +73,8 @@ class TicketAssignment extends Notification
             'relationship_id' => $this->registroId
 
         ];
-            
+
     }
 
-    
+
 }
