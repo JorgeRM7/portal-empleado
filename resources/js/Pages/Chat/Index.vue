@@ -19,6 +19,7 @@ const fileName = ref("");
 const fileInput = ref(null);
 
 const showFileDialog = ref(false);
+const showPendingFileNotice = ref(false);
 
 const showDisclaimer = ref(true);
 
@@ -158,6 +159,7 @@ const sendToBackend = async () => {
             });
             transcript.value = "";
             showFileDialog.value = true;
+            showPendingFileNotice.value = true;
             await nextTick();
             isProcessing.value = false;
             return;
@@ -227,6 +229,7 @@ const submitFileAndData = async () => {
         selectedFile.value = null;
         fileName.value = "";
         showFileDialog.value = false;
+        showPendingFileNotice.value = false;
 
         conversationHistory.value.push({
             role: "assistant",
@@ -262,12 +265,22 @@ const clearConversation = () => {
         selectedFile.value = null;
         fileName.value = "";
         showFileDialog.value = false;
+        showPendingFileNotice.value = false;
         toast.add({
             severity: "info",
             summary: "Conversación limpiada",
             life: 2000,
         });
     }
+};
+
+const reopenFileDialog = () => {
+    showFileDialog.value = true;
+};
+
+const closeFileDialogTemporarily = () => {
+    showFileDialog.value = false;
+    // requireFile sigue siendo true, permitiendo reabrir el modal
 };
 </script>
 
@@ -422,6 +435,29 @@ const clearConversation = () => {
                             size="large"
                         />
                     </div>
+
+                    <!-- Aviso de archivo pendiente -->
+                    <Transition name="slide-fade">
+                        <div
+                            v-if="showPendingFileNotice && requireFile"
+                            class="flex items-center justify-between gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg"
+                        >
+                            <div class="flex items-center gap-2">
+                                <i class="pi pi-info-circle text-blue-600"></i>
+                                <span class="text-sm text-blue-700">
+                                    Archivo pendiente por subir
+                                </span>
+                            </div>
+                            <Button
+                                icon="pi pi-upload"
+                                label="Subir archivo"
+                                severity="info"
+                                text
+                                size="small"
+                                @click="reopenFileDialog"
+                            />
+                        </div>
+                    </Transition>
                 </div>
             </div>
         </div>
@@ -432,6 +468,7 @@ const clearConversation = () => {
             header="Adjuntar documento"
             :modal="true"
             :style="{ width: '90vw', maxWidth: '500px' }"
+            @hide="closeFileDialogTemporarily"
             :pt="{
                 root: {
                     class: 'rounded-xl shadow-lg border border-gray-200',
@@ -494,7 +531,7 @@ const clearConversation = () => {
                     <Button
                         label="Cancelar"
                         severity="secondary"
-                        @click="showFileDialog = false"
+                        @click="closeFileDialogTemporarily"
                         class="flex-1"
                     />
                     <Button
