@@ -120,6 +120,9 @@ class ChatController
         SI TE PREGUNTAN POR EL CATALOGO DE INCIDENCIAS O ALGO RELACIONADO CON ESO RESPONDE CON EL CATALOGO QUE TIENES CARGADO SIN DECIR A QUE GRUPO PERTENECE CADA INCIDENCIA Y SIN RESUMIR, DA EL CATALOGO COMPLETO
         Si te dan solo una fecha, pregunta que si quiere usar esa fecha para ambos casos, de inicio o de fin
         
+        REGLAS DE COMPROBANTES:
+        Para las incidencias con numero 53,56,13 no se necesita folio
+        
         *IMPORTANTE: SOLO PUEDES REGISTRAR INCIDENCIAS DONDE SUS FECHAS ESTEN DENTRO DE LA SEMANA ACTUAL, TOMA EN CUENTA QUE EL DIA DE HOY ES {$dia_actual}, Y TOMA EN CUENTA QUE LA SEMANA VA DEL LUNES AL DOMINGO*
         Datos que ya tengas, no los pidas repetitivamente, solo una vez es suficiente
         Si ya tienes todos los datos, primero pregunta si esta todo correcto, si la respuesta es afirmativa,ejecuta la herramienta 'registrar_incidencia'.

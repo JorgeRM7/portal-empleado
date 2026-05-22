@@ -437,7 +437,7 @@ const clearConversation = () => {
                     class: 'rounded-xl shadow-lg border border-gray-200',
                 },
                 header: {
-                    class: 'bg-white border-b border-gray-100 p-5',
+                    class: 'border-b border-gray-100 p-5',
                 },
                 content: {
                     class: 'p-5 space-y-5',
@@ -473,7 +473,7 @@ const clearConversation = () => {
                 <Transition name="scale">
                     <div
                         v-if="fileName"
-                        class="flex items-center gap-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200"
+                        class="flex items-center gap-3 p-4 rounded-lg border border-emerald-200"
                     >
                         <i class="pi pi-check-circle text-emerald-600"></i>
                         <div class="flex-1 min-w-0">
