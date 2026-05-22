@@ -129,6 +129,7 @@ const handleFileChange = (event) => {
 const sendToBackend = async () => {
     if (isProcessing.value || !transcript.value.trim()) return;
     isProcessing.value = true;
+    recognition.stop();
 
     conversationHistory.value.push({ role: "user", content: transcript.value });
 
