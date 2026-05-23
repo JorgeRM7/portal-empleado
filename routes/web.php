@@ -20,6 +20,7 @@ use App\Http\Controllers\TermConditionController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\LibraryController;
 
+use App\Http\Controllers\NotificationController;
 
 use App\Http\Controllers\DeviceTokensController;
 
@@ -146,13 +147,22 @@ Route::middleware([
         ->name('posts.image');
     Route::get('/posts/{post}/show', [PostController::class, 'show'])
         ->name('posts.show');
-    
+
     Route::get('/chat', [ChatController::class, 'index'])->name('chat');
     Route::post('/chat/ai-assistant', [ChatController::class, 'processVoiceCommand']);
 
     Route::resource('library', LibraryController::class)->names([
         'index' => '/library'
     ]);
+
+    //Notificaciones
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::get('/notifications-page', [NotificationController::class, 'notificationsPage']);
+    Route::post('/notifications-page', [NotificationController::class, 'notificationsPage']);
+    Route::post('/notifications/update-status', [NotificationController::class, 'update'])
+    ->name('notifications.updateStatus');
 
 });
 

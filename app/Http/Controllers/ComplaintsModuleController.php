@@ -829,7 +829,11 @@ class ComplaintsModuleController
      */
     public function show(string $id)
     {
-        //
+        $ticket = EmployeeComplains::findOrFail($id);
+
+        return Inertia::render('ComplaintsModule/Show', [
+            'ticket' => $ticket
+        ]);
     }
 
     /**
