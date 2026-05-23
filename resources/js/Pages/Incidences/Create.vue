@@ -35,6 +35,76 @@ const incidences = computed(
 
 const loading = ref(false);
 
+const attendanceData = ref(null);
+const horasTxt = ref(0);
+
+const calculateOvertime = () => {
+    if (!attendanceData.value) return;
+
+    const { entradaTeorica, salidaTeorica, entradaReal, salidaReal } =
+        attendanceData.value;
+
+    const shiftStart = parseTime(entradaTeorica);
+    const shiftEnd = parseTime(salidaTeorica);
+    const actualIn = parseTime(entradaReal);
+    const actualOut = parseTime(salidaReal);
+
+    if (!shiftStart || !shiftEnd || !actualIn || !actualOut) return;
+
+    if (shiftEnd < shiftStart) shiftEnd.setDate(shiftEnd.getDate() + 1);
+    if (actualOut < actualIn) actualOut.setDate(actualOut.getDate() + 1);
+
+    let minutesBefore = (shiftStart - actualIn) / (1000 * 60);
+    let minutesAfter = (actualOut - shiftEnd) / (1000 * 60);
+
+    const TOLERANCE = 10;
+    const validMinutesBefore = minutesBefore > TOLERANCE ? minutesBefore : 0;
+    const validMinutesAfter = minutesAfter > TOLERANCE ? minutesAfter : 0;
+
+    let calculatedMoment = null;
+    let totalMinutes = 0;
+
+    if (validMinutesBefore > 0 && validMinutesAfter > 0) {
+        calculatedMoment = "both";
+        totalMinutes = validMinutesBefore + validMinutesAfter;
+    } else if (validMinutesBefore > 0) {
+        calculatedMoment = "before";
+        totalMinutes = validMinutesBefore;
+    } else if (validMinutesAfter > 0) {
+        calculatedMoment = "after";
+        totalMinutes = validMinutesAfter;
+    }
+
+    const totalHours = Math.round((totalMinutes / 60) * 2) / 2;
+
+    horasTxt.value = totalHours;
+};
+
+const fetchAttendanceInfo = async () => {
+    console.log("buscando");
+    if (form.value.singleDate) {
+        const dateStr = formatDate(form.value.singleDate);
+        form.date = dateStr;
+
+        const response = await axios.get(`/api/get-attendance?date=${dateStr}`);
+
+        const res = response.data;
+        console.log(res);
+
+        attendanceData.value = response.data.employeeData[0];
+        noData.value = response.data.employeeData.length === 0;
+
+        if (!noData.value) {
+            calculateOvertime();
+        }
+    } else {
+        attendanceData.value = null;
+        noData.value = false;
+    }
+
+    loading.value = false;
+};
+
 function atMidnight(d) {
     const x = new Date(d);
     x.setHours(0, 0, 0, 0);
@@ -160,6 +230,13 @@ const description = ref("");
 watch(daysCalculated, (newVal) => {
     daysEditable.value = newVal;
 });
+
+const formatDate = (date) => {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`;
+};
 
 const incidenceUI = computed(() => {
     const id = Number(form.value.incidence_id);
@@ -478,6 +555,14 @@ function findNextBusyDate(fromDate) {
     return null;
 }
 
+// watch(
+//     () => form.value.singleDate,
+//     (newVal) => {
+//         if (newVal) {
+//             fetchAttendanceInfo();
+//         }
+//     },
+// );
 watch(
     () => form.value.range?.[0],
     (start) => {

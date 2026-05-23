@@ -115,6 +115,15 @@ class EmployeeIncidencesController
         ]);
     }
 
+    public function getAssistanceData(Request $request){
+        $employee_id = Auth::id();
+        $employeeData = EmployeeIncidences::search_employee_data($request->date, $employee_id);
+
+        return [
+            'employeeData' => $employeeData
+        ];
+    }
+
     /**
      * Show the form for creating a new resource.
      */
