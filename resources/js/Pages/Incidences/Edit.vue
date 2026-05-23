@@ -738,8 +738,9 @@ watch(
                                     form.available_txt_hours <= 0 &&
                                     form.incidence_id == 23
                                 "
-                                >No hay horas TXT disponibles, por favor carga
-                                horas TXT a este empleado</Message
+                                >No tienes horas TXT disponibles, te
+                                recomendamos pedir que te carguen mas
+                                horas</Message
                             >
                             <!-- Horario -->
                             <div
@@ -757,10 +758,6 @@ watch(
                                     class="w-full"
                                     placeholder="Selecciona un horario"
                                     @update:modelValue="updateShiftHours"
-                                    :disabled="
-                                        form.available_txt_hours <= 0 &&
-                                        form.incidence_id == 23
-                                    "
                                 />
                             </div>
 
@@ -838,10 +835,6 @@ watch(
                                         :disabledDates="disabledDates"
                                         :minDate="allowedFromDate"
                                         :maxDate="maxRangeDate"
-                                        :disabled="
-                                            form.available_txt_hours <= 0 &&
-                                            form.incidence_id == 23
-                                        "
                                     />
 
                                     <small class="text-gray-500">
@@ -932,10 +925,6 @@ watch(
                                         class="w-full"
                                         :min="0"
                                         placeholder="0"
-                                        :disabled="
-                                            form.available_txt_hours <= 0 &&
-                                            form.incidence_id == 23
-                                        "
                                     />
                                 </div>
 

@@ -239,9 +239,7 @@ const canSave = computed(() => {
         return hasRange && form.value.days_available != null;
     }
     if (ui === "DOC") {
-        return (
-            hasRange && !!form.value.document && !!form.value.document_number
-        );
+        return hasRange && !!form.value.document;
     }
     return hasRange; // DEFAULT
 });
@@ -345,6 +343,8 @@ const revisarIncidencias = async (params = {}) => {
         });
 };
 
+const errors = ref({});
+
 function saveIncidence() {
     form.value.days_to_register = daysEditable.value;
     if (form.value.incidence_id === 23) {
@@ -391,9 +391,10 @@ function saveIncidence() {
                 await revisarIncidencias();
             }
         },
-        onError: () => {
+        onError: (e) => {
             sending.value = false;
             showError();
+            errors.value = e;
         },
     });
 }
@@ -779,8 +780,9 @@ watch(employeeId, () => {
                                     form.available_txt_hours <= 0 &&
                                     form.incidence_id == 23
                                 "
-                                >No hay horas TXT disponibles, por favor carga
-                                horas TXT a este empleado</Message
+                                >No tienes horas TXT disponibles, te
+                                recomendamos pedir que te carguen mas
+                                horas</Message
                             >
                             <!-- Horario -->
                             <div
@@ -801,10 +803,6 @@ watch(employeeId, () => {
                                     class="w-full"
                                     placeholder="Selecciona un horario"
                                     @update:modelValue="updateShiftHours"
-                                    :disabled="
-                                        form.available_txt_hours <= 0 &&
-                                        form.incidence_id == 23
-                                    "
                                 />
                             </div>
 
@@ -883,10 +881,6 @@ watch(employeeId, () => {
                                         :disabledDates="disabledDates"
                                         :minDate="allowedFromDate"
                                         :maxDate="maxRangeDate"
-                                        :disabled="
-                                            form.available_txt_hours <= 0 &&
-                                            form.incidence_id == 23
-                                        "
                                     />
 
                                     <small class="text-gray-500">
@@ -977,12 +971,7 @@ watch(employeeId, () => {
                                         v-model="form.txt_hours_to_register"
                                         class="w-full"
                                         :min="0"
-                                        :max="form.available_txt_hours"
                                         placeholder="0"
-                                        :disabled="
-                                            form.available_txt_hours <= 0 &&
-                                            form.incidence_id == 23
-                                        "
                                     />
                                 </div>
 
@@ -1073,6 +1062,12 @@ watch(employeeId, () => {
                                         v-model="form.document_number"
                                         class="w-full"
                                     />
+                                    <span
+                                        class="text-red-500 text-sm"
+                                        v-if="errors.document_number"
+                                    >
+                                        El folio es requerido</span
+                                    >
                                 </div>
                             </div>
 
