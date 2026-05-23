@@ -17,7 +17,11 @@ const branchOfficesCopy = ref([]);
 const { toggleMenu, toggleDarkMode, isDarkTheme, readTheme } = useLayout();
 const value = ref("");
 
-// ... (resto de tus composables y refs) ...
+const resolvedNotifications = computed(() => {
+    return unread.value.filter(
+        (n) => n.data?.notification_type === "RESOLVED"
+    );
+});
 
 const toggle = (event) => {
     op.value.toggle(event);
@@ -102,7 +106,20 @@ const toggleNotifications = (event) => {
     opNotifications.value.toggle(event);
 };
 
-onMounted(async () => {});
+function openNotification(notification) {
+    markAsRead(notification.id);
+    const data = notification.data;
+    if (!data.complain_id) return;
+    router.get(`/complaints/${data.complain_id}`);
+}
+
+watch(unread, (value) => {
+    console.log('NOTIFICACIONES:', value);
+}, { deep: true });
+
+onMounted(async () => {
+    await fetchNotifications();
+});
 </script>
 
 <template>
@@ -173,38 +190,197 @@ onMounted(async () => {});
                 ></Button>
             </Popover>
 
-            <Button
-                type="button"
-                text
-                :severity="unreadCount > 0 ? 'warn' : 'secondary'"
-                :class="bellAnimClass"
-                @click="toggleNotifications"
-            >
-                <i
-                    class="pi pi-bell"
-                    style="font-size: 1.2rem; line-height: 1"
-                ></i>
-            </Button>
+            <div class="relative">
+                <Button
+                    type="button"
+                    text
+                    :severity="unreadCount > 0 ? 'warn' : 'secondary'"
+                    :class="bellAnimClass"
+                    @click="toggleNotifications"
+                >
+                    <i
+                        class="pi pi-bell"
+                        style="font-size: 1.2rem; line-height: 1"
+                    ></i>
+                </Button>
+
+                <span
+                    v-if="unreadCount > 0"
+                    class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-5 h-5 flex items-center justify-center px-1"
+                >
+                    {{ unreadCount }}
+                </span>
+            </div>
 
             <Popover ref="opNotifications">
+            <div
+                class="w-[390px] overflow-hidden rounded-[24px] border border-slate-200 shadow-[0_20px_50px_rgba(15,23,42,0.15)]"
+            >
+                <!-- Header -->
+                <div
+                    class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500 text-white shadow"
+                        >
+                            <i class="pi pi-bell text-base"></i>
+                        </div>
+
+                        <div>
+                            <h3 class="text-sm font-extrabold">
+                                Notificaciones
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">
+                                {{ unread.length }} pendientes
+                            </p>
+                        </div>
+                    </div>
+
+                    <Button
+                        v-if="unread.length > 0"
+                        text
+                        size="small"
+                        label="Marcar todas como leídas"
+                        class="!text-blue-500 hover:!text-blue-600"
+                        :class="loading && 'opacity-40 pointer-events-none'"
+                        :disabled="loading"
+                        @click="markAllAsRead"
+                    />
+                </div>
+
+                <!-- Body -->
+                <div class="max-h-[380px] overflow-y-auto">
+
+                    <!-- Loading -->
+                    <div v-if="loading" class="p-4 space-y-3">
+                        <div
+                            v-for="n in 4"
+                            :key="n"
+                            class="rounded-2xl border border-slate-200 p-4"
+                        >
+                            <Skeleton height="1rem" class="mb-2" />
+                            <Skeleton height=".8rem" width="70%" />
+                        </div>
+                    </div>
+
+                    <!-- Lista -->
+                    <div
+                        v-else-if="unread.length > 0"
+                        class="p-3 space-y-3"
+                    >
+                        <div
+                            v-for="notification in unread"
+                            :key="notification.id"
+                            class="group rounded-[20px] border border-slate-200 p-4 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 cursor-pointer"
+                            @click="openNotification(notification)"
+                            v-tooltip.top="'Abrir notificación'"
+                        >
+                            <div class="flex items-start gap-3">
+
+                                <!-- Icon -->
+                                <div
+                                    class="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-[0_10px_25px_rgba(59,130,246,0.25)]"
+                                >
+                                    <i class="pi pi-bell text-sm"></i>
+                                </div>
+
+                                <!-- Content -->
+                                <div class="min-w-0 flex-1">
+
+                                    <div class="flex items-start justify-between gap-2">
+
+                                        <div>
+                                            <div class="font-bold">
+                                                {{ notification.data.titulo }}
+                                            </div>
+
+                                            <div class="text-sm text-gray-500">
+                                                {{ notification.data.descripcion }}
+                                            </div>
+                                        </div>
+
+                                        <span
+                                            class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                                            :class="
+                                                notification.status
+                                                    ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300'
+                                                    : 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
+                                            "
+                                        >
+                                            Nueva
+                                        </span>
+
+                                    </div>
+
+                                    <!-- Module -->
+                                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                                        <span
+                                            class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-500/15 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300"
+                                        >
+                                            <i class="pi pi-folder mr-1 text-[10px]" />
+                                            {{
+                                                notification.data.notification_module ||
+                                                "Sin módulo"
+                                            }}
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty -->
+                    <div
+                        v-else
+                        class="flex flex-col items-center justify-center px-6 py-10 text-center"
+                    >
+                        <div
+                            class="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
+                        >
+                            <i class="pi pi-inbox text-2xl"></i>
+                        </div>
+
+                        <h4 class="text-sm font-extrabold dark:text-slate-100">
+                            No tienes notificaciones nuevas
+                        </h4>
+
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-[220px]">
+                            Cuando tengas actividad pendiente, aparecerá aquí.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </Popover>
+
+            <!-- <Popover ref="opNotifications">
                 <div class="flex flex-col gap-4 w-96 max-h-64 overflow-y-auto">
                     <div>
                         <ul class="list-none p-0 m-0 flex flex-col">
                             <li
-                                v-for="notification in unread"
+                                v-for="notification in resolvedNotifications"
                                 :key="notification.id"
                                 class="p-3 border-b border-gray-200 cursor-pointer"
-                                @click="markAsRead(notification.id)"
+                                @click="openNotification(notification)"
                             >
                                 <Skeleton v-if="loading"></Skeleton>
                                 <div v-else>
                                     <div class="font-medium">
-                                        {{ notification.data.mensaje }}
+                                        {{ notification.data.titulo }}
                                     </div>
+
                                     <div
                                         class="text-sm text-gray-600 dark:text-gray-400"
                                     >
-                                        {{ notification.data.modulo }}
+                                        {{ notification.data.descripcion }}
+                                    </div>
+
+                                    <div
+                                        class="text-xs text-blue-500 mt-1"
+                                    >
+                                        {{ notification.data.notification_module }}
                                     </div>
                                 </div>
                             </li>
@@ -229,7 +405,7 @@ onMounted(async () => {});
                         </ul>
                     </div>
                 </div>
-            </Popover>
+            </Popover> -->
 
             <div class="layout-topbar-menu hidden lg:block">
                 <div class="layout-topbar-menu-content">
