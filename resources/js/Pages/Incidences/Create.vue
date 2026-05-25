@@ -41,6 +41,8 @@ const horasTxt = ref(0);
 const calculateOvertime = () => {
     if (!attendanceData.value) return;
 
+    console.log("calculando horas");
+
     const { entradaTeorica, salidaTeorica, entradaReal, salidaReal } =
         attendanceData.value;
 
@@ -49,6 +51,7 @@ const calculateOvertime = () => {
     const actualIn = parseTime(entradaReal);
     const actualOut = parseTime(salidaReal);
 
+    console.log("calculando tiempos");
     if (!shiftStart || !shiftEnd || !actualIn || !actualOut) return;
 
     if (shiftEnd < shiftStart) shiftEnd.setDate(shiftEnd.getDate() + 1);
@@ -77,7 +80,9 @@ const calculateOvertime = () => {
 
     const totalHours = Math.round((totalMinutes / 60) * 2) / 2;
 
-    horasTxt.value = totalHours;
+    console.log(totalHours);
+
+    form.value.txt_hours_to_register = totalHours;
 };
 
 const fetchAttendanceInfo = async () => {
@@ -86,15 +91,15 @@ const fetchAttendanceInfo = async () => {
         const dateStr = formatDate(form.value.singleDate);
         form.date = dateStr;
 
-        const response = await axios.get(`/api/get-attendance?date=${dateStr}`);
+        const response = await axios.get(`/get-attendance?date=${dateStr}`);
 
         const res = response.data;
         console.log(res);
 
         attendanceData.value = response.data.employeeData[0];
-        noData.value = response.data.employeeData.length === 0;
+        let noData = response.data.employeeData.length === 0;
 
-        if (!noData.value) {
+        if (!noData) {
             calculateOvertime();
         }
     } else {
@@ -236,6 +241,14 @@ const formatDate = (date) => {
     const day = date.getDate();
     const year = date.getFullYear();
     return `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`;
+};
+
+const parseTime = (timeStr) => {
+    if (!timeStr) return null;
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
 };
 
 const incidenceUI = computed(() => {
@@ -555,14 +568,14 @@ function findNextBusyDate(fromDate) {
     return null;
 }
 
-// watch(
-//     () => form.value.singleDate,
-//     (newVal) => {
-//         if (newVal) {
-//             fetchAttendanceInfo();
-//         }
-//     },
-// );
+watch(
+    () => form.value.singleDate,
+    (newVal) => {
+        if (newVal) {
+            fetchAttendanceInfo();
+        }
+    },
+);
 watch(
     () => form.value.range?.[0],
     (start) => {
@@ -1058,6 +1071,10 @@ watch(employeeId, () => {
                                         :min="0"
                                         placeholder="0"
                                     />
+                                    <span class="text-xs text-gray-500"
+                                        >Estas horas se calculan automaticamente
+                                        con tus checadas</span
+                                    >
                                 </div>
 
                                 <!-- Fecha adelanto -->

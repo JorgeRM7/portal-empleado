@@ -89,6 +89,7 @@ Route::middleware([
             ->name('incidences.pdf');
     Route::get('incidences/{id_incidence}/txt', [EmployeeIncidencesController::class, 'createReport'])
             ->name('incidences.txt');
+    Route::get('get-attendance', [EmployeeIncidencesController::class, 'getAssistanceData']);
 
     Route::prefix('payroll')->group(function () {
 
