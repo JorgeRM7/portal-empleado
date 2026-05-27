@@ -221,14 +221,12 @@ class EmployeeIncidencesController
 
             $schedule_name = EmployeeIncidences::getSchedule($employee_id);
 
-            $vacations = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->get();
+            $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
 
-            $days = 0;
+            $days = (float) $validated['days_to_register'];
 
-            if($vacations[0]->vacations === null){
-                $days = $validated['days_to_register'];
-            }else{
-                $days = (float) $validated['days_to_register'] * (float) $vacations[0]->vacations;
+            if ($vacation && $vacation->vacations !== null) {
+                $days *= (float) $vacation->vacations;
             }
 
             $week = $getWeekData($validated['range'][0]);
