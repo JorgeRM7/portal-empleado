@@ -132,15 +132,15 @@ class EmployeeIncidencesController
         $employeeId = Auth::id();
         $employee = Employee::select('branch_office_id')->where('id', $employeeId)->first();
 
-        $schedule_name = EmployeeIncidences::getSchedule($employeeId);
+        // $schedule_name = EmployeeIncidences::getSchedule($employeeId);
 
-        $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
+        // $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
 
         $days = 1;
 
-        if ($vacation && $vacation->vacations !== null) {
-            $days *= (float) $vacation->vacations;
-        }
+        // if ($vacation && $vacation->vacations !== null) {
+        //     $days *= (float) $vacation->vacations;
+        // }
 
         
         return Inertia::render('Incidences/Create', [
@@ -575,15 +575,15 @@ class EmployeeIncidencesController
             $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->orWhere('id', 72)->get();
         }
 
-        $schedule_name = EmployeeIncidences::getSchedule($incidences_employee->employee_id);
+        // $schedule_name = EmployeeIncidences::getSchedule($incidences_employee->employee_id);
 
-        $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
+        // $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
 
         $days = 1;
 
-        if ($vacation && $vacation->vacations !== null) {
-            $days *= (float) $vacation->vacations;
-        }
+        // if ($vacation && $vacation->vacations !== null) {
+        //     $days *= (float) $vacation->vacations;
+        // }
         return Inertia::render('Incidences/Edit', [
             'incidence' => $incidences_employee,
             'employeeData' => $employeeData,
