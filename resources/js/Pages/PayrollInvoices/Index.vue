@@ -198,11 +198,11 @@ const getData = async () => {
 const getDocument = (urlPath, invoiceId) => {
     // console.log(invoiceId);
     if (urlPath.includes("invoices")) {
-        window.open(`payroll-invoices/invoice-d/${invoiceId}`, "_blank");
+        window.location.href = `payroll-invoices/invoice-d/${invoiceId}`;
         return;
     }
 
-    window.open(`payroll-invoices/invoice-h/${invoiceId}`, "_blank");
+    window.location.href = `payroll-invoices/invoice-h/${invoiceId}`;
 };
 
 const sendMail = () => {

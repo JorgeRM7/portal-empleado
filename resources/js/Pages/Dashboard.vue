@@ -1547,6 +1547,24 @@ onMounted(() => {
                                 }"
                                 class="mb-3 px-3 py-1 text-xs"
                             />
+                            <Button
+                                size="small"
+                                severity="warn"
+                                label="Solicitar Aclaracion"
+                                class="ml-5"
+                                v-if="details?.incidencia === 'FALTA'"
+                                @click="
+                                    () => {
+                                        router.get('/complaints/create', {
+                                            message: `Tengo duda sobre la incidencida de ${details?.incidencia} del dia ${
+                                                details?.horario?.Checadas?.[0]
+                                                    ?.access_date ??
+                                                details.fecha_dia
+                                            } ya que creo que no es correcta...`,
+                                        });
+                                    }
+                                "
+                            />
                             <p class="text-sm leading-relaxed break-words">
                                 {{ details?.descripcion_incidencia }}
                             </p>

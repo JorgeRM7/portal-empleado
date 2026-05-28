@@ -321,7 +321,7 @@ class ComplaintsModuleController
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
         $userId = Auth::id();
 
@@ -336,7 +336,8 @@ class ComplaintsModuleController
             ->get();
 
         return Inertia::render('ComplaintsModule/Create', [
-            'history' => $history
+            'history' => $history,
+            'message' => $request->message
         ]);
     }
 

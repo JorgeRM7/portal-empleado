@@ -14,7 +14,13 @@ const props = defineProps({
         type: Number,
         required: true,
     },
+    vacations: {
+        type: Number,
+        required: true,
+    },
 });
+
+console.log(props);
 
 const { showSuccess, showError } = useToastService();
 const toast = useToast();
@@ -226,7 +232,7 @@ const daysCalculated = computed(() => {
     const b = new Date(r[1]);
     b.setHours(0, 0, 0, 0);
     const diff = Math.round((b - a) / (1000 * 60 * 60 * 24));
-    return diff >= 0 ? diff + 1 : 0;
+    return diff >= 0 ? (diff + 1) * props.vacations : 0;
 });
 
 const daysEditable = ref(daysCalculated.value);
@@ -612,6 +618,12 @@ function getISOWeek(date = new Date()) {
     };
 }
 
+function completeRange() {
+    if (form.value.range && form.value.range[0] && !form.value.range[1]) {
+        form.value.range = [form.value.range[0], form.value.range[0]];
+    }
+}
+
 onMounted(async () => {
     loading.value = true;
     await axios
@@ -904,6 +916,29 @@ watch(employeeId, () => {
                                 />
                             </div>
 
+                            <!-- Días disponibles (placeholder) -->
+                            <div
+                                v-if="
+                                    incidenceUI.fields.includes(
+                                        'days_available',
+                                    )
+                                "
+                                class="flex flex-col gap-2"
+                            >
+                                <label class="text-sm font-medium"
+                                    >Días disponibles (antes de esta
+                                    incidencia)</label
+                                >
+                                <InputText
+                                    :value="form.days_available ?? '—'"
+                                    class="w-full"
+                                    disabled
+                                />
+                                <small class="text-gray-500"
+                                    >Se obtiene según empleado/periodo.</small
+                                >
+                            </div>
+
                             <!-- Paso 2: Campos dinámicos -->
                             <div class="grid gap-3 md:grid-cols-2">
                                 <!-- Horas del turno -->
@@ -955,6 +990,7 @@ watch(employeeId, () => {
                                             form.available_txt_hours <= 0 &&
                                             form.incidence_id == 23
                                         "
+                                        @hide="completeRange"
                                     />
 
                                     <small class="text-gray-500">
@@ -1002,33 +1038,11 @@ watch(employeeId, () => {
                                         v-model="daysEditable"
                                         type="number"
                                         class="w-full"
+                                        disabled
                                     />
                                     <small class="text-gray-500"
                                         >Se calcula automáticamente con las
                                         fechas.</small
-                                    >
-                                </div>
-
-                                <!-- Días disponibles (placeholder) -->
-                                <div
-                                    v-if="
-                                        incidenceUI.fields.includes(
-                                            'days_available',
-                                        )
-                                    "
-                                    class="flex flex-col gap-2"
-                                >
-                                    <label class="text-sm font-medium"
-                                        >Días disponibles</label
-                                    >
-                                    <InputText
-                                        :value="form.days_available ?? '—'"
-                                        class="w-full"
-                                        disabled
-                                    />
-                                    <small class="text-gray-500"
-                                        >Se obtiene según
-                                        empleado/periodo.</small
                                     >
                                 </div>
 
@@ -1070,6 +1084,7 @@ watch(employeeId, () => {
                                         class="w-full"
                                         :min="0"
                                         placeholder="0"
+                                        disabled
                                     />
                                     <span class="text-xs text-gray-500"
                                         >Estas horas se calculan automaticamente

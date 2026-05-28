@@ -315,41 +315,62 @@ class EmployeeIncidences extends Model
 
                     -- ENTRADA REAL: El primer marcaje en la ventana de tiempo
                     (
-                        SELECT jt.access_time
-                        FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' 
-                            COLUMNS (
-                                access_date DATE PATH '$.access_date',
-                                access_time TIME PATH '$.access_time'
+                    SELECT
+                        CASE
+                            WHEN JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Horario')) = 'Descanso'
+                            THEN (
+                                -- Si es descanso, trae la primera checada sin filtro
+                                SELECT jt.access_time
+                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
+                                WHERE jt.access_date = '{$date}'
+                                ORDER BY jt.access_time ASC
+                                LIMIT 1
                             )
-                        ) AS jt
-                        WHERE jt.access_date = '{$date}' 
-                        AND jt.access_time BETWEEN 
-                            SUBTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '08:00:00') 
-                            AND 
-                            ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '03:00:00')
-                        ORDER BY jt.access_time ASC
-                        LIMIT 1
-                    ) AS entradaReal,
+                            WHEN JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')) IS NOT NULL
+                            THEN (
+                                -- Si tiene turno, filtra por rango
+                                SELECT jt.access_time
+                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
+                                WHERE jt.access_date = '{$date}'
+                                AND jt.access_time BETWEEN
+                                    SUBTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '08:00:00')
+                                    AND ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '03:00:00')
+                                ORDER BY jt.access_time ASC
+                                LIMIT 1
+                            )
+                            ELSE NULL
+                        END
+                ) AS entradaReal,
 
                     -- SALIDA REAL: El último marcaje considerando turnos nocturnos
                     (
-                        SELECT jt.access_time
-                        FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' 
-                            COLUMNS (
-                                access_date DATE PATH '$.access_date',
-                                access_time TIME PATH '$.access_time'
+                    SELECT
+                        CASE
+                            WHEN JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Horario')) = 'Descanso'
+                            THEN (
+                                -- Si es descanso, trae la última checada sin filtro
+                                SELECT jt.access_time
+                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
+                                WHERE jt.access_date = '{$date}'
+                                ORDER BY jt.access_time DESC
+                                LIMIT 1
                             )
-                        ) AS jt
-                        WHERE (
-                            -- Marcaje el día siguiente (nocturno)
-                            (jt.access_date = DATE_ADD('{$date}', INTERVAL 1 DAY) AND jt.access_time <= ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Salida')), '04:00:00'))
-                            OR 
-                            -- Marcaje el mismo día tarde
-                            (jt.access_date = '{$date}' AND jt.access_time > ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '04:00:00'))
-                        )
-                        ORDER BY jt.access_date DESC, jt.access_time DESC
-                        LIMIT 1
-                    ) AS salidaReal
+                            ELSE (
+                                -- Si tiene turno, aplica lógica de nocturnos
+                                SELECT jt.access_time
+                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
+                                WHERE (
+                                    -- Marcaje el día siguiente (nocturno)
+                                    (jt.access_date = DATE_ADD('{$date}', INTERVAL 1 DAY) AND jt.access_time <= ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Salida')), '08:00:00'))
+                                    OR
+                                    -- Marcaje el mismo día tarde
+                                    (jt.access_date = '{$date}' AND jt.access_time > ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '04:00:00'))
+                                )
+                                ORDER BY jt.access_date DESC, jt.access_time DESC
+                                LIMIT 1
+                            )
+                        END
+                ) AS salidaReal
 
                 FROM weekly_assistances wa
                 INNER JOIN assistances a ON a.employee_id = wa.employee_id

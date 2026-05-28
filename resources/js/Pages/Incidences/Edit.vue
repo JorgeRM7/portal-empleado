@@ -21,6 +21,10 @@ const props = defineProps({
         type: Array,
         required: true,
     },
+    vacations: {
+        type: Number,
+        required: true,
+    },
 });
 
 const { showSuccess, showError } = useToastService();
@@ -220,7 +224,7 @@ const daysCalculated = computed(() => {
     const b = new Date(r[1]);
     b.setHours(0, 0, 0, 0);
     const diff = Math.round((b - a) / (1000 * 60 * 60 * 24));
-    return diff >= 0 ? diff + 1 : 0;
+    return diff >= 0 ? (diff + 1) * props.vacations : 0;
 });
 
 const daysEditable = ref(daysCalculated.value);
@@ -285,6 +289,12 @@ const typeOptions = ref(
 );
 
 const attendanceData = ref(null);
+
+function completeRange() {
+    if (form.value.range && form.value.range[0] && !form.value.range[1]) {
+        form.value.range = [form.value.range[0], form.value.range[0]];
+    }
+}
 
 const formatDate = (date) => {
     const month = date.getMonth() + 1;
@@ -910,6 +920,7 @@ watch(
                                             form.available_txt_hours <= 0 &&
                                             form.incidence_id == 23
                                         "
+                                        @hide="completeRange"
                                     />
                                     <small class="text-gray-500">
                                         El rango no puede incluir días ocupados.

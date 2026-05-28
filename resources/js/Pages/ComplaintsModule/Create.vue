@@ -13,12 +13,13 @@ import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
     history: Array,
+    message: String,
 });
 
 const confirm = useConfirm();
 const actualizandoLista = ref(false);
 const opciones = ref([]);
-const complaintDescription = ref("");
+const complaintDescription = ref(props.message ? props.message : "");
 const seleccionada = ref(null);
 const loading = ref(false);
 const $primevue = usePrimeVue();
@@ -28,7 +29,7 @@ const totalSizePercent = ref(0);
 const files = ref([]);
 const MAX_SIZE = 5000000;
 const isCollapsed = ref(false);
-const selectedOption = ref(null);
+const selectedOption = ref(props.message ? "ACI" : null);
 const otherSubject = ref("");
 const fileUploadRef = ref(null);
 const isReverting = ref(false);
@@ -423,7 +424,7 @@ const enviarQueja = async () => {
             "asunto_texto",
             selectedOption.value.code === "OTR"
                 ? otherSubject.value
-                : selectedOption.value.name
+                : selectedOption.value.name,
         );
 
         formData.append("descripcion", descripcionFinal);
@@ -474,7 +475,6 @@ const enviarQueja = async () => {
         sending.value = false;
     }
 };
-
 
 const limpiarFormulario = () => {
     selectedOption.value = null;
@@ -577,20 +577,10 @@ onUnmounted(() => {
                         :options="options"
                         filter
                         optionLabel="name"
+                        optionValue="code"
                         placeholder="Seleccione un Asunto..."
                         class="w-full md:w-30rem"
                     >
-                        <template #value="slotProps">
-                            <div
-                                v-if="slotProps.value"
-                                class="flex align-items-center"
-                            >
-                                <div>{{ slotProps.value.name }}</div>
-                            </div>
-                            <span v-else>
-                                {{ slotProps.placeholder }}
-                            </span>
-                        </template>
                         <template #option="slotProps">
                             <div class="flex align-items-center">
                                 <div>{{ slotProps.option.name }}</div>
