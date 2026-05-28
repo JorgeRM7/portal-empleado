@@ -193,15 +193,6 @@ const openIncidencesModal = async (id) => {
     }
 };
 
-const employeePhoto = computed(() => {
-    const employeeId =
-        employee.value?.id ?? props.idEmployee?.[0]?.id ?? authUser.value?.id;
-
-    return employeeId
-        ? `https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${employeeId}.jpg`
-        : page.props.auth?.user?.profile_photo_url || "";
-});
-
 function obtenerEmpleado() {
     loading.value = true;
 
@@ -476,7 +467,7 @@ onMounted(() => {
                                 >
                                     <img
                                         class="w-full h-full object-cover"
-                                        :src="employeePhoto"
+                                        :src="'/employees/photo'"
                                         @error="
                                             (e) =>
                                                 (e.target.src =

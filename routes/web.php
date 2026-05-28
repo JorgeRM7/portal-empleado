@@ -23,7 +23,7 @@ use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\NotificationController;
 
 use App\Http\Controllers\DeviceTokensController;
-
+use App\Http\Controllers\PasswordController;
 use Illuminate\Support\Facades\Storage;
 
 
@@ -164,6 +164,11 @@ Route::middleware([
     Route::post('/notifications-page', [NotificationController::class, 'notificationsPage']);
     Route::post('/notifications/update-status', [NotificationController::class, 'update'])
     ->name('notifications.updateStatus');
+
+    Route::get('/employees/photo', [UserController::class, 'getPhoto'])->name('employees.photo');
+
+    Route::put('/password', [PasswordController::class, 'update'])
+        ->name('password.update-user-employee');
 
 });
 

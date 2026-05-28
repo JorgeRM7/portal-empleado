@@ -23,6 +23,18 @@ const messaging = getMessaging();
 const deferredPrompt = ref(null);
 const showInstallModal = ref(false);
 
+// ============================================
+// NUEVA SECCIÓN: Estados para cambio de contraseña
+// ============================================
+const showPasswordChangeModal = ref(false);
+const loadingPasswordChange = ref(false);
+const passwordForm = ref({
+    current_password: "",
+    password: "",
+    password_confirmation: "",
+});
+const passwordErrors = ref({});
+
 const getOrGenerateDeviceId = () => {
     let deviceId = localStorage.getItem("my_device_id");
     if (!deviceId) {
@@ -129,13 +141,6 @@ const saveDeviceToken = async (token) => {
             device_id: deviceIdentifier,
         });
 
-        // toast.add({
-        //     severity: 'success',
-        //     summary: 'Éxito',
-        //     detail: response.data.message,
-        //     life: 4000
-        // });
-
         console.log(response.data.message);
     } catch (error) {
         toast.add({
@@ -164,10 +169,73 @@ const logout = () => {
     );
 };
 
+const handlePasswordChange = async () => {
+    try {
+        loadingPasswordChange.value = true;
+        passwordErrors.value = {};
+
+        await router.put(
+            route("password.update-user-employee"),
+            {
+                current_password: passwordForm.value.current_password,
+                password: passwordForm.value.password,
+                password_confirmation: passwordForm.value.password_confirmation,
+            },
+            {
+                onSuccess: () => {
+                    passwordForm.value = {
+                        current_password: "",
+                        password: "",
+                        password_confirmation: "",
+                    };
+
+                    showPasswordChangeModal.value = false;
+
+                    toast.add({
+                        severity: "success",
+                        summary: "Contraseña actualizada",
+                        detail: "Tu contraseña ha sido cambiada exitosamente.",
+                        life: 4000,
+                    });
+
+                    router.reload({ only: ["auth"] });
+                },
+                onError: (errors) => {
+                    passwordErrors.value = errors;
+
+                    toast.add({
+                        severity: "error",
+                        summary: "Error",
+                        detail: "Verifica los campos e intenta nuevamente.",
+                        life: 4000,
+                    });
+                },
+            },
+        );
+    } catch (error) {
+        console.error(error);
+    } finally {
+        loadingPasswordChange.value = false;
+    }
+};
+
 watch(
     () => page.props.auth?.user?.terms_condition,
     (value) => {
         showTermsModal.value = Number(value) !== 1;
+    },
+    { immediate: true },
+);
+
+console.log(page.props.auth?.user);
+
+// ============================================
+// NUEVO WATCHER: Verificar cambio de contraseña obligatorio
+// ============================================
+watch(
+    () => page.props.auth?.user?.password_change,
+    (value) => {
+        showPasswordChangeModal.value = Boolean(value);
     },
     { immediate: true },
 );
@@ -283,13 +351,11 @@ const installApp = async () => {
         <app-topbar></app-topbar>
         <app-sidebar></app-sidebar>
         <div class="layout-main-container">
-            <!-- <div class="layout-main">
-                <slot />
-            </div> -->
             <div class="layout-main">
                 <div
                     :class="{
-                        'pointer-events-none opacity-50': showTermsModal,
+                        'pointer-events-none opacity-50':
+                            showTermsModal || showPasswordChangeModal,
                     }"
                 >
                     <slot />
@@ -311,11 +377,12 @@ const installApp = async () => {
                 />
             </div>
         </div>
-        <!-- <Assistant use-backend="true" endpoint="/chat" /> -->
         <InactivityTimer :on-logout="logout" />
         <div class="layout-mask animate-fadein"></div>
     </div>
     <Toast />
+
+    <!-- Modal de Términos y Condiciones (original) -->
     <Dialog
         v-model:visible="showTermsModal"
         header="Términos y Condiciones de Uso"
@@ -418,6 +485,8 @@ const installApp = async () => {
             </div>
         </div>
     </Dialog>
+
+    <!-- Modal de Notificaciones (original) -->
     <Dialog
         v-model:visible="showWarningNotifications"
         header="Configuración Requerida"
@@ -481,7 +550,125 @@ const installApp = async () => {
             </div>
         </div>
     </Dialog>
+
+    <!-- NUEVO: Modal de Cambio de Contraseña Obligatorio -->
+    <Dialog
+        v-model:visible="showPasswordChangeModal"
+        header="Cambio de Contraseña Obligatorio"
+        :modal="true"
+        :closable="false"
+        :closeOnEscape="false"
+        :draggable="false"
+        class="mx-4 w-full md:w-[550px]"
+    >
+        <div class="flex flex-col gap-4">
+            <!-- Mensaje de alerta -->
+            <div class="p-4 rounded-2xl">
+                <InlineMessage severity="warn"
+                    >Por razones de seguridad,
+                    <strong>debes cambiar tu contraseña</strong> antes de
+                    continuar usando el portal.</InlineMessage
+                >
+            </div>
+
+            <!-- Formulario -->
+            <form
+                @submit.prevent="handlePasswordChange"
+                class="flex flex-col gap-4"
+            >
+                <!-- Campo: Contraseña Actual -->
+                <div class="flex flex-col gap-2">
+                    <label for="current_password" class="font-semibold text-sm"
+                        >Contraseña Actual
+                        <span class="text-red-500">*</span></label
+                    >
+                    <Password
+                        id="current_password"
+                        v-model="passwordForm.current_password"
+                        class="w-full"
+                        inputClass="w-full"
+                        toggleMask
+                        placeholder="Ingresa tu contraseña actual"
+                        autocomplete="false"
+                        :feedback="false"
+                    />
+                    <small
+                        v-if="passwordErrors.current_password"
+                        class="text-red-500"
+                    >
+                        {{ passwordErrors.current_password }}
+                    </small>
+                </div>
+
+                <!-- Campo: Nueva Contraseña -->
+                <div class="flex flex-col gap-2">
+                    <label for="password" class="font-semibold text-sm"
+                        >Nueva Contraseña
+                        <span class="text-red-500">*</span></label
+                    >
+                    <Password
+                        id="password"
+                        v-model="passwordForm.password"
+                        placeholder="Ingresa una nueva contraseña"
+                        class="w-full"
+                        inputClass="w-full"
+                        toggleMask
+                        autocomplete="false"
+                    />
+                    <small v-if="passwordErrors.password" class="text-red-500">
+                        {{ passwordErrors.password }}
+                    </small>
+                    <small class="text-gray-500 text-xs">
+                        Mínimo 8 caracteres, debe incluir mayúsculas, minúsculas
+                        y números.
+                    </small>
+                </div>
+
+                <!-- Campo: Confirmar Contraseña -->
+                <div class="flex flex-col gap-2">
+                    <label
+                        for="password_confirmation"
+                        class="font-semibold text-sm"
+                        >Confirmar Contraseña
+                        <span class="text-red-500">*</span></label
+                    >
+                    <Password
+                        id="password_confirmation"
+                        v-model="passwordForm.password_confirmation"
+                        placeholder="Confirma tu nueva contraseña"
+                        class="w-full"
+                        inputClass="w-full"
+                        toggleMask
+                        autocomplete="false"
+                    />
+                    <small
+                        v-if="passwordErrors.password_confirmation"
+                        class="text-red-500"
+                    >
+                        {{ passwordErrors.password_confirmation }}
+                    </small>
+                </div>
+
+                <!-- Botón de envío -->
+                <div
+                    class="flex flex-col sm:flex-row items-center justify-end gap-3 mt-4"
+                >
+                    <Button
+                        type="submit"
+                        label="Cambiar Contraseña"
+                        icon="pi pi-lock"
+                        :loading="loadingPasswordChange"
+                        :disabled="loadingPasswordChange"
+                        severity="success"
+                        class="w-full sm:w-auto shadow-lg shadow-emerald-500/20"
+                        raised
+                    />
+                </div>
+            </form>
+        </div>
+    </Dialog>
 </template>
+
 <style scoped>
 .animate-bounce-slow {
     animation: bounce 3s infinite;

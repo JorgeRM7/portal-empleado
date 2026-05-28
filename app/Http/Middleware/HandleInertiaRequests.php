@@ -73,6 +73,7 @@ class HandleInertiaRequests extends Middleware
                         'status' => $user->employee->status,
                         'entry_date' => $user->employee->entry_date,
                     ] : null,
+                    'password_change' => $user->password_change
                 ] : null,
             ],
             'flash' => [

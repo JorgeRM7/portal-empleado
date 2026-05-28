@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use App\Notifications\RegistroEditado;
 use App\Notifications\RegistroEliminado;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -307,6 +308,29 @@ class UserController
             ]);
 
         return back()->with('success', 'Correo actualizado correctamente');
+    }
+
+    public function getPhoto(Request $request)
+    {
+        $authId = Auth::id();
+        $externalUrl = "https://nominas.grupo-ortiz.site/Librerias/img/Fotos/{$authId}.jpg";
+
+        try {
+            // Consumimos la imagen de forma interna
+            $response = Http::get($externalUrl);
+
+            if ($response->failed()) {
+                return response()->json(['error' => 'Foto no encontrada'], 404);
+            }
+
+            // Retornamos el contenido con el tipo de contenido correcto
+            return response($response->body(), 200)
+                ->header('Content-Type', 'image/jpeg')
+                ->header('Cache-Control', 'private, max-age=86400'); // Cacheamos en el navegador del usuario autorizado
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al obtener la imagen'], 500);
+        }
     }
 
 }
