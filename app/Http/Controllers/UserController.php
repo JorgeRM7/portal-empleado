@@ -323,10 +323,10 @@ class UserController
                 return response()->json(['error' => 'Foto no encontrada'], 404);
             }
 
-            // Retornamos el contenido con el tipo de contenido correcto
             return response($response->body(), 200)
-                ->header('Content-Type', 'image/jpeg')
-                ->header('Cache-Control', 'private, max-age=86400'); // Cacheamos en el navegador del usuario autorizado
+                    ->header('Content-Type', 'image/jpeg')
+                    ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                    ->header('Pragma', 'no-cache');
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al obtener la imagen'], 500);

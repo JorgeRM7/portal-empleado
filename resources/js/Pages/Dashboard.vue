@@ -467,7 +467,7 @@ onMounted(() => {
                                 >
                                     <img
                                         class="w-full h-full object-cover"
-                                        :src="'/employees/photo'"
+                                        :src="`/employees/photo?t=${new Date().getTime()}`"
                                         @error="
                                             (e) =>
                                                 (e.target.src =
