@@ -147,7 +147,7 @@ const logout = () => router.post(route("logout"));
                             class="hero-avatar"
                         /> -->
                         <img
-                            :src="`/employees/photo?t=${new Date().getTime()}`"
+                            :src="`/employees/photo?t=${$page.props.auth.user?.updated_at}`"
                             alt="Foto de perfil"
                             class="hero-avatar"
                         />
