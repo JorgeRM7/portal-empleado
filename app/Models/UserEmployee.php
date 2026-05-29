@@ -16,6 +16,7 @@ class UserEmployee extends Authenticatable
         'email',
         'password',
         'device_token',
+        'password_change'
     ];
 
     protected $hidden = [
@@ -26,6 +27,7 @@ class UserEmployee extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'password_change' => 'boolean'
     ];
 
     public function employee()

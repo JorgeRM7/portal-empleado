@@ -48,15 +48,15 @@ const passwordForm = useForm({
 const submitEmail = () => {
     emailLoading.value = true;
 
-    emailForm.put(route('user-email.update'), {
+    emailForm.put(route("user-email.update"), {
         preserveScroll: true,
 
         onSuccess: () => {
             toast.add({
-                severity: 'success',
-                summary: 'Correo actualizado',
-                detail: 'Tu correo fue actualizado correctamente',
-                life: 3000
+                severity: "success",
+                summary: "Correo actualizado",
+                detail: "Tu correo fue actualizado correctamente",
+                life: 3000,
             });
 
             emailDialog.value = false;
@@ -67,16 +67,16 @@ const submitEmail = () => {
 
         onError: () => {
             toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'No se pudo actualizar el correo',
-                life: 3000
+                severity: "error",
+                summary: "Error",
+                detail: "No se pudo actualizar el correo",
+                life: 3000,
             });
         },
 
         onFinish: () => {
             emailLoading.value = false;
-        }
+        },
     });
 };
 
@@ -108,7 +108,6 @@ const submitPassword = () => {
                     detail: msg,
                     life: 4000,
                 });
-
             } else {
                 toast.add({
                     severity: "error",
@@ -123,14 +122,6 @@ const submitPassword = () => {
         },
     });
 };
-
-const employeePhoto = computed(() => {
-    const employeeId = user.value?.employee?.id ?? user.value?.id;
-
-    return employeeId
-        ? `https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${employeeId}.jpg`
-        : page.props.auth?.user?.profile_photo_url || "";
-});
 
 // ── Cerrar sesión ────────────────────────────────────────────────────────────
 const logoutConfirm = ref(false);
@@ -155,7 +146,11 @@ const logout = () => router.post(route("logout"));
                             shape="circle"
                             class="hero-avatar"
                         /> -->
-                        <img :src="employeePhoto" alt="Foto de perfil" class="hero-avatar" />
+                        <img
+                            :src="`/employees/photo?t=${$page.props.auth.user?.updated_at}`"
+                            alt="Foto de perfil"
+                            class="hero-avatar"
+                        />
                     </div>
                     <div class="hero-text">
                         <p class="user-name">
@@ -177,7 +172,7 @@ const logout = () => router.post(route("logout"));
                         <span class="lbl">Nombre completo</span>
                         <span class="val">{{
                             user.employee?.full_name ?? "—"
-                            }}</span>
+                        }}</span>
                     </div>
                     <Divider />
                     <div class="info-row">
@@ -191,15 +186,15 @@ const logout = () => router.post(route("logout"));
                             {{
                                 user.employee?.entry_date
                                     ? new Date(
-                                        user.employee.entry_date.slice(
-                                            0,
-                                            10,
-                                        ) + "T00:00:00",
-                                    ).toLocaleDateString("es-MX", {
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric",
-                                    })
+                                          user.employee.entry_date.slice(
+                                              0,
+                                              10,
+                                          ) + "T00:00:00",
+                                      ).toLocaleDateString("es-MX", {
+                                          year: "numeric",
+                                          month: "long",
+                                          day: "numeric",
+                                      })
                                     : "—"
                             }}
                         </span>
@@ -212,27 +207,41 @@ const logout = () => router.post(route("logout"));
                 <p class="section-label"><i class="pi pi-cog"></i> Cuenta</p>
                 <div class="action-list">
                     <button class="action-row" @click="emailDialog = true">
-                        <span class="action-icon blue"><i class="pi pi-at"></i></span>
+                        <span class="action-icon blue"
+                            ><i class="pi pi-at"></i
+                        ></span>
                         <span class="action-text">
-                            <span class="action-main">Cambiar correo/email</span>
-                            <span class="action-hint">Actualiza tu correo de acceso</span>
+                            <span class="action-main"
+                                >Cambiar correo/email</span
+                            >
+                            <span class="action-hint"
+                                >Actualiza tu correo de acceso</span
+                            >
                         </span>
                         <i class="pi pi-chevron-right chevron"></i>
                     </button>
                     <Divider />
                     <button class="action-row" @click="passwordDialog = true">
-                        <span class="action-icon blue"><i class="pi pi-lock"></i></span>
+                        <span class="action-icon blue"
+                            ><i class="pi pi-lock"></i
+                        ></span>
                         <span class="action-text">
                             <span class="action-main">Cambiar contraseña</span>
-                            <span class="action-hint">Actualiza tu contraseña de acceso</span>
+                            <span class="action-hint"
+                                >Actualiza tu contraseña de acceso</span
+                            >
                         </span>
                         <i class="pi pi-chevron-right chevron"></i>
                     </button>
                     <Divider />
                     <button class="action-row" @click="logoutConfirm = true">
-                        <span class="action-icon red"><i class="pi pi-sign-out"></i></span>
+                        <span class="action-icon red"
+                            ><i class="pi pi-sign-out"></i
+                        ></span>
                         <span class="action-text">
-                            <span class="action-main danger-text">Cerrar sesión</span>
+                            <span class="action-main danger-text"
+                                >Cerrar sesión</span
+                            >
                             <span class="action-hint">Salir de tu cuenta</span>
                         </span>
                         <i class="pi pi-chevron-right chevron"></i>
@@ -242,8 +251,13 @@ const logout = () => router.post(route("logout"));
         </div>
 
         <!-- ══ DIALOG: Cambiar Correo ═══════════════════════════════════ -->
-        <Dialog v-model:visible="emailDialog" header="Cambiar Correo" modal :style="{ width: '380px' }"
-            :draggable="false">
+        <Dialog
+            v-model:visible="emailDialog"
+            header="Cambiar Correo"
+            modal
+            :style="{ width: '380px' }"
+            :draggable="false"
+        >
             <div class="pwd-form">
                 <div class="pwd-form flex flex-col gap-4">
                     <div class="flex flex-col gap-2">
@@ -270,36 +284,76 @@ const logout = () => router.post(route("logout"));
                 </div>
             </div>
             <template #footer>
-                <Button label="Cancelar" text severity="secondary" @click="emailDialog = false" />
-                <Button label="Guardar" icon="pi pi-check" :loading="emailLoading" @click="submitEmail" />
+                <Button
+                    label="Cancelar"
+                    text
+                    severity="secondary"
+                    @click="emailDialog = false"
+                />
+                <Button
+                    label="Guardar"
+                    icon="pi pi-check"
+                    :loading="emailLoading"
+                    @click="submitEmail"
+                />
             </template>
         </Dialog>
 
         <!-- ══ DIALOG: Cambiar contraseña ═══════════════════════════════════ -->
-        <Dialog v-model:visible="passwordDialog" header="Cambiar contraseña" modal :style="{ width: '380px' }"
-            :draggable="false">
+        <Dialog
+            v-model:visible="passwordDialog"
+            header="Cambiar contraseña"
+            modal
+            :style="{ width: '380px' }"
+            :draggable="false"
+        >
             <div class="pwd-form">
-                <div v-if="blocked" class="p-3 mb-2 bg-red-100 text-red-700 rounded text-sm">
+                <div
+                    v-if="blocked"
+                    class="p-3 mb-2 bg-red-100 text-red-700 rounded text-sm"
+                >
                     Has excedido el número de intentos. Por favor revisa con RH.
                 </div>
                 <label>Contraseña actual</label>
-                <Password v-model="passwordForm.current_password" :feedback="false" toggleMask placeholder="••••••••"
-                    class="w-full" inputClass="w-full" />
+                <Password
+                    v-model="passwordForm.current_password"
+                    :feedback="false"
+                    toggleMask
+                    placeholder="••••••••"
+                    class="w-full"
+                    inputClass="w-full"
+                />
                 <span class="text-red-500 text-sm">{{
                     passwordForm.errors.updatePassword?.current_password
-                    }}</span>
+                }}</span>
                 <label>Nueva contraseña</label>
-                <Password v-model="passwordForm.password" toggleMask placeholder="••••••••" class="w-full"
-                    inputClass="w-full" />
+                <Password
+                    v-model="passwordForm.password"
+                    toggleMask
+                    placeholder="••••••••"
+                    class="w-full"
+                    inputClass="w-full"
+                />
                 <span class="text-red-500 text-sm">{{
                     passwordForm.errors.updatePassword?.password
-                    }}</span>
+                }}</span>
                 <label>Confirmar contraseña</label>
-                <Password v-model="passwordForm.password_confirmation" :feedback="false" toggleMask
-                    placeholder="••••••••" class="w-full" inputClass="w-full" />
+                <Password
+                    v-model="passwordForm.password_confirmation"
+                    :feedback="false"
+                    toggleMask
+                    placeholder="••••••••"
+                    class="w-full"
+                    inputClass="w-full"
+                />
             </div>
             <template #footer>
-                <Button label="Cancelar" text severity="secondary" @click="passwordDialog = false" />
+                <Button
+                    label="Cancelar"
+                    text
+                    severity="secondary"
+                    @click="passwordDialog = false"
+                />
                 <!-- <Button label="Guardar" icon="pi pi-check" :loading="passwordLoading" @click="submitPassword" /> -->
                 <Button
                     label="Guardar"
@@ -312,15 +366,30 @@ const logout = () => router.post(route("logout"));
         </Dialog>
 
         <!-- ══ DIALOG: Confirmar logout ══════════════════════════════════════ -->
-        <Dialog v-model:visible="logoutConfirm" header="¿Cerrar sesión?" modal :style="{ width: '340px' }"
-            :draggable="false">
+        <Dialog
+            v-model:visible="logoutConfirm"
+            header="¿Cerrar sesión?"
+            modal
+            :style="{ width: '340px' }"
+            :draggable="false"
+        >
             <p class="logout-msg">
                 Tu sesión será terminada. Podrás volver a iniciar sesión cuando
                 quieras.
             </p>
             <template #footer>
-                <Button label="Cancelar" text severity="secondary" @click="logoutConfirm = false" />
-                <Button label="Cerrar sesión" severity="danger" icon="pi pi-sign-out" @click="logout" />
+                <Button
+                    label="Cancelar"
+                    text
+                    severity="secondary"
+                    @click="logoutConfirm = false"
+                />
+                <Button
+                    label="Cerrar sesión"
+                    severity="danger"
+                    icon="pi pi-sign-out"
+                    @click="logout"
+                />
             </template>
         </Dialog>
     </AppLayout>
@@ -384,9 +453,11 @@ const logout = () => router.post(route("logout"));
     flex-shrink: 0;
     padding: 3px;
     border-radius: 10%;
-    background: linear-gradient(135deg,
-            rgba(255, 255, 255, 0.55),
-            rgba(255, 255, 255, 0.08));
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.55),
+        rgba(255, 255, 255, 0.08)
+    );
     box-shadow: 0 0 22px rgba(99, 102, 241, 0.5);
 }
 

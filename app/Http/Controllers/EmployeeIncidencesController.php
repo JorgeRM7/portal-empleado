@@ -115,6 +115,15 @@ class EmployeeIncidencesController
         ]);
     }
 
+    public function getAssistanceData(Request $request){
+        $employee_id = Auth::id();
+        $employeeData = EmployeeIncidences::search_employee_data($request->date, $employee_id);
+
+        return [
+            'employeeData' => $employeeData
+        ];
+    }
+
     /**
      * Show the form for creating a new resource.
      */
@@ -123,10 +132,21 @@ class EmployeeIncidencesController
         $employeeId = Auth::id();
         $employee = Employee::select('branch_office_id')->where('id', $employeeId)->first();
 
+        // $schedule_name = EmployeeIncidences::getSchedule($employeeId);
+
+        // $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
+
+        $days = 1;
+
+        // if ($vacation && $vacation->vacations !== null) {
+        //     $days *= (float) $vacation->vacations;
+        // }
+
         
         return Inertia::render('Incidences/Create', [
             'employeeId' => $employeeId,
-            'branchOfficeId' => $employee->branch_office_id
+            'branchOfficeId' => $employee->branch_office_id,
+            'vacations' => (float) $days
         ]);
     }
 
@@ -210,17 +230,15 @@ class EmployeeIncidencesController
                 'days_to_register'  => 'required',
             ]);
 
-            $schedule_name = EmployeeIncidences::getSchedule($employee_id);
+            // $schedule_name = EmployeeIncidences::getSchedule($employee_id);
 
-            $vacations = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->get();
+            // $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
 
-            $days = 0;
+            // $days = (float) $validated['days_to_register'];
 
-            if($vacations[0]->vacations === null){
-                $days = $validated['days_to_register'];
-            }else{
-                $days = (float) $validated['days_to_register'] * (float) $vacations[0]->vacations;
-            }
+            // if ($vacation && $vacation->vacations !== null) {
+            //     $days *= (float) $vacation->vacations;
+            // }
 
             $week = $getWeekData($validated['range'][0]);
 
@@ -231,7 +249,7 @@ class EmployeeIncidencesController
                 "validity_to"      => $validated['range'][1],
                 "branch_office_id" => $request->branch_office_id,
                 "comment"          => $validated['notes'],
-                "days"             => $days,
+                "days"             => $validated['days_to_register'],
             ], $week));
 
             Logs::create([
@@ -556,11 +574,22 @@ class EmployeeIncidencesController
         }else{
             $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->orWhere('id', 72)->get();
         }
+
+        // $schedule_name = EmployeeIncidences::getSchedule($incidences_employee->employee_id);
+
+        // $vacation = Schedules::select('vacations')->where('name', $schedule_name[0]->horario)->first();
+
+        $days = 1;
+
+        // if ($vacation && $vacation->vacations !== null) {
+        //     $days *= (float) $vacation->vacations;
+        // }
         return Inertia::render('Incidences/Edit', [
             'incidence' => $incidences_employee,
             'employeeData' => $employeeData,
             'schedules' => $schedules,
             'allincidences' => $allincidences,
+            'vacations' => $days
         ]);
     }
 

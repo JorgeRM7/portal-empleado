@@ -193,15 +193,6 @@ const openIncidencesModal = async (id) => {
     }
 };
 
-const employeePhoto = computed(() => {
-    const employeeId =
-        employee.value?.id ?? props.idEmployee?.[0]?.id ?? authUser.value?.id;
-
-    return employeeId
-        ? `https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${employeeId}.jpg`
-        : page.props.auth?.user?.profile_photo_url || "";
-});
-
 function obtenerEmpleado() {
     loading.value = true;
 
@@ -476,7 +467,7 @@ onMounted(() => {
                                 >
                                     <img
                                         class="w-full h-full object-cover"
-                                        :src="employeePhoto"
+                                        :src="`/employees/photo?t=${$page.props.auth.user?.updated_at}`"
                                         @error="
                                             (e) =>
                                                 (e.target.src =
@@ -1546,6 +1537,24 @@ onMounted(() => {
                                     color: '#fff',
                                 }"
                                 class="mb-3 px-3 py-1 text-xs"
+                            />
+                            <Button
+                                size="small"
+                                severity="warn"
+                                label="Solicitar Aclaracion"
+                                class="ml-5"
+                                v-if="details?.incidencia === 'FALTA'"
+                                @click="
+                                    () => {
+                                        router.get('/complaints/create', {
+                                            message: `Tengo duda sobre la incidencida de ${details?.incidencia} del dia ${
+                                                details?.horario?.Checadas?.[0]
+                                                    ?.access_date ??
+                                                details.fecha_dia
+                                            } ya que creo que no es correcta...`,
+                                        });
+                                    }
+                                "
                             />
                             <p class="text-sm leading-relaxed break-words">
                                 {{ details?.descripcion_incidencia }}

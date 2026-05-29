@@ -21,6 +21,10 @@ const props = defineProps({
         type: Array,
         required: true,
     },
+    vacations: {
+        type: Number,
+        required: true,
+    },
 });
 
 const { showSuccess, showError } = useToastService();
@@ -220,7 +224,7 @@ const daysCalculated = computed(() => {
     const b = new Date(r[1]);
     b.setHours(0, 0, 0, 0);
     const diff = Math.round((b - a) / (1000 * 60 * 60 * 24));
-    return diff >= 0 ? diff + 1 : 0;
+    return diff >= 0 ? (diff + 1) * props.vacations : 0;
 });
 
 const daysEditable = ref(daysCalculated.value);
@@ -283,6 +287,101 @@ const typeOptions = ref(
         value: inc.id,
     })),
 );
+
+const attendanceData = ref(null);
+
+function completeRange() {
+    if (form.value.range && form.value.range[0] && !form.value.range[1]) {
+        form.value.range = [form.value.range[0], form.value.range[0]];
+    }
+}
+
+const formatDate = (date) => {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`;
+};
+
+const parseTime = (timeStr) => {
+    if (!timeStr) return null;
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+};
+
+const calculateOvertime = () => {
+    if (!attendanceData.value) return;
+
+    console.log("calculando horas");
+
+    const { entradaTeorica, salidaTeorica, entradaReal, salidaReal } =
+        attendanceData.value;
+
+    const shiftStart = parseTime(entradaTeorica);
+    const shiftEnd = parseTime(salidaTeorica);
+    const actualIn = parseTime(entradaReal);
+    const actualOut = parseTime(salidaReal);
+
+    console.log("calculando tiempos");
+    if (!shiftStart || !shiftEnd || !actualIn || !actualOut) return;
+
+    if (shiftEnd < shiftStart) shiftEnd.setDate(shiftEnd.getDate() + 1);
+    if (actualOut < actualIn) actualOut.setDate(actualOut.getDate() + 1);
+
+    let minutesBefore = (shiftStart - actualIn) / (1000 * 60);
+    let minutesAfter = (actualOut - shiftEnd) / (1000 * 60);
+
+    const TOLERANCE = 10;
+    const validMinutesBefore = minutesBefore > TOLERANCE ? minutesBefore : 0;
+    const validMinutesAfter = minutesAfter > TOLERANCE ? minutesAfter : 0;
+
+    let calculatedMoment = null;
+    let totalMinutes = 0;
+
+    if (validMinutesBefore > 0 && validMinutesAfter > 0) {
+        calculatedMoment = "both";
+        totalMinutes = validMinutesBefore + validMinutesAfter;
+    } else if (validMinutesBefore > 0) {
+        calculatedMoment = "before";
+        totalMinutes = validMinutesBefore;
+    } else if (validMinutesAfter > 0) {
+        calculatedMoment = "after";
+        totalMinutes = validMinutesAfter;
+    }
+
+    const totalHours = Math.round((totalMinutes / 60) * 2) / 2;
+
+    console.log(totalHours);
+
+    form.value.txt_hours_to_register = totalHours;
+};
+
+const fetchAttendanceInfo = async () => {
+    console.log("buscando");
+    if (form.value.singleDate) {
+        const dateStr = formatDate(form.value.singleDate);
+        form.date = dateStr;
+
+        const response = await axios.get(`/get-attendance?date=${dateStr}`);
+
+        const res = response.data;
+        console.log(res);
+
+        attendanceData.value = response.data.employeeData[0];
+        let noData = response.data.employeeData.length === 0;
+
+        if (!noData) {
+            calculateOvertime();
+        }
+    } else {
+        attendanceData.value = null;
+        noData.value = false;
+    }
+
+    loading.value = false;
+};
 
 const canSave = computed(() => {
     const id = Number(form.value.incidence_id);
@@ -499,6 +598,15 @@ watch(
     () => form.value.schedule,
     () => {
         updateShiftHours();
+    },
+);
+
+watch(
+    () => form.value.singleDate,
+    (newVal) => {
+        if (newVal) {
+            fetchAttendanceInfo();
+        }
     },
 );
 </script>
@@ -812,6 +920,7 @@ watch(
                                             form.available_txt_hours <= 0 &&
                                             form.incidence_id == 23
                                         "
+                                        @hide="completeRange"
                                     />
                                     <small class="text-gray-500">
                                         El rango no puede incluir días ocupados.

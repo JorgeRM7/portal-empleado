@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,9 +13,11 @@ class PostController
 {
     public function index()
     {
+        $branch_office_id = Employee::select('branch_office_id')->where('id', Auth::id());
         $posts = Post::with(['user.employee.position', 'likes.employee'])
             ->withCount('likes')
             ->latest()
+            ->where('branch_office_id', $branch_office_id)
             ->get()
             ->map(function ($post) {
                 return [
