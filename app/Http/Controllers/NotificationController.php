@@ -11,58 +11,110 @@ use App\Models\User;
 
 class NotificationController
 {
+
     public function index(Request $request)
     {
         $authUser = $request->user();
 
-        // Buscar employee del usuario autenticado
-        $employee = Employee::where('id', $authUser->id)->first();
+        // OBTENER employee_id DEL USUARIO LOGUEADO
+        $employeeId = $authUser->employee_id;
 
-        $user = User::find($employee->user_id);
+        // NOTIFICACIONES RESUELTAS DEL EMPLEADO
+        $resolvedNotifications = DatabaseNotification::query()
+            ->where('employee_id', $employeeId)
+            ->where('type_notification', 'RESOLVED')
+            ->whereNull('notifiable_id')
+            ->latest()
+            ->get();
 
-        // SOLO NOTIFICACIONES RESOLVED
-        $unread = $user->unreadNotifications
-            ->filter(function ($notification) {
-                return ($notification->data['notification_type'] ?? null) === 'RESOLVED';
-            })
+        $unread = $resolvedNotifications
+            ->whereNull('read_at')
             ->map(function ($notification) {
                 return [
                     'id'                => $notification->id,
-                    'type_notification' => $notification->data['notification_type'] ?? null,
+                    'type_notification' => $notification->type_notification,
                     'data'              => $notification->data,
-                    'module'            => $notification->data['notification_module'] ?? null,
+                    'module'            => $notification->module,
                     'status'            => $notification->read_at ? 'read' : 'unread',
                     'read_at'           => $notification->read_at,
-                    'relationship_id'   => $notification->data['complain_id'] ?? null,
+                    'relationship_id'   => $notification->relationship_id,
                     'created_at'        => $notification->created_at->toDateTimeString(),
                 ];
             })
             ->values();
 
-        // TODAS LAS NOTIFICACIONES (sin filtro)
-        $all = $user->notifications
+        $all = $resolvedNotifications
             ->map(function ($notification) {
                 return [
                     'id'                => $notification->id,
-                    'type_notification' => $notification->data['notification_type'] ?? null,
+                    'type_notification' => $notification->type_notification,
                     'data'              => $notification->data,
-                    'module'            => $notification->data['notification_module'] ?? null,
+                    'module'            => $notification->module,
                     'status'            => $notification->read_at ? 'read' : 'unread',
                     'read_at'           => $notification->read_at,
-                    'relationship_id'   => $notification->data['complain_id'] ?? null,
+                    'relationship_id'   => $notification->relationship_id,
                     'created_at'        => $notification->created_at->toDateTimeString(),
                 ];
-            });
+            })
+            ->values();
 
         return response()->json([
-            'unread_count' => $user->unreadNotifications
-                ->filter(fn ($n) => ($n->data['notification_type'] ?? null) === 'RESOLVED')
+            'unread_count' => $resolvedNotifications
+                ->whereNull('read_at')
                 ->count(),
 
             'unread' => $unread,
-            'all'    => $all,
+
+            'all' => $all,
         ]);
     }
+
+    // public function index(Request $request)
+    // {
+    //     $authUser = $request->user();
+    //     // SOLO NOTIFICACIONES RESOLVED
+    //     $unread = $authUser->unreadNotifications
+    //         ->filter(function ($notification) {
+    //             return ($notification->data['notification_type'] ?? null) === 'RESOLVED';
+    //         })
+    //         ->map(function ($notification) {
+    //             return [
+    //                 'id'                => $notification->id,
+    //                 'type_notification' => $notification->data['notification_type'] ?? null,
+    //                 'data'              => $notification->data,
+    //                 'module'            => $notification->data['notification_module'] ?? null,
+    //                 'status'            => $notification->read_at ? 'read' : 'unread',
+    //                 'read_at'           => $notification->read_at,
+    //                 'relationship_id'   => $notification->data['complain_id'] ?? null,
+    //                 'created_at'        => $notification->created_at->toDateTimeString(),
+    //             ];
+    //         })
+    //         ->values();
+
+    //     // TODAS LAS NOTIFICACIONES (sin filtro)
+    //     $all = $authUser->notifications
+    //         ->map(function ($notification) {
+    //             return [
+    //                 'id'                => $notification->id,
+    //                 'type_notification' => $notification->data['notification_type'] ?? null,
+    //                 'data'              => $notification->data,
+    //                 'module'            => $notification->data['notification_module'] ?? null,
+    //                 'status'            => $notification->read_at ? 'read' : 'unread',
+    //                 'read_at'           => $notification->read_at,
+    //                 'relationship_id'   => $notification->data['complain_id'] ?? null,
+    //                 'created_at'        => $notification->created_at->toDateTimeString(),
+    //             ];
+    //         });
+
+    //     return response()->json([
+    //         'unread_count' => $authUser->unreadNotifications
+    //             ->filter(fn ($n) => ($n->data['notification_type'] ?? null) === 'RESOLVED')
+    //             ->count(),
+
+    //         'unread' => $unread,
+    //         'all'    => $all,
+    //     ]);
+    // }
     // public function index(Request $request)
     // {
     //     $user = $request->user();

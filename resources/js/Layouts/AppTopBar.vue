@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useLayout } from "./composables/layout";
 import { Link, router } from "@inertiajs/vue3";
 import axios from "axios";
@@ -16,10 +16,15 @@ const branchOffices = ref([]);
 const branchOfficesCopy = ref([]);
 const { toggleMenu, toggleDarkMode, isDarkTheme, readTheme } = useLayout();
 const value = ref("");
+let notificationsInterval = null;
 
 const resolvedNotifications = computed(() => {
-    return unread.value.filter(
-        (n) => n.data?.notification_type === "RESOLVED"
+    return unread.value.filter((n) =>
+        [
+            "RESOLVED",
+            "INCIDENCE_REJECTED",
+            "INCIDENCE_APPROVED",
+        ].includes(n.data?.notification_type)
     );
 });
 
@@ -117,8 +122,17 @@ watch(unread, (value) => {
     console.log('NOTIFICACIONES:', value);
 }, { deep: true });
 
+onUnmounted(() => {
+    if (notificationsInterval) {
+        clearInterval(notificationsInterval);
+    }
+});
+
 onMounted(async () => {
     await fetchNotifications();
+    notificationsInterval = setInterval(() => {
+        fetchNotifications(true);
+    }, 5000);
 });
 </script>
 
