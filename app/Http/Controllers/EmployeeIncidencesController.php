@@ -328,7 +328,7 @@ class EmployeeIncidencesController
             return redirect()->route('/incidences-employee');
         }
 
-        $documentIncidences = [10,8,22,5,4,7,6,49,29,14,15];
+        $documentIncidences = [10,8,22,5,4,7,6,49,29,15];
 
         if (in_array($incidenceId, $documentIncidences, true)) {
             $validated = $request->validate([
@@ -404,7 +404,7 @@ class EmployeeIncidencesController
             return redirect()->route('/incidences-employee');
         }
 
-        $documentIncidencesNoNumber = [53,56,13];
+        $documentIncidencesNoNumber = [53,56,13,14];
 
         if (in_array($incidenceId, $documentIncidencesNoNumber, true)) {
 
