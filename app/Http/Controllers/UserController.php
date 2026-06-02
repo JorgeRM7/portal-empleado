@@ -310,23 +310,25 @@ class UserController
         return back()->with('success', 'Correo actualizado correctamente');
     }
 
-    public function getPhoto(Request $request)
+    public function getPhoto($id)
     {
-        $authId = Auth::id();
-        $externalUrl = "https://nominas.grupo-ortiz.site/Librerias/img/Fotos/{$authId}.jpg";
+
+        $externalUrl = "https://nominas.grupo-ortiz.site/Librerias/img/Fotos/{$id}.jpg?t=" . time();
 
         try {
-            // Consumimos la imagen de forma interna
-            $response = Http::get($externalUrl);
+            $response = Http::withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+            ])->get($externalUrl);
 
             if ($response->failed()) {
                 return response()->json(['error' => 'Foto no encontrada'], 404);
             }
 
             return response($response->body(), 200)
-                    ->header('Content-Type', 'image/jpeg')
-                    ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-                    ->header('Pragma', 'no-cache');
+                ->header('Content-Type', 'image/jpeg')
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->header('Pragma', 'no-cache');
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al obtener la imagen'], 500);
