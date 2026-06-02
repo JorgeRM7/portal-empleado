@@ -313,6 +313,10 @@ class UserController
     public function getPhoto($id)
     {
 
+        if ((int)$id !== (int)Auth::id()) {
+            return response()->json(['error' => 'No tienes permiso para ver esta foto.'], 403);
+        }
+
         $externalUrl = "https://nominas.grupo-ortiz.site/Librerias/img/Fotos/{$id}.jpg?t=" . time();
 
         try {
