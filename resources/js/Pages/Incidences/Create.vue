@@ -1084,7 +1084,6 @@ watch(employeeId, () => {
                                         class="w-full"
                                         :min="0"
                                         placeholder="0"
-                                        disabled
                                     />
                                     <span class="text-xs text-gray-500"
                                         >Estas horas se calculan automaticamente
