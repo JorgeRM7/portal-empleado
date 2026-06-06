@@ -124,7 +124,7 @@ const initFilters = () => {
             operator: FilterOperator.AND,
             constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
         },
-        anio: {
+        year: {
             operator: FilterOperator.AND,
             constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
         },
