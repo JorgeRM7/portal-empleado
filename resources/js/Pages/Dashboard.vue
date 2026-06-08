@@ -776,20 +776,6 @@ onMounted(() => {
                                                 )?.name?.substring(0, 2)
                                             }}</span>
                                         </div>
-
-                                        <!-- <div class="extra-columns-container">
-                                            <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_dobles || 0) > 0 }">
-                                                <span class="label">Dob:</span> {{ getDayAttendanceData(date)?.horas_dobles || 0 }}
-                                            </div>
-
-                                            <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.horas_triples || 0) > 0 }">
-                                                <span class="label">Tri:</span> {{ getDayAttendanceData(date)?.horas_triples || 0 }}
-                                            </div>
-
-                                            <div class="col-item" :class="{ 'has-value': (getDayAttendanceData(date)?.sunday_premium || 0) > 0 }">
-                                                <span class="label">PVac:</span> {{ getDayAttendanceData(date)?.sunday_premium || 0 }}
-                                            </div>
-                                        </div> -->
                                     </template>
                                 </div>
                             </template>

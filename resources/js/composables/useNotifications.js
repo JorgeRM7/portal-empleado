@@ -7,17 +7,36 @@ const all = ref([]);
 const loading = ref(false);
 const error = ref(null);
 
-async function fetchNotifications() {
+// async function fetchNotifications() {
+//     try {
+//         loading.value = true;
+//         const { data } = await axios.get("/notifications");
+//         unreadCount.value = data.unread_count;
+//         unread.value = data.unread;
+//         all.value = data.all;
+//     } catch (e) {
+//         error.value = e.message ?? "Error cargando notificaciones";
+//     } finally {
+//         loading.value = false;
+//     }
+// }
+
+async function fetchNotifications(silent = false) {
     try {
-        loading.value = true;
+        if (!silent) loading.value = true;
+
         const { data } = await axios.get("/notifications");
+
         unreadCount.value = data.unread_count;
+
+        // 🔥 REEMPLAZAR COMPLETAMENTE (NO MERGE)
         unread.value = data.unread;
         all.value = data.all;
+
     } catch (e) {
         error.value = e.message ?? "Error cargando notificaciones";
     } finally {
-        loading.value = false;
+        if (!silent) loading.value = false;
     }
 }
 
@@ -49,3 +68,5 @@ export function useNotifications() {
         sendNotification,
     };
 }
+
+

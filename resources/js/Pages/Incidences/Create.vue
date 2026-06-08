@@ -905,6 +905,15 @@ watch(employeeId, () => {
                                 <label class="text-sm font-medium"
                                     >Horario</label
                                 >
+                                <!-- <Select
+                                    v-model="form.schedule"
+                                    :options="schedules"
+                                    optionLabel="name"
+                                    optionValue="id"
+                                    class="w-full"
+                                    placeholder="Selecciona un horario"
+                                    @update:modelValue="updateShiftHours"
+                                /> -->
                                 <Select
                                     v-model="form.schedule"
                                     :options="schedules"
@@ -913,7 +922,41 @@ watch(employeeId, () => {
                                     class="w-full"
                                     placeholder="Selecciona un horario"
                                     @update:modelValue="updateShiftHours"
-                                />
+                                >
+                                    <template #option="slotProps">
+                                        <div class="flex flex-col">
+                                            <span class="font-semibold">
+                                                {{ slotProps.option.name }}
+                                            </span>
+
+                                            <span class="text-xs text-gray-500">
+                                                {{ slotProps.option.entry_time }} - {{ slotProps.option.leave_time }}
+                                            </span>
+                                        </div>
+                                    </template>
+
+                                    <template #value="slotProps">
+                                        <div v-if="slotProps.value" class="flex flex-col">
+                                            <span class="font-semibold">
+                                                {{ slotProps.option?.name || schedules.find(s => s.id === slotProps.value)?.name }}
+                                            </span>
+
+                                            <span class="text-xs text-gray-500">
+                                                {{
+                                                    schedules.find(s => s.id === slotProps.value)?.entry_time
+                                                }}
+                                                -
+                                                {{
+                                                    schedules.find(s => s.id === slotProps.value)?.leave_time
+                                                }}
+                                            </span>
+                                        </div>
+
+                                        <span v-else>
+                                            Selecciona un horario
+                                        </span>
+                                    </template>
+                                </Select>
                             </div>
 
                             <!-- Días disponibles (placeholder) -->

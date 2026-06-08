@@ -572,12 +572,20 @@ onUnmounted(() => {
                 </p>
 
                 <div class="flex flex-column gap-2">
-                    <Dropdown
+                    <!-- <Dropdown
                         v-model="selectedOption"
                         :options="options"
                         filter
                         optionLabel="name"
                         optionValue="code"
+                        placeholder="Seleccione un Asunto..."
+                        class="w-full md:w-30rem"
+                    > -->
+                    <Dropdown
+                        v-model="selectedOption"
+                        :options="options"
+                        filter
+                        optionLabel="name"
                         placeholder="Seleccione un Asunto..."
                         class="w-full md:w-30rem"
                     >

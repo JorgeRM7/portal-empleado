@@ -24,6 +24,7 @@ const resolvedNotifications = computed(() => {
             "RESOLVED",
             "INCIDENCE_REJECTED",
             "INCIDENCE_APPROVED",
+            "NEWS",
         ].includes(n.data?.notification_type)
     );
 });
@@ -111,16 +112,42 @@ const toggleNotifications = (event) => {
     opNotifications.value.toggle(event);
 };
 
-function openNotification(notification) {
-    markAsRead(notification.id);
+async function openNotification(notification) {
+    try {
+        await markAsRead(notification.id);
+        await fetchNotifications(true);
+    } catch (e) {
+        console.error("markAsRead falló:", e);
+    }
+
     const data = notification.data;
-    if (!data.complain_id) return;
-    router.get(`/complaints/${data.complain_id}`);
+    if (!data) return;
+
+    let url = null;
+
+    switch (data.notification_type) {
+        case "RESOLVED":
+        case "TICKET_RESOLVED":
+            url = `/complaints/${data.complain_id}`;
+            break;
+
+        case "INCIDENCE_APPROVED":
+        case "INCIDENCE_REJECTED":
+            url = `/incidences-employee/${data.relationship_id}`;
+            break;
+
+        case "NEWS":
+        case "NEWS_CREATED":
+            url = `/posts`;
+            break;
+    }
+
+    if (url) window.open(url, "_blank");
 }
 
-watch(unread, (value) => {
-    console.log('NOTIFICACIONES:', value);
-}, { deep: true });
+// watch(unread, (value) => {
+//     console.log('NOTIFICACIONES:', value);
+// }, { deep: true });
 
 onUnmounted(() => {
     if (notificationsInterval) {
@@ -264,7 +291,7 @@ onMounted(async () => {
                 </div>
 
                 <!-- Body -->
-                <div class="max-h-[380px] overflow-y-auto">
+                <div class="max-h-[380px] overflow-y-auto min-h-[120px]">
 
                     <!-- Loading -->
                     <div v-if="loading" class="p-4 space-y-3">
