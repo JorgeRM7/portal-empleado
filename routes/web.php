@@ -165,7 +165,7 @@ Route::middleware([
     Route::post('/notifications/update-status', [NotificationController::class, 'update'])
     ->name('notifications.updateStatus');
 
-    Route::get('/employees/photo', [UserController::class, 'getPhoto'])->name('employees.photo');
+    Route::get('/employees/{id}/photo', [UserController::class, 'getPhoto'])->name('employees.photo');
 
     Route::put('/password', [PasswordController::class, 'update'])
         ->name('password.update-user-employee');
