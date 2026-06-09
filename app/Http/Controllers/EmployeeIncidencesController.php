@@ -178,7 +178,7 @@ class EmployeeIncidencesController
             ]);
 
             $week = $getWeekData($validated['singleDate']);
-            $hours = (int) $validated['txt_hours_to_register'];
+            $hours = $validated['txt_hours_to_register'];
 
             $base = [
                 "employee_id"       => $validated['employee_id'],
