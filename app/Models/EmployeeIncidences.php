@@ -111,7 +111,7 @@ class EmployeeIncidences extends Model
                 FROM employees e
                 LEFT JOIN employee_incidences ei ON ei.employee_id = e.id
                 LEFT JOIN incidences i ON i.id = ei.incidence_id
-                WHERE e.id = $employeeId AND deleted_by IS NULL
+                WHERE e.id = $employeeId AND deleted_by IS NULL AND declined_at IS NULL
                 ORDER BY e.id, ei.validity_from DESC;
             ";
 
