@@ -2,7 +2,9 @@
 
 namespace App\Notifications;
 
+use App\Models\BranchOffice;
 use App\Models\Employee;
+use App\Models\EmployeeComplains;
 use App\Notifications\Channels\CustomDatabaseChannel;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -58,9 +60,11 @@ class TicketAssignment extends Notification
 
     public function toDatabase(object $notifiable): array
     {
+        $notificationDate = Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s');
+        $details = $this->ticketDetails();
         return [
             'titulo'    => "Nuevo Ticket Asignado",
-            'descripcion'   => "Se te ha asignado el ticket con ID \"{$this->registroId}\"",
+            'descripcion'   => "[{$details['branch_office']}] Se te ha asignado un ticket del trabajador ({$details['employee']}) levantado el ({$details['ticket_date']}). \"{$notificationDate}\"",
             'modulo'    => $this->modulo,
             'registroId'=> $this->registroId,
             'employee_id'    => $this->employee->id,
@@ -74,6 +78,32 @@ class TicketAssignment extends Notification
 
         ];
 
+    }
+
+    private function ticketDetails(): array
+    {
+        $complain = EmployeeComplains::find($this->complainId);
+        $employee = $complain ? Employee::find($complain->employee_id) : $this->employee->id;
+        $branchOffice = $complain ? BranchOffice::find($complain->branch_office_id) : null;
+
+        $employeeCode = $employee?->code ?? $employee?->id ?? 'Sin clave';
+        $employeeFullName = $employee?->full_name ?? 'Sin nombre';
+        $branchOfficeName = trim(implode(' - ', array_filter([
+            $branchOffice?->code,
+            $branchOffice?->name,
+        ]))) ?: 'Sin planta';
+        $ticketDate = $complain?->date
+            ? Carbon::parse($complain->date)->format('d/m/Y')
+            : 'Sin fecha';
+
+        return [
+            'branch_office' => $branchOfficeName,
+            'branch_office_id' => $complain?->branch_office_id ?? $employee?->branch_office_id,
+            'employee_id' => $employee?->id,
+            'employee_full_name' => $employeeFullName,
+            'employee' => "{$employeeCode} - {$employeeFullName}",
+            'ticket_date' => $ticketDate,
+        ];
     }
 
 
