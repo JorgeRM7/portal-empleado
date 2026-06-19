@@ -82,7 +82,7 @@ class TicketAssignment extends Notification
 
     private function ticketDetails(): array
     {
-        $complain = EmployeeComplains::find($this->complainId);
+        $complain = EmployeeComplains::find($this->registroId);
         $employee = $complain ? Employee::find($complain->employee_id) : $this->employee->id;
         $branchOffice = $complain ? BranchOffice::find($complain->branch_office_id) : null;
 
