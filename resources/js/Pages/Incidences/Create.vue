@@ -139,7 +139,8 @@ const GROUPS = {
     TXT: new Set([23]),
     VAC: new Set([3]),
     SHIFT: new Set([20, 18, 19]),
-    DOC: new Set([53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13]),
+    DOC: new Set([8, 22, 56, 5, 4, 7, 6]),
+    DOCNOCODE: new Set([53, 10, 49, 29, 14, 15, 13]),
 };
 
 const SHIFT_IDS = new Set([20, 18, 19]);
@@ -301,6 +302,12 @@ const incidenceUI = computed(() => {
             ],
         };
     }
+    if (GROUPS.DOCNOCODE.has(id)) {
+        return {
+            key: "DOCNOCODE",
+            fields: ["range", "days_to_register", "document", "notes"],
+        };
+    }
     return { key: "DEFAULT", fields: ["range", "days_to_register", "notes"] };
 });
 
@@ -335,6 +342,11 @@ const canSave = computed(() => {
         return hasRange && form.value.days_available != null;
     }
     if (ui === "DOC") {
+        return (
+            hasRange && !!form.value.document && !!form.value.document_number
+        );
+    }
+    if (ui === "DOCNOCODE") {
         return hasRange && !!form.value.document;
     }
     return hasRange; // DEFAULT
