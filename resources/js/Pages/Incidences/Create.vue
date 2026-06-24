@@ -281,7 +281,7 @@ const incidenceUI = computed(() => {
     if (GROUPS.VAC.has(id)) {
         return {
             key: "VAC",
-            fields: ["range", "days_to_register", "days_available", "notes"],
+            fields: ["range", "days_available", "notes"],
         };
     }
     if (GROUPS.SHIFT.has(id)) {
@@ -293,19 +293,13 @@ const incidenceUI = computed(() => {
     if (GROUPS.DOC.has(id)) {
         return {
             key: "DOC",
-            fields: [
-                "range",
-                "days_to_register",
-                "document",
-                "document_number",
-                "notes",
-            ],
+            fields: ["range", "document", "document_number", "notes"],
         };
     }
     if (GROUPS.DOCNOCODE.has(id)) {
         return {
             key: "DOCNOCODE",
-            fields: ["range", "days_to_register", "document", "notes"],
+            fields: ["range", "document", "notes"],
         };
     }
     return { key: "DEFAULT", fields: ["range", "days_to_register", "notes"] };
@@ -1025,27 +1019,6 @@ watch(employeeId, () => {
                             </div>
 
                             <!-- Días disponibles (placeholder) -->
-                            <div
-                                v-if="
-                                    incidenceUI.fields.includes(
-                                        'days_available',
-                                    )
-                                "
-                                class="flex flex-col gap-2"
-                            >
-                                <label class="text-sm font-medium"
-                                    >Días disponibles (antes de esta
-                                    incidencia)</label
-                                >
-                                <InputText
-                                    :value="form.days_available ?? '—'"
-                                    class="w-full"
-                                    disabled
-                                />
-                                <small class="text-gray-500"
-                                    >Se obtiene según empleado/periodo.</small
-                                >
-                            </div>
 
                             <!-- Paso 2: Campos dinámicos -->
                             <div class="grid gap-3 md:grid-cols-2">
@@ -1069,6 +1042,29 @@ watch(employeeId, () => {
                                         disabled
                                         placeholder="Selecciona un horario"
                                     />
+                                </div>
+
+                                <div
+                                    v-if="
+                                        incidenceUI.fields.includes(
+                                            'days_available',
+                                        )
+                                    "
+                                    class="flex flex-col gap-2"
+                                >
+                                    <label class="text-sm font-medium"
+                                        >Días disponibles (antes de esta
+                                        incidencia)</label
+                                    >
+                                    <InputText
+                                        :value="form.days_available ?? '—'"
+                                        class="w-full"
+                                        disabled
+                                    />
+                                    <small class="text-gray-500"
+                                        >Se obtiene según
+                                        empleado/periodo.</small
+                                    >
                                 </div>
 
                                 <!-- Rango / vigencia -->
