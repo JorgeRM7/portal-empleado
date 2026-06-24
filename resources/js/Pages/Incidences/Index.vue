@@ -463,60 +463,90 @@ const revisarIncidencias = async (params = {}) => {
 
     loading.value = true;
 
+    const url =
+        "https://portal-nominas.grupo-ortiz.site/api/weekly-assistances/check-turn";
+
     let peticiones = [];
 
     empleados.forEach((id) => {
         fechas.forEach((fecha) => {
-            let promesa = $.ajax({
-                url: "https://grupo-ortiz.site/apis/Controllers/weeklyAsistenceController.php?op=revisar-turno",
-                method: "POST",
-                data: { id: id, validity_from: fecha },
-            })
-                .then(function (response) {
-                    let res =
-                        typeof response === "string"
-                            ? JSON.parse(response)
-                            : response;
-                    // console.log(response);
-                    res.empleadoId = id;
-                    res.fechaError = fecha;
-                    return res;
-                })
-                .catch(function () {
-                    return {
-                        estatus: "error",
-                        message: "No se encontró un rol de turno activo",
-                        empleadoId: id,
-                        fechaError: fecha,
-                    };
-                });
+            peticiones.push(() =>
+                axios
+                    .post(url, {
+                        id: id,
+                        validity_from: fecha,
+                    })
+                    .then((response) => {
+                        let res = response.data;
 
-            peticiones.push(promesa);
+                        res.empleadoId = id;
+                        res.fechaError = fecha;
+                        console.log(res);
+
+                        return res;
+                    })
+                    .catch((error) => {
+                        console.error("Error en petición:", error);
+
+                        return {
+                            estatus: "error",
+                            message:
+                                error?.response?.data?.message ||
+                                "No se encontró un rol de turno activo",
+                            empleadoId: id,
+                            fechaError: fecha,
+                        };
+                    }),
+            );
         });
     });
 
-    Promise.all(peticiones)
-        .then((resultados) => {
-            const errores = resultados.filter(
-                (res) => res && res.estatus === "error",
-            );
+    const total = peticiones.length;
+    let procesados = 0;
+    let resultados = [];
 
-            toast.removeGroup("processing");
+    const tamañoLote = 200;
 
-            if (errores.length > 0) {
-                toast.add({
-                    severity: "warn",
-                    summary: "Proceso completado con advertencias",
-                    detail: `${errores.length} registro(s) presentaron inconvenientes`,
-                });
-            }
+    try {
+        for (let i = 0; i < peticiones.length; i += tamañoLote) {
+            const lote = peticiones.slice(i, i + tamañoLote);
 
-            showSuccess();
-        })
-        .catch((err) => {
-            showError();
-            console.error("Error crítico:", err);
+            const res = await Promise.all(lote.map((fn) => fn()));
+
+            resultados = resultados.concat(res);
+
+            procesados += lote.length;
+
+            const porcentaje = Math.round((procesados / total) * 100);
+
+            toast.add({
+                severity: "info",
+                summary: "Procesando...",
+                detail: `${porcentaje}% (${procesados}/${total})`,
+                life: 3000,
+            });
+
+            await new Promise((r) => setTimeout(r, 120));
+        }
+
+        const errores = resultados.filter(
+            (res) => res && res.estatus === "error",
+        );
+
+        console.log("Errores detectados:", errores);
+
+        toast.add({
+            severity: "success",
+            summary: "Finalizado",
+            detail: `Procesados: ${total}`,
+            life: 5000,
         });
+
+        toast.removeGroup("processing");
+    } catch (err) {
+        console.error("Error crítico:", err);
+        showError("Ocurrió un error al procesar la revisión");
+    }
 };
 
 const deleteIncidence = async () => {
