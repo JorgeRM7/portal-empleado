@@ -106,6 +106,7 @@ class NotificationController
         DB::table('notifications')
         ->where('employee_id', $userId)
         ->whereNull('read_at')
+        ->whereNull('notifiable_id')
         ->update([
             'read_at' => now()
         ]);
