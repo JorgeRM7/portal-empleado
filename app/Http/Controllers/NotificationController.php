@@ -8,6 +8,8 @@ use Inertia\Inertia;
 use App\Models\Notifications;
 use App\Models\Employee;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class NotificationController
 {
@@ -100,7 +102,13 @@ class NotificationController
 
     public function markAllAsRead(Request $request)
     {
-        $request->user()->unreadNotifications->markAsRead();
+        $userId = Auth::id();
+        DB::table('notifications')
+        ->where('employee_id', $userId)
+        ->whereNull('read_at')
+        ->update([
+            'read_at' => now()
+        ]);
 
         return response()->json(['message' => 'Todas las notificaciones marcadas como leídas']);
     }
