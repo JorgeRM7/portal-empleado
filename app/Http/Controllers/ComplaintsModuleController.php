@@ -635,7 +635,13 @@ class ComplaintsModuleController
             foreach ($request->file('archivos') as $file) {
                 // Validar imágenes con IA para detectar contenido sensible
                 if (str_starts_with($file->getMimeType(), 'image/')) {
-                    $validacionImagen = $this->validarImagenConIA($file, $asuntoCod, $asuntoTexto);
+                    $validacionImagen = array_merge([
+                        'valid' => true,
+                        'razon' => 'Analisis de imagen incompleto',
+                        'tipo_detectado' => 'desconocido',
+                        'advertencias' => [],
+                        'sugerencia' => null,
+                    ], $this->validarImagenConIA($file, $asuntoCod, $asuntoTexto) ?? []);
 
                     // Si la IA marca la imagen como no apta, activar flag de contenido sensible
                     if (!$validacionImagen['valid']) {
@@ -966,6 +972,5 @@ class ComplaintsModuleController
 
 
 }
-
 
 
