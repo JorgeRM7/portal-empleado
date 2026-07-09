@@ -605,7 +605,7 @@ class ComplaintsModuleController
             'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240',
             'descripcion' => 'nullable|required_if:es_constancia,0|string|min:4|max:300',
             'es_constancia' => 'required|boolean',
-            'tipo_constancia' => 'nullable|required_if:es_constancia,1|string|max:150',
+            'tipo_constancia' => 'nullable|required_if:es_constancia,1',
         ]);
 
         $asuntoCod = $validated['asunto_cod'];
