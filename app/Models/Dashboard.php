@@ -114,9 +114,12 @@ class Dashboard extends Model
                 edv.amount,
                 edv.seniority,
                 edv.date,
-                edv.branch_office_id
+                edv.branch_office_id,
+                employee_incidences.validity_from,
+                employee_incidences.validity_to 
             FROM employee_day_vacations AS edv
             LEFT JOIN employees AS e ON edv.employee_id = e.id
+            INNER JOIN employee_incidences ON employee_incidences.id = edv.employee_incidence_id 
             WHERE e.deleted_at IS NULL
             AND edv.employee_id IS NOT NULL
             AND e.full_name IS NOT NULL

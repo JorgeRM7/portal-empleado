@@ -801,6 +801,7 @@ onMounted(() => {
             <div v-if="loadingData">
                 <Skeleton width="100%" height="150px"></Skeleton>
             </div>
+            
             <div v-else>
                 <DataTable
                     :value="filteredVacationsHistory"
@@ -870,7 +871,7 @@ onMounted(() => {
                         </template>
                     </Column>
                     <Column
-                        field="date"
+                        field="validity_from"
                         header="Fecha"
                         dataType="date"
                         sortable
@@ -882,7 +883,7 @@ onMounted(() => {
                     >
                         <template #body="{ data }">
                             <i class="pi pi-calendar mr-2"></i>
-                            {{ formatDate(data.date) }}
+                            {{ formatDate(data.validity_from) }}
                         </template>
 
                         <template #filter="{ filterModel }">
