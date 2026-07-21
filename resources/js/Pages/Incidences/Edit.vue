@@ -118,7 +118,8 @@ const GROUPS = {
     TXT: new Set([23]),
     VAC: new Set([3]),
     SHIFT: new Set([20, 18, 19]),
-    DOC: new Set([53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13]),
+    DOC: new Set([8, 22, 56, 5, 4, 7, 6]),
+    DOCNOCODE: new Set([53, 10, 49, 29, 14, 15, 13]),
 };
 const SHIFT_IDS = new Set([20, 18, 19]);
 
@@ -257,7 +258,7 @@ const incidenceUI = computed(() => {
     if (GROUPS.VAC.has(id)) {
         return {
             key: "VAC",
-            fields: ["range", "days_to_register", "days_available", "notes"],
+            fields: ["range", "days_available", "notes"],
         };
     }
     if (GROUPS.SHIFT.has(id)) {
@@ -269,13 +270,13 @@ const incidenceUI = computed(() => {
     if (GROUPS.DOC.has(id)) {
         return {
             key: "DOC",
-            fields: [
-                "range",
-                "days_to_register",
-                "document",
-                "document_number",
-                "notes",
-            ],
+            fields: ["range", "document", "document_number", "notes"],
+        };
+    }
+    if (GROUPS.DOCNOCODE.has(id)) {
+        return {
+            key: "DOCNOCODE",
+            fields: ["range", "document", "notes"],
         };
     }
     return { key: "DEFAULT", fields: ["range", "days_to_register", "notes"] };
@@ -414,12 +415,140 @@ const canSave = computed(() => {
             hasRange && !!form.value.document && !!form.value.document_number
         );
     }
+    if (ui === "DOCNOCODE") {
+        return hasRange && !!form.value.document;
+    }
+
     return hasRange;
 });
 
 function typeLabel(type) {
     return typeOptions.value.find((x) => x.value === type)?.label ?? type;
 }
+
+const revisarIncidencias = async (params = {}) => {
+    toast.add({
+        severity: "info",
+        summary: "Procesando",
+        detail: "Revisión de turnos en proceso...",
+        group: "processing",
+        life: 0,
+        icon: "pi pi-spin pi-spinner",
+    });
+
+    await nextTick();
+
+    const fecha_inicial = form.value.range[0];
+    const fecha_final = form.value.range[1];
+
+    let empleados = [{ id: props.employeeId }];
+
+    if (!fecha_inicial || !fecha_final) {
+        showError();
+        return;
+    }
+
+    if (!empleados || empleados.length < 1) {
+        showError();
+        return;
+    }
+
+    const fechas = [];
+    let fInicio = new Date(fecha_inicial);
+    const fFin = new Date(fecha_final);
+
+    while (fInicio <= fFin) {
+        fechas.push(fInicio.toISOString().split("T")[0]);
+        fInicio.setDate(fInicio.getDate() + 1);
+    }
+
+    loading.value = true;
+
+    const url =
+        "https://portal-nominas.grupo-ortiz.site/api/weekly-assistances/check-turn";
+
+    let peticiones = [];
+
+    empleados.forEach((id) => {
+        fechas.forEach((fecha) => {
+            peticiones.push(() =>
+                axios
+                    .post(url, {
+                        id: id,
+                        validity_from: fecha,
+                    })
+                    .then((response) => {
+                        let res = response.data;
+
+                        res.empleadoId = id;
+                        res.fechaError = fecha;
+                        console.log(res);
+
+                        return res;
+                    })
+                    .catch((error) => {
+                        console.error("Error en petición:", error);
+
+                        return {
+                            estatus: "error",
+                            message:
+                                error?.response?.data?.message ||
+                                "No se encontró un rol de turno activo",
+                            empleadoId: id,
+                            fechaError: fecha,
+                        };
+                    }),
+            );
+        });
+    });
+
+    const total = peticiones.length;
+    let procesados = 0;
+    let resultados = [];
+
+    const tamañoLote = 200;
+
+    try {
+        for (let i = 0; i < peticiones.length; i += tamañoLote) {
+            const lote = peticiones.slice(i, i + tamañoLote);
+
+            const res = await Promise.all(lote.map((fn) => fn()));
+
+            resultados = resultados.concat(res);
+
+            procesados += lote.length;
+
+            const porcentaje = Math.round((procesados / total) * 100);
+
+            toast.add({
+                severity: "info",
+                summary: "Procesando...",
+                detail: `${porcentaje}% (${procesados}/${total})`,
+                life: 3000,
+            });
+
+            await new Promise((r) => setTimeout(r, 120));
+        }
+
+        const errores = resultados.filter(
+            (res) => res && res.estatus === "error",
+        );
+
+        console.log("Errores detectados:", errores);
+
+        toast.add({
+            severity: "success",
+            summary: "Finalizado",
+            detail: `Procesados: ${total}`,
+            life: 5000,
+        });
+
+        toast.removeGroup("processing");
+    } catch (err) {
+        console.error("Error crítico:", err);
+        showError("Ocurrió un error al procesar la revisión");
+    }
+};
 
 function saveIncidence() {
     form.value.days_to_register = daysEditable.value;
@@ -463,9 +592,12 @@ function saveIncidence() {
         route("incidences-employee.update", props.incidence.id),
         form.value,
         {
-            onSuccess: () => {
+            onSuccess: async () => {
                 sending.value = false;
                 showSuccess();
+                if (GROUPS.DOC.has(form.value.incidence_id)) {
+                    await revisarIncidencias();
+                }
             },
             onError: () => {
                 sending.value = false;
@@ -893,6 +1025,30 @@ watch(
                                     />
                                 </div>
 
+                                <!-- Días disponibles (placeholder) -->
+                                <div
+                                    v-if="
+                                        incidenceUI.fields.includes(
+                                            'days_available',
+                                        )
+                                    "
+                                    class="flex flex-col gap-2"
+                                >
+                                    <label class="text-sm font-medium"
+                                        >Días disponibles (antes de esta
+                                        incidencia)</label
+                                    >
+                                    <InputText
+                                        :value="form.days_available ?? '—'"
+                                        class="w-full"
+                                        disabled
+                                    />
+                                    <small class="text-gray-500"
+                                        >Se obtiene según
+                                        empleado/periodo.</small
+                                    >
+                                </div>
+
                                 <!-- Rango / vigencia -->
                                 <div
                                     v-if="incidenceUI.fields.includes('range')"
@@ -971,29 +1127,6 @@ watch(
                                     <small class="text-gray-500"
                                         >Se calcula automáticamente con las
                                         fechas.</small
-                                    >
-                                </div>
-
-                                <!-- Días disponibles (placeholder) -->
-                                <div
-                                    v-if="
-                                        incidenceUI.fields.includes(
-                                            'days_available',
-                                        )
-                                    "
-                                    class="flex flex-col gap-2"
-                                >
-                                    <label class="text-sm font-medium"
-                                        >Días disponibles</label
-                                    >
-                                    <InputText
-                                        :value="form.days_available ?? '—'"
-                                        class="w-full"
-                                        disabled
-                                    />
-                                    <small class="text-gray-500"
-                                        >Se obtiene según
-                                        empleado/periodo.</small
                                     >
                                 </div>
 

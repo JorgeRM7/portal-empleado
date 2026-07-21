@@ -104,7 +104,7 @@ class EmployeeIncidencesController
         if($employee->branch_office_id != 19){
             $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->whereNotIn('id', [12,24,25,41, 72])->get();
         }else{
-            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->orWhere('id', 72)->get();
+            $allincidences = Incidence::select('id','name', 'description')->where('requested_by_user', '=', '1')->get();
         }
         $lastWeekNumber = EmployeeIncidences::getLastWeekNumber($employee->branch_office_id);
 
@@ -178,7 +178,7 @@ class EmployeeIncidencesController
             ]);
 
             $week = $getWeekData($validated['singleDate']);
-            $hours = (int) $validated['txt_hours_to_register'];
+            $hours = $validated['txt_hours_to_register'];
 
             $base = [
                 "employee_id"       => $validated['employee_id'],
@@ -619,7 +619,7 @@ class EmployeeIncidencesController
             ]);
 
             $week = $getWeekData($validated['singleDate']);
-            $hours = (int) $validated['txt_hours_to_register'];
+            $hours = $validated['txt_hours_to_register'];
 
             $base = [
                 "employee_id"       => $validated['employee_id'],

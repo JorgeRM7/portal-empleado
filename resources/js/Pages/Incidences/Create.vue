@@ -139,7 +139,8 @@ const GROUPS = {
     TXT: new Set([23]),
     VAC: new Set([3]),
     SHIFT: new Set([20, 18, 19]),
-    DOC: new Set([53, 10, 8, 22, 56, 5, 4, 7, 6, 49, 29, 14, 15, 13]),
+    DOC: new Set([8, 22, 56, 5, 4, 7, 6]),
+    DOCNOCODE: new Set([53, 10, 49, 29, 14, 15, 13]),
 };
 
 const SHIFT_IDS = new Set([20, 18, 19]);
@@ -280,7 +281,7 @@ const incidenceUI = computed(() => {
     if (GROUPS.VAC.has(id)) {
         return {
             key: "VAC",
-            fields: ["range", "days_to_register", "days_available", "notes"],
+            fields: ["range", "days_available", "notes"],
         };
     }
     if (GROUPS.SHIFT.has(id)) {
@@ -292,13 +293,13 @@ const incidenceUI = computed(() => {
     if (GROUPS.DOC.has(id)) {
         return {
             key: "DOC",
-            fields: [
-                "range",
-                "days_to_register",
-                "document",
-                "document_number",
-                "notes",
-            ],
+            fields: ["range", "document", "document_number", "notes"],
+        };
+    }
+    if (GROUPS.DOCNOCODE.has(id)) {
+        return {
+            key: "DOCNOCODE",
+            fields: ["range", "document", "notes"],
         };
     }
     return { key: "DEFAULT", fields: ["range", "days_to_register", "notes"] };
@@ -335,6 +336,11 @@ const canSave = computed(() => {
         return hasRange && form.value.days_available != null;
     }
     if (ui === "DOC") {
+        return (
+            hasRange && !!form.value.document && !!form.value.document_number
+        );
+    }
+    if (ui === "DOCNOCODE") {
         return hasRange && !!form.value.document;
     }
     return hasRange; // DEFAULT
@@ -382,61 +388,90 @@ const revisarIncidencias = async (params = {}) => {
 
     loading.value = true;
 
+    const url =
+        "https://portal-nominas.grupo-ortiz.site/api/weekly-assistances/check-turn";
+
     let peticiones = [];
 
     empleados.forEach((id) => {
         fechas.forEach((fecha) => {
-            // console.log(fecha, id);
-            let promesa = $.ajax({
-                url: "https://grupo-ortiz.site/apis/Controllers/weeklyAsistenceController.php?op=revisar-turno",
-                method: "POST",
-                data: { id: id.id, validity_from: fecha },
-            })
-                .then(function (response) {
-                    let res =
-                        typeof response === "string"
-                            ? JSON.parse(response)
-                            : response;
-                    // console.log(response);
-                    res.empleadoId = id.id;
-                    res.fechaError = fecha;
-                    return res;
-                })
-                .catch(function () {
-                    return {
-                        estatus: "error",
-                        message: "No se encontró un rol de turno activo",
-                        empleadoId: id.id,
-                        fechaError: fecha,
-                    };
-                });
+            peticiones.push(() =>
+                axios
+                    .post(url, {
+                        id: id,
+                        validity_from: fecha,
+                    })
+                    .then((response) => {
+                        let res = response.data;
 
-            peticiones.push(promesa);
+                        res.empleadoId = id;
+                        res.fechaError = fecha;
+                        console.log(res);
+
+                        return res;
+                    })
+                    .catch((error) => {
+                        console.error("Error en petición:", error);
+
+                        return {
+                            estatus: "error",
+                            message:
+                                error?.response?.data?.message ||
+                                "No se encontró un rol de turno activo",
+                            empleadoId: id,
+                            fechaError: fecha,
+                        };
+                    }),
+            );
         });
     });
 
-    Promise.all(peticiones)
-        .then((resultados) => {
-            const errores = resultados.filter(
-                (res) => res && res.estatus === "error",
-            );
+    const total = peticiones.length;
+    let procesados = 0;
+    let resultados = [];
 
-            toast.removeGroup("processing");
+    const tamañoLote = 200;
 
-            if (errores.length > 0) {
-                toast.add({
-                    severity: "warn",
-                    summary: "Proceso completado con advertencias",
-                    detail: `${errores.length} registro(s) presentaron inconvenientes`,
-                });
-            }
+    try {
+        for (let i = 0; i < peticiones.length; i += tamañoLote) {
+            const lote = peticiones.slice(i, i + tamañoLote);
 
-            showSuccess();
-        })
-        .catch((err) => {
-            showError();
-            console.error("Error crítico:", err);
+            const res = await Promise.all(lote.map((fn) => fn()));
+
+            resultados = resultados.concat(res);
+
+            procesados += lote.length;
+
+            const porcentaje = Math.round((procesados / total) * 100);
+
+            toast.add({
+                severity: "info",
+                summary: "Procesando...",
+                detail: `${porcentaje}% (${procesados}/${total})`,
+                life: 3000,
+            });
+
+            await new Promise((r) => setTimeout(r, 120));
+        }
+
+        const errores = resultados.filter(
+            (res) => res && res.estatus === "error",
+        );
+
+        console.log("Errores detectados:", errores);
+
+        toast.add({
+            severity: "success",
+            summary: "Finalizado",
+            detail: `Procesados: ${total}`,
+            life: 5000,
         });
+
+        toast.removeGroup("processing");
+    } catch (err) {
+        console.error("Error crítico:", err);
+        showError("Ocurrió un error al procesar la revisión");
+    }
 };
 
 const errors = ref({});
@@ -930,24 +965,48 @@ watch(employeeId, () => {
                                             </span>
 
                                             <span class="text-xs text-gray-500">
-                                                {{ slotProps.option.entry_time }} - {{ slotProps.option.leave_time }}
+                                                {{
+                                                    slotProps.option.entry_time
+                                                }}
+                                                -
+                                                {{
+                                                    slotProps.option.leave_time
+                                                }}
                                             </span>
                                         </div>
                                     </template>
 
                                     <template #value="slotProps">
-                                        <div v-if="slotProps.value" class="flex flex-col">
+                                        <div
+                                            v-if="slotProps.value"
+                                            class="flex flex-col"
+                                        >
                                             <span class="font-semibold">
-                                                {{ slotProps.option?.name || schedules.find(s => s.id === slotProps.value)?.name }}
+                                                {{
+                                                    slotProps.option?.name ||
+                                                    schedules.find(
+                                                        (s) =>
+                                                            s.id ===
+                                                            slotProps.value,
+                                                    )?.name
+                                                }}
                                             </span>
 
                                             <span class="text-xs text-gray-500">
                                                 {{
-                                                    schedules.find(s => s.id === slotProps.value)?.entry_time
+                                                    schedules.find(
+                                                        (s) =>
+                                                            s.id ===
+                                                            slotProps.value,
+                                                    )?.entry_time
                                                 }}
                                                 -
                                                 {{
-                                                    schedules.find(s => s.id === slotProps.value)?.leave_time
+                                                    schedules.find(
+                                                        (s) =>
+                                                            s.id ===
+                                                            slotProps.value,
+                                                    )?.leave_time
                                                 }}
                                             </span>
                                         </div>
@@ -960,27 +1019,6 @@ watch(employeeId, () => {
                             </div>
 
                             <!-- Días disponibles (placeholder) -->
-                            <div
-                                v-if="
-                                    incidenceUI.fields.includes(
-                                        'days_available',
-                                    )
-                                "
-                                class="flex flex-col gap-2"
-                            >
-                                <label class="text-sm font-medium"
-                                    >Días disponibles (antes de esta
-                                    incidencia)</label
-                                >
-                                <InputText
-                                    :value="form.days_available ?? '—'"
-                                    class="w-full"
-                                    disabled
-                                />
-                                <small class="text-gray-500"
-                                    >Se obtiene según empleado/periodo.</small
-                                >
-                            </div>
 
                             <!-- Paso 2: Campos dinámicos -->
                             <div class="grid gap-3 md:grid-cols-2">
@@ -1004,6 +1042,29 @@ watch(employeeId, () => {
                                         disabled
                                         placeholder="Selecciona un horario"
                                     />
+                                </div>
+
+                                <div
+                                    v-if="
+                                        incidenceUI.fields.includes(
+                                            'days_available',
+                                        )
+                                    "
+                                    class="flex flex-col gap-2"
+                                >
+                                    <label class="text-sm font-medium"
+                                        >Días disponibles (antes de esta
+                                        incidencia)</label
+                                    >
+                                    <InputText
+                                        :value="form.days_available ?? '—'"
+                                        class="w-full"
+                                        disabled
+                                    />
+                                    <small class="text-gray-500"
+                                        >Se obtiene según
+                                        empleado/periodo.</small
+                                    >
                                 </div>
 
                                 <!-- Rango / vigencia -->

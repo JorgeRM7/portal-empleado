@@ -605,7 +605,7 @@ class ComplaintsModuleController
             'archivos.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240',
             'descripcion' => 'nullable|required_if:es_constancia,0|string|min:4|max:300',
             'es_constancia' => 'required|boolean',
-            'tipo_constancia' => 'nullable|required_if:es_constancia,1|string|max:150',
+            'tipo_constancia' => 'nullable|required_if:es_constancia,1',
         ]);
 
         $asuntoCod = $validated['asunto_cod'];
@@ -635,7 +635,13 @@ class ComplaintsModuleController
             foreach ($request->file('archivos') as $file) {
                 // Validar imágenes con IA para detectar contenido sensible
                 if (str_starts_with($file->getMimeType(), 'image/')) {
-                    $validacionImagen = $this->validarImagenConIA($file, $asuntoCod, $asuntoTexto);
+                    $validacionImagen = array_merge([
+                        'valid' => true,
+                        'razon' => 'Analisis de imagen incompleto',
+                        'tipo_detectado' => 'desconocido',
+                        'advertencias' => [],
+                        'sugerencia' => null,
+                    ], $this->validarImagenConIA($file, $asuntoCod, $asuntoTexto) ?? []);
 
                     // Si la IA marca la imagen como no apta, activar flag de contenido sensible
                     if (!$validacionImagen['valid']) {
@@ -966,6 +972,5 @@ class ComplaintsModuleController
 
 
 }
-
 
 
