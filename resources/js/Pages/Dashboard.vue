@@ -194,17 +194,14 @@ const openIncidencesModal = async (id) => {
 };
 
 function obtenerEmpleado() {
+    console.log(employeeVacations.value)
     loading.value = true;
 
     let id = employee.value.id;
     axios
         .get(`/dashboard/show/${id}`)
         .then((response) => {
-            // console.log('Datos del empleado:', response.data);
             employeeData.value = response.data.employee;
-            // if (!employeeData.value.terms_condition) {
-            //     showTermsModal.value = true;
-            // }
             employeeVacations.value = response.data.vacaciones;
             employeeIncidences.value = response.data.incidencias_empleado;
             antiguedad.value = response.data.antiguedad;

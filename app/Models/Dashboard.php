@@ -102,6 +102,38 @@ class Dashboard extends Model
         ];
     }
 
+    // // FUNCION EN DONDE TRAE TODOS LOS REGISTROS DE VACACIONES DEL EMPLEADO
+    // public static function dashboardVacaciones($data = [])
+    // {
+    //     $ids_empleados = $data['empleados'] ?? [];
+
+    //     $sql = "
+    //         SELECT
+    //             edv.id,
+    //             edv.employee_id,
+    //             TRIM(e.full_name) AS full_name,
+    //             edv.amount,
+    //             edv.seniority,
+    //             edv.date,
+    //             edv.branch_office_id
+    //         FROM employee_day_vacations AS edv
+    //         LEFT JOIN employees AS e ON edv.employee_id = e.id
+    //         WHERE e.deleted_at IS NULL
+    //         AND edv.employee_id IS NOT NULL
+    //         AND e.full_name IS NOT NULL
+    //         AND edv.deleted_at IS NULL
+    //     ";
+
+    //     if (!empty($ids_empleados)) {
+    //         $ids = implode(',', array_map('intval', $ids_empleados));
+    //         $sql .= " AND edv.employee_id IN ($ids)";
+    //     }
+
+    //     return DB::select($sql);
+    // }
+
+    // // FUNCION EN DONDE TRAE LOS REGISTROS DE VACACIONES DEL EMPLEADO TOMANDO SU REENTRY DATE COMO PUNTO DE PARTIDA
+    // // SI NO TIENE REENTRY DATE TRAE TODOS LOS REGISTROS DE VACAIONES
     public static function dashboardVacaciones($data = [])
     {
         $ids_empleados = $data['empleados'] ?? [];
@@ -116,11 +148,17 @@ class Dashboard extends Model
                 edv.date,
                 edv.branch_office_id
             FROM employee_day_vacations AS edv
-            LEFT JOIN employees AS e ON edv.employee_id = e.id
+            LEFT JOIN employees AS e
+                ON edv.employee_id = e.id
             WHERE e.deleted_at IS NULL
             AND edv.employee_id IS NOT NULL
             AND e.full_name IS NOT NULL
             AND edv.deleted_at IS NULL
+
+            AND (
+                e.reentry_date IS NULL
+                OR edv.date >= e.reentry_date
+            )
         ";
 
         if (!empty($ids_empleados)) {
