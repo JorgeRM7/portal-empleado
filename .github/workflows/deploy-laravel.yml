@@ -18,44 +18,44 @@ jobs:
           clean: false
           fetch-depth: 2
 
-      - name: 🚀 Notificar INICIO de Despliegue Sandbox
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-          payload: |
-            {
-              "text": ":rocket: Iniciando Despliegue a SANDBOX",
-              "attachments": [
-                {
-                  "color": "#3AA3E3",
-                  "title": ":rocket: Despliegue a Sandbox",
-                  "fields": [
-                    {
-                      "title": "Usuario",
-                      "value": "${{ github.actor }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Rama",
-                      "value": "sandbox",
-                      "short": true
-                    },
-                    {
-                      "title": "Commit",
-                      "value": "${{ github.event.head_commit.message }}",
-                      "short": false
-                    },
-                    {
-                      "title": "Servidor",
-                      "value": "sandbox.miportalrh.com",
-                      "short": true
-                    }
-                  ],
-                  "footer": "GitHub Actions"
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      # - name: 🚀 Notificar INICIO de Despliegue Sandbox
+      #   uses: slackapi/slack-github-action@v1.23.0
+      #   with:
+      #     payload: |
+      #       {
+      #         "text": ":rocket: Iniciando Despliegue a SANDBOX",
+      #         "attachments": [
+      #           {
+      #             "color": "#3AA3E3",
+      #             "title": ":rocket: Despliegue a Sandbox",
+      #             "fields": [
+      #               {
+      #                 "title": "Usuario",
+      #                 "value": "${{ github.actor }}",
+      #                 "short": true
+      #               },
+      #               {
+      #                 "title": "Rama",
+      #                 "value": "sandbox",
+      #                 "short": true
+      #               },
+      #               {
+      #                 "title": "Commit",
+      #                 "value": "${{ github.event.head_commit.message }}",
+      #                 "short": false
+      #               },
+      #               {
+      #                 "title": "Servidor",
+      #                 "value": "sandbox.miportalrh.com",
+      #                 "short": true
+      #               }
+      #             ],
+      #             "footer": "GitHub Actions"
+      #           }
+      #         ]
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 
       # ------------------------------------------------------------------
       # FASE 1: CONEXIÓN SSH Y PREPARACIÓN
@@ -223,37 +223,37 @@ jobs:
       # ------------------------------------------------------------------
       # FASE FINAL: NOTIFICACIÓN RESULTADO
       # ------------------------------------------------------------------
-      - name: 📢 Notificar RESULTADO a Slack
-        if: always()
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-          payload: |
-            {
-              "text": "${{ job.status == 'success' && ':white_check_mark: Despliegue Sandbox Exitoso' || ':x: Fallo en Despliegue Sandbox' }}",
-              "attachments": [
-                {
-                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
-                  "title": "${{ job.status == 'success' && ':white_check_mark: Sandbox Completado' || ':x: Error en Sandbox' }}",
-                  "fields": [
-                    {
-                      "title": "Repositorio",
-                      "value": "${{ github.repository }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Branch",
-                      "value": "sandbox",
-                      "short": true
-                    },
-                    {
-                      "title": "Servidor",
-                      "value": "sandbox.miportalrh.com",
-                      "short": true
-                    }
-                  ],
-                  "footer": "GitHub Actions"
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      # - name: 📢 Notificar RESULTADO a Slack
+      #   if: always()
+      #   uses: slackapi/slack-github-action@v1.23.0
+      #   with:
+      #     payload: |
+      #       {
+      #         "text": "${{ job.status == 'success' && ':white_check_mark: Despliegue Sandbox Exitoso' || ':x: Fallo en Despliegue Sandbox' }}",
+      #         "attachments": [
+      #           {
+      #             "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+      #             "title": "${{ job.status == 'success' && ':white_check_mark: Sandbox Completado' || ':x: Error en Sandbox' }}",
+      #             "fields": [
+      #               {
+      #                 "title": "Repositorio",
+      #                 "value": "${{ github.repository }}",
+      #                 "short": true
+      #               },
+      #               {
+      #                 "title": "Branch",
+      #                 "value": "sandbox",
+      #                 "short": true
+      #               },
+      #               {
+      #                 "title": "Servidor",
+      #                 "value": "sandbox.miportalrh.com",
+      #                 "short": true
+      #               }
+      #             ],
+      #             "footer": "GitHub Actions"
+      #           }
+      #         ]
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
