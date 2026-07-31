@@ -36,18 +36,6 @@ const incidencesByEmployee = ref([]);
 
 const sending = ref(false);
 
-const getSafeBranchId = () => {
-    try {
-        const item = localStorage.getItem("selectedBranchOffice");
-        if (!item) return null;
-        const parsed = JSON.parse(item);
-        return parsed?.id || null;
-    } catch (e) {
-        console.warn("Error leyendo localStorage:", e);
-        return null;
-    }
-};
-
 const branchOfficeId = ref(props.incidence?.branch_office_id);
 
 const incidences = computed(

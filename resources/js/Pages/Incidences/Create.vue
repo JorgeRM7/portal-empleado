@@ -457,11 +457,7 @@ onMounted(() => {
     loading.value = true;
     axios
         .get("/incidences/getIncidencesDataLoad", {
-            params: {
-                branch_office_id: JSON.parse(
-                    localStorage.getItem("selectedBranchOffice"),
-                ).id,
-            },
+            params: {},
         })
         .then((response) => {
             console.log(response.data);

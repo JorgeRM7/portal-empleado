@@ -18,11 +18,13 @@ const props = defineProps({
     incidences: Array,
     branchOffices: Array,
     employees: Array,
+    branchOfficeId: Number,
 });
 
-const branch_office_id = ref(
-    JSON.parse(localStorage.getItem("selectedBranchOffice")),
-);
+const branch_office_id = ref({
+    id: props.branchOfficeId,
+    code: props.branchOfficeId,
+});
 
 const incidences = ref([{}]);
 const selected = ref([]);

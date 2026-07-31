@@ -42,9 +42,11 @@ class EmployeeIncidencesController
     public function index()
     {
         $incidences = Incidence::select('id','name')->where('requested_by_user', '=', '1')->get();
+        $branchOfficeId = Employee::whereKey(Auth::id())->value('branch_office_id');
         
         return Inertia::render('Incidences/Index', [
-            'incidences' => $incidences
+            'incidences' => $incidences,
+            'branchOfficeId' => $branchOfficeId,
         ]);
     }
 
@@ -708,7 +710,6 @@ class EmployeeIncidencesController
         $validated = $request->validate([
             'employee_id' => ['required', 'exists:employees,id'],
             'incidence_id' => ['required', 'exists:incidences,id'],
-            'branch_office_id' => ['required', 'exists:branch_offices,id'],
             'notes' => ['nullable', 'string'],
             'range' => [$usesSpecialDates ? 'nullable' : 'required', 'nullable', 'array', 'size:2'],
             'range.0' => [$usesSpecialDates ? 'nullable' : 'required', 'nullable', 'date'],
