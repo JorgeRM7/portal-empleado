@@ -194,17 +194,14 @@ const openIncidencesModal = async (id) => {
 };
 
 function obtenerEmpleado() {
+    console.log(employeeVacations.value)
     loading.value = true;
 
     let id = employee.value.id;
     axios
         .get(`/dashboard/show/${id}`)
         .then((response) => {
-            // console.log('Datos del empleado:', response.data);
             employeeData.value = response.data.employee;
-            // if (!employeeData.value.terms_condition) {
-            //     showTermsModal.value = true;
-            // }
             employeeVacations.value = response.data.vacaciones;
             employeeIncidences.value = response.data.incidencias_empleado;
             antiguedad.value = response.data.antiguedad;
@@ -801,6 +798,7 @@ onMounted(() => {
             <div v-if="loadingData">
                 <Skeleton width="100%" height="150px"></Skeleton>
             </div>
+            
             <div v-else>
                 <DataTable
                     :value="filteredVacationsHistory"
@@ -870,7 +868,7 @@ onMounted(() => {
                         </template>
                     </Column>
                     <Column
-                        field="date"
+                        field="validity_from"
                         header="Fecha"
                         dataType="date"
                         sortable
@@ -882,7 +880,7 @@ onMounted(() => {
                     >
                         <template #body="{ data }">
                             <i class="pi pi-calendar mr-2"></i>
-                            {{ formatDate(data.date) }}
+                            {{ formatDate(data.validity_from) }}
                         </template>
 
                         <template #filter="{ filterModel }">
