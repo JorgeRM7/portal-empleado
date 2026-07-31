@@ -1,33 +1,22 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { Link, router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { useToastService } from "@/Stores/toastService";
 import { useToast } from "primevue";
 
 const props = defineProps({
-    employeeId: {
-        type: Number,
-        required: true,
-    },
-    branchOfficeId: {
-        type: Number,
-        required: true,
-    },
-    vacations: {
-        type: Number,
-        required: true,
-    },
+    employeeId: { type: Number, required: true },
+    branchOfficeId: { type: Number, required: true },
+    vacations: { type: Number, required: true },
 });
-
-console.log(props);
-
 const { showSuccess, showError } = useToastService();
 const toast = useToast();
 
 const employees = ref([]);
 const schedules = ref([]);
 const allincidences = ref([]);
+const blockedWeeks = ref([]);
 
 const employeeId = ref(props.employeeId);
 
@@ -35,86 +24,20 @@ const incidencesByEmployee = ref([]);
 
 const sending = ref(false);
 
+const branchOfficeId = ref(props.branchOfficeId);
+
 const incidences = computed(
     () => incidencesByEmployee.value[employeeId.value] ?? [],
 );
 
 const loading = ref(false);
 
-const attendanceData = ref(null);
-const horasTxt = ref(0);
-
-const calculateOvertime = () => {
-    if (!attendanceData.value) return;
-
-    console.log("calculando horas");
-
-    const { entradaTeorica, salidaTeorica, entradaReal, salidaReal } =
-        attendanceData.value;
-
-    const shiftStart = parseTime(entradaTeorica);
-    const shiftEnd = parseTime(salidaTeorica);
-    const actualIn = parseTime(entradaReal);
-    const actualOut = parseTime(salidaReal);
-
-    console.log("calculando tiempos");
-    if (!shiftStart || !shiftEnd || !actualIn || !actualOut) return;
-
-    if (shiftEnd < shiftStart) shiftEnd.setDate(shiftEnd.getDate() + 1);
-    if (actualOut < actualIn) actualOut.setDate(actualOut.getDate() + 1);
-
-    let minutesBefore = (shiftStart - actualIn) / (1000 * 60);
-    let minutesAfter = (actualOut - shiftEnd) / (1000 * 60);
-
-    const TOLERANCE = 10;
-    const validMinutesBefore = minutesBefore > TOLERANCE ? minutesBefore : 0;
-    const validMinutesAfter = minutesAfter > TOLERANCE ? minutesAfter : 0;
-
-    let calculatedMoment = null;
-    let totalMinutes = 0;
-
-    if (validMinutesBefore > 0 && validMinutesAfter > 0) {
-        calculatedMoment = "both";
-        totalMinutes = validMinutesBefore + validMinutesAfter;
-    } else if (validMinutesBefore > 0) {
-        calculatedMoment = "before";
-        totalMinutes = validMinutesBefore;
-    } else if (validMinutesAfter > 0) {
-        calculatedMoment = "after";
-        totalMinutes = validMinutesAfter;
-    }
-
-    const totalHours = Math.round((totalMinutes / 60) * 2) / 2;
-
-    console.log(totalHours);
-
-    form.value.txt_hours_to_register = totalHours;
-};
-
-const fetchAttendanceInfo = async () => {
-    console.log("buscando");
-    if (form.value.singleDate) {
-        const dateStr = formatDate(form.value.singleDate);
-        form.date = dateStr;
-
-        const response = await axios.get(`/get-attendance?date=${dateStr}`);
-
-        const res = response.data;
-        console.log(res);
-
-        attendanceData.value = response.data.employeeData[0];
-        let noData = response.data.employeeData.length === 0;
-
-        if (!noData) {
-            calculateOvertime();
-        }
-    } else {
-        attendanceData.value = null;
-        noData.value = false;
-    }
-
-    loading.value = false;
-};
+const employeeOptions = computed(() =>
+    employees.value.map((e) => ({
+        ...e,
+        label: `(${e.id}) ${e.full_name}`,
+    })),
+);
 
 function atMidnight(d) {
     const x = new Date(d);
@@ -134,13 +57,9 @@ function parseYmdToDate(s) {
     return new Date(y, m - 1, d);
 }
 
-// Tus grupos por ID
 const GROUPS = {
     TXT: new Set([23]),
     VAC: new Set([3]),
-    SHIFT: new Set([20, 18, 19]),
-    DOC: new Set([8, 22, 56, 5, 4, 7, 6]),
-    DOCNOCODE: new Set([53, 10, 49, 29, 14, 15, 13]),
 };
 
 const SHIFT_IDS = new Set([20, 18, 19]);
@@ -149,7 +68,7 @@ const busyMap = computed(() => {
     const map = new Map();
 
     for (const inc of incidences.value) {
-        // console.log("inc", inc);
+        console.log("inc", inc);
         const start = parseYmdToDate(inc.start_date);
         const end = parseYmdToDate(inc.end_date);
 
@@ -192,6 +111,17 @@ const busyMap = computed(() => {
 const disabledDates = computed(() => {
     const out = [];
     for (const k of busyMap.value.keys()) out.push(parseYmdToDate(k));
+
+    if (true) {
+        for (const week of blockedWeeks.value) {
+            let current = parseYmdToDate(week.start_week);
+            const end = parseYmdToDate(week.end_week);
+            while (current <= end) {
+                out.push(new Date(current));
+                current = addDays(current, 1);
+            }
+        }
+    }
     return out;
 });
 
@@ -207,7 +137,8 @@ function busyTypeColor(dateObj) {
 }
 
 const range = ref(null);
-const form = ref({
+const documentInputKey = ref(0);
+const emptyForm = (lastWeekNumber = null) => ({
     incidence_id: null,
     notes: "",
     range: null,
@@ -222,8 +153,10 @@ const form = ref({
     document_number: "",
     employee_id: props.employeeId,
     days_available: null,
-    branch_office_id: props.branchOfficeId,
+    branch_office_id: branchOfficeId.value,
+    lastWeekNumber,
 });
+const form = ref(emptyForm());
 
 const daysCalculated = computed(() => {
     const r = form.value.range;
@@ -233,7 +166,7 @@ const daysCalculated = computed(() => {
     const b = new Date(r[1]);
     b.setHours(0, 0, 0, 0);
     const diff = Math.round((b - a) / (1000 * 60 * 60 * 24));
-    return diff >= 0 ? (diff + 1) * props.vacations : 0;
+    return diff >= 0 ? diff + 1 : 0;
 });
 
 const daysEditable = ref(daysCalculated.value);
@@ -243,20 +176,7 @@ watch(daysCalculated, (newVal) => {
     daysEditable.value = newVal;
 });
 
-const formatDate = (date) => {
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`;
-};
-
-const parseTime = (timeStr) => {
-    if (!timeStr) return null;
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date;
-};
+// Tus grupos por ID
 
 const incidenceUI = computed(() => {
     const id = Number(form.value.incidence_id);
@@ -281,29 +201,33 @@ const incidenceUI = computed(() => {
     if (GROUPS.VAC.has(id)) {
         return {
             key: "VAC",
-            fields: ["range", "days_available", "notes"],
+            fields: ["range", "days_to_register", "days_available", "notes"],
         };
     }
-    if (GROUPS.SHIFT.has(id)) {
-        return {
-            key: "SHIFT",
-            fields: ["advance_date", "rest_date", "schedule", "notes"],
-        };
+    const fields = ["notes"];
+    const usesSpecialDates =
+        selectedIncidence?.requires_date ||
+        selectedIncidence?.requires_rest_date;
+
+    if (usesSpecialDates) {
+        if (selectedIncidence?.requires_date) fields.push("advance_date");
+        if (selectedIncidence?.requires_rest_date) fields.push("rest_date");
+    } else {
+        fields.push("range", "days_to_register");
     }
-    if (GROUPS.DOC.has(id)) {
-        return {
-            key: "DOC",
-            fields: ["range", "document", "document_number", "notes"],
-        };
-    }
-    if (GROUPS.DOCNOCODE.has(id)) {
-        return {
-            key: "DOCNOCODE",
-            fields: ["range", "document", "notes"],
-        };
-    }
-    return { key: "DEFAULT", fields: ["range", "days_to_register", "notes"] };
+
+    if (selectedIncidence?.requires_schedule) fields.push("schedule");
+    if (selectedIncidence?.requires_document) fields.push("document");
+    if (selectedIncidence?.requires_code) fields.push("document_number");
+
+    return { key: "CONFIGURED", fields };
 });
+
+const advanceDateLabel = computed(() =>
+    Number(form.value.incidence_id) === 19
+        ? "Fecha de reposición"
+        : "Fecha de adelanto",
+);
 
 const typeOptions = ref([]);
 
@@ -312,14 +236,6 @@ const canSave = computed(() => {
     if (!id) return false;
 
     const ui = incidenceUI.value.key;
-
-    if (ui === "SHIFT") {
-        return (
-            !!form.value.advance_date &&
-            !!form.value.rest_date &&
-            !!form.value.schedule
-        );
-    }
 
     // todos los que usan rango:
     const hasRange = !!form.value.range?.[0] && !!form.value.range?.[1];
@@ -335,148 +251,45 @@ const canSave = computed(() => {
     if (ui === "VAC") {
         return hasRange && form.value.days_available != null;
     }
-    if (ui === "DOC") {
-        return (
-            hasRange && !!form.value.document && !!form.value.document_number
-        );
-    }
-    if (ui === "DOCNOCODE") {
-        return hasRange && !!form.value.document;
-    }
-    return hasRange; // DEFAULT
+    const fields = incidenceUI.value.fields;
+    const folioIsValid = /^[A-Za-z0-9]{8}$/.test(
+        form.value.document_number?.trim() ?? "",
+    );
+    return (
+        (!fields.includes("range") || hasRange) &&
+        (!fields.includes("advance_date") || !!form.value.advance_date) &&
+        (!fields.includes("rest_date") || !!form.value.rest_date) &&
+        (!fields.includes("schedule") || !!form.value.schedule) &&
+        (!fields.includes("document") || !!form.value.document) &&
+        (!fields.includes("document_number") || folioIsValid)
+    );
 });
 
 function typeLabel(type) {
     return typeOptions.value.find((x) => x.value === type)?.label ?? type;
 }
 
-const revisarIncidencias = async (params = {}) => {
-    toast.add({
-        severity: "info",
-        summary: "Procesando",
-        detail: "Revisión de turnos en proceso...",
-        group: "processing",
-        life: 0,
-        icon: "pi pi-spin pi-spinner",
-    });
-
-    await nextTick();
-
-    const fecha_inicial = form.value.range[0];
-    const fecha_final = form.value.range[1];
-
-    let empleados = [{ id: props.employeeId }];
-
-    if (!fecha_inicial || !fecha_final) {
-        showError();
-        return;
-    }
-
-    if (!empleados || empleados.length < 1) {
-        showError();
-        return;
-    }
-
-    const fechas = [];
-    let fInicio = new Date(fecha_inicial);
-    const fFin = new Date(fecha_final);
-
-    while (fInicio <= fFin) {
-        fechas.push(fInicio.toISOString().split("T")[0]);
-        fInicio.setDate(fInicio.getDate() + 1);
-    }
-
-    loading.value = true;
-
-    const url =
-        "https://portal-nominas.grupo-ortiz.site/api/weekly-assistances/check-turn";
-
-    let peticiones = [];
-
-    empleados.forEach((id) => {
-        fechas.forEach((fecha) => {
-            peticiones.push(() =>
-                axios
-                    .post(url, {
-                        id: id,
-                        validity_from: fecha,
-                    })
-                    .then((response) => {
-                        let res = response.data;
-
-                        res.empleadoId = id;
-                        res.fechaError = fecha;
-                        console.log(res);
-
-                        return res;
-                    })
-                    .catch((error) => {
-                        console.error("Error en petición:", error);
-
-                        return {
-                            estatus: "error",
-                            message:
-                                error?.response?.data?.message ||
-                                "No se encontró un rol de turno activo",
-                            empleadoId: id,
-                            fechaError: fecha,
-                        };
-                    }),
-            );
-        });
-    });
-
-    const total = peticiones.length;
-    let procesados = 0;
-    let resultados = [];
-
-    const tamañoLote = 200;
-
-    try {
-        for (let i = 0; i < peticiones.length; i += tamañoLote) {
-            const lote = peticiones.slice(i, i + tamañoLote);
-
-            const res = await Promise.all(lote.map((fn) => fn()));
-
-            resultados = resultados.concat(res);
-
-            procesados += lote.length;
-
-            const porcentaje = Math.round((procesados / total) * 100);
-
-            toast.add({
-                severity: "info",
-                summary: "Procesando...",
-                detail: `${porcentaje}% (${procesados}/${total})`,
-                life: 3000,
-            });
-
-            await new Promise((r) => setTimeout(r, 120));
-        }
-
-        const errores = resultados.filter(
-            (res) => res && res.estatus === "error",
-        );
-
-        console.log("Errores detectados:", errores);
-
-        toast.add({
-            severity: "success",
-            summary: "Finalizado",
-            detail: `Procesados: ${total}`,
-            life: 5000,
-        });
-
-        toast.removeGroup("processing");
-    } catch (err) {
-        console.error("Error crítico:", err);
-        showError("Ocurrió un error al procesar la revisión");
-    }
-};
-
 const errors = ref({});
 
+function resetIncidenceForm() {
+    const lastWeekNumber = form.value.lastWeekNumber;
+
+    employeeId.value = props.employeeId;
+    form.value = emptyForm(lastWeekNumber);
+    incidencesByEmployee.value = [];
+    range.value = null;
+    daysEditable.value = 0;
+    description.value = "";
+    entryTime.value = null;
+    leaveTime.value = null;
+    minRangeDate.value = null;
+    maxRangeDate.value = null;
+    errors.value = {};
+    documentInputKey.value += 1;
+}
+
 function saveIncidence() {
+    form.value.employee_id = employeeId.value;
     form.value.days_to_register = daysEditable.value;
     if (form.value.incidence_id === 23) {
         if (!form.value.singleDate) {
@@ -489,7 +302,6 @@ function saveIncidence() {
             return;
         }
     }
-
     if (form.value.incidence_id === 19) {
         if (form.value.advance_date < form.value.rest_date) {
             toast.add({
@@ -514,55 +326,56 @@ function saveIncidence() {
         }
     }
     sending.value = true;
-    router.post(route("incidences-employee.store"), form.value, {
-        onSuccess: async () => {
-            sending.value = false;
-            showSuccess();
-            if (GROUPS.DOC.has(form.value.incidence_id)) {
-                await revisarIncidencias();
-            }
+    router.post(
+        route("incidences-employee.store"),
+        form.value,
+        {
+            onSuccess: () => {
+                sending.value = false;
+                showSuccess();
+            },
+            onError: (e) => {
+                sending.value = false;
+                showError();
+                errors.value = e;
+            },
         },
-        onError: (e) => {
-            sending.value = false;
-            showError();
-            errors.value = e;
-        },
-    });
+    );
 }
+
+const entryTime = ref(null);
+const leaveTime = ref(null);
 
 function updateShiftHours() {
     const schedule = schedules.value.find((x) => x.id === form.value.schedule);
     const shiftTotalHours =
         parseInt(schedule.leave_time) - parseInt(schedule.entry_time);
+    entryTime.value = schedule.entry_time;
+    leaveTime.value = schedule.leave_time;
     form.value.shift_hours = shiftTotalHours;
 }
 
-const getData = async () => {
+const getData = () => {
     if (!employeeId.value) return;
     loading.value = true;
 
-    await axios
+    axios
         .get("/incidences/employee", {
             params: {
                 employee_id: employeeId.value,
             },
         })
         .then((response) => {
-            // console.log("incidencias por empleado", response.data);
-            if (!response.data[employeeId.value][0].id) {
-                incidencesByEmployee.value = {};
-                loading.value = false;
-                return;
-            }
-            incidencesByEmployee.value = response.data;
+            const employeeRows = response.data[employeeId.value] ?? [];
+            const summary = employeeRows[0] ?? {};
+
+            incidencesByEmployee.value = employeeRows.some((row) => row.id)
+                ? response.data
+                : {};
             loading.value = false;
 
-            // console.log(incidencesByEmployee.value[employeeId.value][0]);
-
-            form.value.available_txt_hours =
-                incidencesByEmployee.value[employeeId.value][0].total_hours;
-            form.value.days_available =
-                incidencesByEmployee.value[employeeId.value][0].vacations;
+            form.value.available_txt_hours = summary.total_hours ?? 0;
+            form.value.days_available = summary.vacations ?? 0;
         })
         .catch((error) => {
             console.error(error);
@@ -593,9 +406,13 @@ function isoWeekStartDate(year, week) {
     result.setHours(0, 0, 0, 0);
     return result;
 }
+const page = usePage();
+const auth = page.props.auth;
 
 const allowedFromDate = computed(() =>
-    isoWeekStartDate(Number(minIsoYear.value), Number(minIsoWeek.value)),
+    false
+        ? null
+        : isoWeekStartDate(Number(minIsoYear.value), Number(minIsoWeek.value)),
 );
 
 function findNextBusyDate(fromDate) {
@@ -609,14 +426,6 @@ function findNextBusyDate(fromDate) {
     return null;
 }
 
-watch(
-    () => form.value.singleDate,
-    (newVal) => {
-        if (newVal) {
-            fetchAttendanceInfo();
-        }
-    },
-);
 watch(
     () => form.value.range?.[0],
     (start) => {
@@ -637,48 +446,42 @@ watch(
         }
     },
 );
-
-function getISOWeek(date = new Date()) {
-    const d = new Date(
-        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-    );
-    const dayNum = d.getUTCDay() || 7; // domingo = 7
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-    return {
-        year: d.getUTCFullYear(),
-        week: weekNo,
-        iso: `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`,
-    };
-}
-
 function completeRange() {
     if (form.value.range && form.value.range[0] && !form.value.range[1]) {
         form.value.range = [form.value.range[0], form.value.range[0]];
     }
 }
 
-onMounted(async () => {
+onMounted(() => {
+    getData();
     loading.value = true;
-    await axios
-        .get("/incidences/getIncidencesDataLoad")
-        .then(async (response) => {
+    axios
+        .get("/incidences/getIncidencesDataLoad", {
+            params: {
+                branch_office_id: JSON.parse(
+                    localStorage.getItem("selectedBranchOffice"),
+                ).id,
+            },
+        })
+        .then((response) => {
             console.log(response.data);
             employees.value = response.data.employees;
             schedules.value = response.data.schedules;
             allincidences.value = response.data.allincidences;
-            minIsoWeek.value = getISOWeek().week;
-            minIsoYear.value = getISOWeek().year;
+            blockedWeeks.value = response.data.blockedWeeks ?? [];
+            minIsoWeek.value = response.data.lastWeekNumber[0].week;
+            minIsoYear.value = response.data.lastWeekNumber[0].year;
+
+            form.value.lastWeekNumber = response.data.lastWeekNumber[0].week;
+
+            loading.value = false;
 
             typeOptions.value = allincidences.value.map((inc) => ({
                 label: inc.name,
                 value: inc.id,
             }));
 
-            await getData();
-
-            // console.log(typeOptions.value);
+            console.log(typeOptions.value);
         });
 });
 
@@ -731,7 +534,7 @@ watch(employeeId, () => {
                                 <div v-if="!loading">
                                     <p>
                                         La ultima semana disponible es la semana
-                                        {{ minIsoWeek }} del año
+                                        {{ minIsoWeek }} del a�o
                                         {{ minIsoYear }}
                                     </p>
                                 </div>
@@ -890,31 +693,6 @@ watch(employeeId, () => {
                                 >
                                     {{ description }}
                                 </Message>
-
-                                <!-- Resumen rápido -->
-                                <!-- <div class="flex flex-col gap-2">
-                                    <label class="text-sm font-medium"
-                                        >Resumen</label
-                                    >
-                                    <div class="p-3 border rounded-lg text-sm">
-                                        <div>
-                                            <b>Tipo de incidencia:</b>
-                                            {{ incidenceUI.key }}
-                                        </div>
-                                        <div
-                                            v-if="
-                                                form.range?.[0] &&
-                                                form.range?.[1]
-                                            "
-                                        >
-                                            <b>Días a registrar:</b>
-                                            {{ daysToRegister }}
-                                        </div>
-                                        <div v-else class="text-gray-500">
-                                            Selecciona fechas para ver cálculos.
-                                        </div>
-                                    </div>
-                                </div> -->
                             </div>
 
                             <Divider />
@@ -1018,9 +796,9 @@ watch(employeeId, () => {
                                 </Select>
                             </div>
 
-                            <!-- Días disponibles (placeholder) -->
+                            <!-- D�as disponibles (placeholder) -->
 
-                            <!-- Paso 2: Campos dinámicos -->
+                            <!-- Paso 2: Campos din�micos -->
                             <div class="grid gap-3 md:grid-cols-2">
                                 <!-- Horas del turno -->
                                 <div
@@ -1057,7 +835,7 @@ watch(employeeId, () => {
                                         incidencia)</label
                                     >
                                     <InputText
-                                        :value="form.days_available ?? '—'"
+                                        :value="form.days_available ?? '-'"
                                         class="w-full"
                                         disabled
                                     />
@@ -1126,7 +904,7 @@ watch(employeeId, () => {
                                     </small>
                                 </div>
 
-                                <!-- Días a registrar (calculado) -->
+                                <!-- D�as a registrar (calculado) -->
                                 <div
                                     v-if="
                                         incidenceUI.fields.includes(
@@ -1283,6 +1061,7 @@ watch(employeeId, () => {
                                     >
                                     <InputText
                                         v-model="form.document_number"
+                                        maxlength="8"
                                         class="w-full"
                                     />
                                     <span

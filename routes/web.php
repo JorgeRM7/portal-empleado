@@ -77,10 +77,7 @@ Route::middleware([
 
     });
 
-    Route::resource('incidences-employee', EmployeeIncidencesController::class)
-        ->names([
-            'index' => '/incidences-employee',
-        ]);
+    Route::resource('incidences-employee', EmployeeIncidencesController::class);
 
     Route::get('incidences/getIncidencesDataLoad', [EmployeeIncidencesController::class, 'getIncidencesDataLoad']);
     Route::get('incidences/employee', [EmployeeIncidencesController::class,'getIncidencesByEmployeeId']);
@@ -184,4 +181,3 @@ Route::get('/ver-archivo/{path}', function ($path) {
     return response($file, 200)
         ->header('Content-Type', 'application/pdf');
 })->where('path', '.*');
-

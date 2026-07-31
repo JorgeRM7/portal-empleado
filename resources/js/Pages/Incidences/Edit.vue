@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { useToastService } from "@/Stores/toastService";
 
 const props = defineProps({
@@ -21,16 +21,13 @@ const props = defineProps({
         type: Array,
         required: true,
     },
-    vacations: {
-        type: Number,
-        required: true,
-    },
 });
 
 const { showSuccess, showError } = useToastService();
 
 const employees = ref([props.employeeData]);
 const schedules = ref(props.schedules);
+const blockedWeeks = ref([]);
 const currentIncidenceId = computed(() => props.incidence?.id);
 
 const employeeId = ref(props.employeeData.id);
@@ -51,7 +48,7 @@ const getSafeBranchId = () => {
     }
 };
 
-const branchOfficeId = ref(getSafeBranchId());
+const branchOfficeId = ref(props.incidence?.branch_office_id);
 
 const incidences = computed(
     () => incidencesByEmployee.value[employeeId.value] ?? [],
@@ -109,17 +106,19 @@ function isoWeekStartDate(year, week) {
     return result;
 }
 
+const page = usePage();
+const auth = page.props.auth;
+
 const allowedFromDate = computed(() =>
-    isoWeekStartDate(Number(minIsoYear.value), Number(minIsoWeek.value)),
+    false
+        ? null
+        : isoWeekStartDate(Number(minIsoYear.value), Number(minIsoWeek.value)),
 );
 // =======================================================
 // ========== GRUPOS DE INCIDENCIAS ==========
 const GROUPS = {
     TXT: new Set([23]),
     VAC: new Set([3]),
-    SHIFT: new Set([20, 18, 19]),
-    DOC: new Set([8, 22, 56, 5, 4, 7, 6]),
-    DOCNOCODE: new Set([53, 10, 49, 29, 14, 15, 13]),
 };
 const SHIFT_IDS = new Set([20, 18, 19]);
 
@@ -127,14 +126,14 @@ const busyMap = computed(() => {
     const map = new Map();
 
     for (const inc of incidences.value) {
-        // console.log("inc", inc);
+        console.log("inc", inc);
         if (inc.incidence_id === currentIncidenceId.value) {
             continue;
         }
         const start = parseYmdToDate(inc.start_date);
         const end = parseYmdToDate(inc.end_date);
 
-        // 👉 Caso especial: SHIFT (solo fechas puntuales)
+        // ðŸ‘‰ Caso especial: SHIFT (solo fechas puntuales)
         if (SHIFT_IDS.has(Number(inc.id))) {
             if (start) {
                 map.set(ymd(start), {
@@ -152,10 +151,10 @@ const busyMap = computed(() => {
                 });
             }
 
-            continue; // 🔥 importante: NO entrar al while
+            continue; // ðŸ”¥ importante: NO entrar al while
         }
 
-        // 👉 Comportamiento normal (bloquear rango completo)
+        // ðŸ‘‰ Comportamiento normal (bloquear rango completo)
         const cur = atMidnight(start);
         while (cur <= end) {
             map.set(ymd(cur), {
@@ -173,6 +172,17 @@ const busyMap = computed(() => {
 const disabledDates = computed(() => {
     const out = [];
     for (const k of busyMap.value.keys()) out.push(parseYmdToDate(k));
+
+    if (true) {
+        for (const week of blockedWeeks.value) {
+            let current = parseYmdToDate(week.start_week);
+            const end = parseYmdToDate(week.end_week);
+            while (current <= end) {
+                out.push(new Date(current));
+                current = addDays(current, 1);
+            }
+        }
+    }
     return out;
 });
 
@@ -207,14 +217,19 @@ const form = ref({
     shift_hours: null,
     available_txt_hours: 0,
     txt_hours_to_register: props.incidence?.hours_txt,
-    advance_date: props.incidence?.before_date,
-    rest_date: props.incidence?.rest_date,
+    advance_date: props.incidence?.before_date
+        ? new Date(props.incidence.before_date + "T00:00:00")
+        : null,
+    rest_date: props.incidence?.rest_date
+        ? new Date(props.incidence.rest_date + "T00:00:00")
+        : null,
     schedule: props.incidence?.schedule_id,
     document: props.incidence?.document,
     document_number: props.incidence?.document_number,
     employee_id: props.incidence?.employee_id,
     days_available: null,
     branch_office_id: props.incidence?.branch_office_id,
+    lastWeekNumber: null,
 });
 
 const daysCalculated = computed(() => {
@@ -225,7 +240,7 @@ const daysCalculated = computed(() => {
     const b = new Date(r[1]);
     b.setHours(0, 0, 0, 0);
     const diff = Math.round((b - a) / (1000 * 60 * 60 * 24));
-    return diff >= 0 ? (diff + 1) * props.vacations : 0;
+    return diff >= 0 ? diff + 1 : 0;
 });
 
 const daysEditable = ref(daysCalculated.value);
@@ -239,8 +254,6 @@ const incidenceUI = computed(() => {
     const selectedIncidence = props.allincidences.find(
         (incidence) => incidence.id === id,
     );
-    console.log(selectedIncidence);
-
     description.value = selectedIncidence?.description;
     if (GROUPS.TXT.has(id)) {
         return {
@@ -258,29 +271,33 @@ const incidenceUI = computed(() => {
     if (GROUPS.VAC.has(id)) {
         return {
             key: "VAC",
-            fields: ["range", "days_available", "notes"],
+            fields: ["range", "days_to_register", "days_available", "notes"],
         };
     }
-    if (GROUPS.SHIFT.has(id)) {
-        return {
-            key: "SHIFT",
-            fields: ["advance_date", "rest_date", "schedule", "notes"],
-        };
+    const fields = ["notes"];
+    const usesSpecialDates =
+        selectedIncidence?.requires_date ||
+        selectedIncidence?.requires_rest_date;
+
+    if (usesSpecialDates) {
+        if (selectedIncidence?.requires_date) fields.push("advance_date");
+        if (selectedIncidence?.requires_rest_date) fields.push("rest_date");
+    } else {
+        fields.push("range", "days_to_register");
     }
-    if (GROUPS.DOC.has(id)) {
-        return {
-            key: "DOC",
-            fields: ["range", "document", "document_number", "notes"],
-        };
-    }
-    if (GROUPS.DOCNOCODE.has(id)) {
-        return {
-            key: "DOCNOCODE",
-            fields: ["range", "document", "notes"],
-        };
-    }
-    return { key: "DEFAULT", fields: ["range", "days_to_register", "notes"] };
+
+    if (selectedIncidence?.requires_schedule) fields.push("schedule");
+    if (selectedIncidence?.requires_document) fields.push("document");
+    if (selectedIncidence?.requires_code) fields.push("document_number");
+
+    return { key: "CONFIGURED", fields };
 });
+
+const advanceDateLabel = computed(() =>
+    Number(form.value.incidence_id) === 19
+        ? "Fecha de reposiciÃ³n"
+        : "Fecha de adelanto",
+);
 
 const typeOptions = ref(
     props.allincidences.map((inc) => ({
@@ -289,113 +306,10 @@ const typeOptions = ref(
     })),
 );
 
-const attendanceData = ref(null);
-
-function completeRange() {
-    if (form.value.range && form.value.range[0] && !form.value.range[1]) {
-        form.value.range = [form.value.range[0], form.value.range[0]];
-    }
-}
-
-const formatDate = (date) => {
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`;
-};
-
-const parseTime = (timeStr) => {
-    if (!timeStr) return null;
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date;
-};
-
-const calculateOvertime = () => {
-    if (!attendanceData.value) return;
-
-    console.log("calculando horas");
-
-    const { entradaTeorica, salidaTeorica, entradaReal, salidaReal } =
-        attendanceData.value;
-
-    const shiftStart = parseTime(entradaTeorica);
-    const shiftEnd = parseTime(salidaTeorica);
-    const actualIn = parseTime(entradaReal);
-    const actualOut = parseTime(salidaReal);
-
-    console.log("calculando tiempos");
-    if (!shiftStart || !shiftEnd || !actualIn || !actualOut) return;
-
-    if (shiftEnd < shiftStart) shiftEnd.setDate(shiftEnd.getDate() + 1);
-    if (actualOut < actualIn) actualOut.setDate(actualOut.getDate() + 1);
-
-    let minutesBefore = (shiftStart - actualIn) / (1000 * 60);
-    let minutesAfter = (actualOut - shiftEnd) / (1000 * 60);
-
-    const TOLERANCE = 10;
-    const validMinutesBefore = minutesBefore > TOLERANCE ? minutesBefore : 0;
-    const validMinutesAfter = minutesAfter > TOLERANCE ? minutesAfter : 0;
-
-    let calculatedMoment = null;
-    let totalMinutes = 0;
-
-    if (validMinutesBefore > 0 && validMinutesAfter > 0) {
-        calculatedMoment = "both";
-        totalMinutes = validMinutesBefore + validMinutesAfter;
-    } else if (validMinutesBefore > 0) {
-        calculatedMoment = "before";
-        totalMinutes = validMinutesBefore;
-    } else if (validMinutesAfter > 0) {
-        calculatedMoment = "after";
-        totalMinutes = validMinutesAfter;
-    }
-
-    const totalHours = Math.round((totalMinutes / 60) * 2) / 2;
-
-    console.log(totalHours);
-
-    form.value.txt_hours_to_register = totalHours;
-};
-
-const fetchAttendanceInfo = async () => {
-    console.log("buscando");
-    if (form.value.singleDate) {
-        const dateStr = formatDate(form.value.singleDate);
-        form.date = dateStr;
-
-        const response = await axios.get(`/get-attendance?date=${dateStr}`);
-
-        const res = response.data;
-        console.log(res);
-
-        attendanceData.value = response.data.employeeData[0];
-        let noData = response.data.employeeData.length === 0;
-
-        if (!noData) {
-            calculateOvertime();
-        }
-    } else {
-        attendanceData.value = null;
-        noData.value = false;
-    }
-
-    loading.value = false;
-};
-
 const canSave = computed(() => {
     const id = Number(form.value.incidence_id);
     if (!id) return false;
     const ui = incidenceUI.value.key;
-
-    if (ui === "SHIFT") {
-        return (
-            !!form.value.advance_date &&
-            !!form.value.rest_date &&
-            !!form.value.schedule
-        );
-    }
 
     const hasRange = !!form.value.range?.[0] && !!form.value.range?.[1];
     const hasDay = !!form.value.singleDate;
@@ -410,166 +324,38 @@ const canSave = computed(() => {
     if (ui === "VAC") {
         return hasRange && form.value.days_available != null;
     }
-    if (ui === "DOC") {
-        return (
-            hasRange && !!form.value.document && !!form.value.document_number
-        );
-    }
-    if (ui === "DOCNOCODE") {
-        return hasRange && !!form.value.document;
-    }
-
-    return hasRange;
+    const fields = incidenceUI.value.fields;
+    const folioIsValid = /^[A-Za-z0-9]{8}$/.test(
+        form.value.document_number?.trim() ?? "",
+    );
+    return (
+        (!fields.includes("range") || hasRange) &&
+        (!fields.includes("advance_date") || !!form.value.advance_date) &&
+        (!fields.includes("rest_date") || !!form.value.rest_date) &&
+        (!fields.includes("schedule") || !!form.value.schedule) &&
+        (!fields.includes("document") ||
+            !!form.value.document ||
+            (Number(props.incidence?.incidence_id) === id &&
+                !!props.incidence?.file_path)) &&
+        (!fields.includes("document_number") || folioIsValid)
+    );
 });
 
 function typeLabel(type) {
     return typeOptions.value.find((x) => x.value === type)?.label ?? type;
 }
 
-const revisarIncidencias = async (params = {}) => {
-    toast.add({
-        severity: "info",
-        summary: "Procesando",
-        detail: "Revisión de turnos en proceso...",
-        group: "processing",
-        life: 0,
-        icon: "pi pi-spin pi-spinner",
-    });
-
-    await nextTick();
-
-    const fecha_inicial = form.value.range[0];
-    const fecha_final = form.value.range[1];
-
-    let empleados = [{ id: props.employeeId }];
-
-    if (!fecha_inicial || !fecha_final) {
-        showError();
-        return;
-    }
-
-    if (!empleados || empleados.length < 1) {
-        showError();
-        return;
-    }
-
-    const fechas = [];
-    let fInicio = new Date(fecha_inicial);
-    const fFin = new Date(fecha_final);
-
-    while (fInicio <= fFin) {
-        fechas.push(fInicio.toISOString().split("T")[0]);
-        fInicio.setDate(fInicio.getDate() + 1);
-    }
-
-    loading.value = true;
-
-    const url =
-        "https://portal-nominas.grupo-ortiz.site/api/weekly-assistances/check-turn";
-
-    let peticiones = [];
-
-    empleados.forEach((id) => {
-        fechas.forEach((fecha) => {
-            peticiones.push(() =>
-                axios
-                    .post(url, {
-                        id: id,
-                        validity_from: fecha,
-                    })
-                    .then((response) => {
-                        let res = response.data;
-
-                        res.empleadoId = id;
-                        res.fechaError = fecha;
-                        console.log(res);
-
-                        return res;
-                    })
-                    .catch((error) => {
-                        console.error("Error en petición:", error);
-
-                        return {
-                            estatus: "error",
-                            message:
-                                error?.response?.data?.message ||
-                                "No se encontró un rol de turno activo",
-                            empleadoId: id,
-                            fechaError: fecha,
-                        };
-                    }),
-            );
-        });
-    });
-
-    const total = peticiones.length;
-    let procesados = 0;
-    let resultados = [];
-
-    const tamañoLote = 200;
-
-    try {
-        for (let i = 0; i < peticiones.length; i += tamañoLote) {
-            const lote = peticiones.slice(i, i + tamañoLote);
-
-            const res = await Promise.all(lote.map((fn) => fn()));
-
-            resultados = resultados.concat(res);
-
-            procesados += lote.length;
-
-            const porcentaje = Math.round((procesados / total) * 100);
-
-            toast.add({
-                severity: "info",
-                summary: "Procesando...",
-                detail: `${porcentaje}% (${procesados}/${total})`,
-                life: 3000,
-            });
-
-            await new Promise((r) => setTimeout(r, 120));
-        }
-
-        const errores = resultados.filter(
-            (res) => res && res.estatus === "error",
-        );
-
-        console.log("Errores detectados:", errores);
-
-        toast.add({
-            severity: "success",
-            summary: "Finalizado",
-            detail: `Procesados: ${total}`,
-            life: 5000,
-        });
-
-        toast.removeGroup("processing");
-    } catch (err) {
-        console.error("Error crítico:", err);
-        showError("Ocurrió un error al procesar la revisión");
-    }
-};
+const errors = ref({});
 
 function saveIncidence() {
+    form.value.employee_id = employeeId.value;
     form.value.days_to_register = daysEditable.value;
-    if (form.value.incidence_id === 23) {
-        if (!form.value.singleDate) {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "Por favor seleccione un día",
-                life: 3000,
-            });
-            return;
-        }
-    }
-
     if (form.value.incidence_id === 19) {
         if (form.value.advance_date < form.value.rest_date) {
             toast.add({
                 severity: "error",
                 summary: "Error",
-                detail: "La fecha de reposición debe ser menor a la fecha de descanso",
+                detail: "La fecha de reposiciÃ³n debe ser menor a la fecha de descanso",
                 life: 3000,
             });
             return;
@@ -592,26 +378,29 @@ function saveIncidence() {
         route("incidences-employee.update", props.incidence.id),
         form.value,
         {
-            onSuccess: async () => {
+            onSuccess: () => {
                 sending.value = false;
                 showSuccess();
-                if (GROUPS.DOC.has(form.value.incidence_id)) {
-                    await revisarIncidencias();
-                }
             },
-            onError: () => {
+            onError: (e) => {
                 sending.value = false;
                 showError();
+                errors.value = e;
             },
         },
     );
 }
+
+const entryTime = ref(null);
+const leaveTime = ref(null);
 
 function updateShiftHours() {
     const schedule = schedules.value.find((x) => x.id === form.value.schedule);
     if (!schedule) return;
     const shiftTotalHours =
         parseInt(schedule.leave_time) - parseInt(schedule.entry_time);
+    entryTime.value = schedule.entry_time;
+    leaveTime.value = schedule.leave_time;
     form.value.shift_hours = shiftTotalHours;
 }
 
@@ -623,17 +412,14 @@ const getData = () => {
             params: { employee_id: employeeId.value },
         })
         .then((response) => {
-            if (!response.data[employeeId.value]?.[0]?.id) {
-                incidencesByEmployee.value = {};
+            const employeeRows = response.data[employeeId.value] ?? [];
+            const summary = employeeRows[0] ?? {};
 
-                return;
-            }
-            incidencesByEmployee.value = response.data;
-
-            form.value.available_txt_hours =
-                incidencesByEmployee.value[employeeId.value][0].total_hours;
-            form.value.days_available =
-                incidencesByEmployee.value[employeeId.value][0].vacations;
+            incidencesByEmployee.value = employeeRows.some((row) => row.id)
+                ? response.data
+                : {};
+            form.value.available_txt_hours = summary.total_hours ?? 0;
+            form.value.days_available = summary.vacations ?? 0;
         })
         .catch((error) => {
             console.error(error);
@@ -641,7 +427,7 @@ const getData = () => {
         });
 };
 
-// ========== LÓGICA DE RANGO Y FECHAS OCUPADAS ==========
+// ========== LÃ“GICA DE RANGO Y FECHAS OCUPADAS ==========
 const minRangeDate = ref(null);
 const maxRangeDate = ref(null);
 
@@ -664,14 +450,14 @@ watch(
 
         if (!start) return;
 
-        // Validar que la fecha no sea anterior a la última semana disponible
-        if (allowedFromDate.value && start < allowedFromDate.value) {
-            showError(
-                "No se pueden seleccionar fechas anteriores a la última semana disponible",
-            );
-            form.value.range = null;
-            return;
-        }
+        // Validar que la fecha no sea anterior a la Ãºltima semana disponible
+        // if (allowedFromDate.value && start < allowedFromDate.value) {
+        //     showError(
+        //         "No se pueden seleccionar fechas anteriores a la Ãºltima semana disponible",
+        //     );
+        //     form.value.range = null;
+        //     return;
+        // }
 
         if (isBusyDate(start)) {
             showError();
@@ -687,39 +473,37 @@ watch(
 );
 // =======================================================
 
-function getISOWeek(date = new Date()) {
-    const d = new Date(
-        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-    );
-    const dayNum = d.getUTCDay() || 7; // domingo = 7
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-    return {
-        year: d.getUTCFullYear(),
-        week: weekNo,
-        iso: `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`,
-    };
-}
-
 onMounted(() => {
     getData();
 
     axios
-        .get("/incidences/getIncidencesDataLoad")
+        .get("/incidences/getIncidencesDataLoad", {
+            params: {
+                branch_office_id: branchOfficeId.value,
+            },
+        })
         .then((response) => {
+            blockedWeeks.value = response.data.blockedWeeks ?? [];
             if (response.data?.lastWeekNumber?.[0]) {
-                minIsoWeek.value = getISOWeek().week;
-                minIsoYear.value = getISOWeek().year;
+                minIsoWeek.value = response.data.lastWeekNumber[0].week;
+                minIsoYear.value = response.data.lastWeekNumber[0].year;
+                form.value.lastWeekNumber =
+                    response.data.lastWeekNumber[0].week;
             }
             loading.value = false;
         })
         .catch((error) => {
-            console.warn("Error cargando última semana disponible:", error);
+            console.warn("Error cargando Ãºltima semana disponible:", error);
         });
 
     updateShiftHours();
 });
+
+function completeRange() {
+    if (form.value.range && form.value.range[0] && !form.value.range[1]) {
+        form.value.range = [form.value.range[0], form.value.range[0]];
+    }
+}
 
 watch(employeeId, () => {
     range.value = null;
@@ -730,15 +514,6 @@ watch(
     () => form.value.schedule,
     () => {
         updateShiftHours();
-    },
-);
-
-watch(
-    () => form.value.singleDate,
-    (newVal) => {
-        if (newVal) {
-            fetchAttendanceInfo();
-        }
     },
 );
 </script>
@@ -1258,6 +1033,7 @@ watch(
                                     >
                                     <InputText
                                         v-model="form.document_number"
+                                        maxlength="8"
                                         class="w-full"
                                     />
                                 </div>

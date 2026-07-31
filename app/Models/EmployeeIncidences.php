@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-use DateTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class EmployeeIncidences extends Model
 {
@@ -25,6 +25,7 @@ class EmployeeIncidences extends Model
         "branch_office_id",
         "approved_by",
         "approved_at",
+        "approved_in_blocked_period",
         "declined_by",
         "declined_at",
         "expires_at",
@@ -38,14 +39,34 @@ class EmployeeIncidences extends Model
         "comment",
         "hours_txt",
         "deleted_at",
-        "system",
+        "system"
     ];
 
-    protected static function booted()
+    protected static function booted(): void
     {
-        static::creating(function ($model) {
-            $model->system = 'mi portal rh';
+        static::created(function (EmployeeIncidences $incidence) {
+            if (
+                (bool) $incidence->approved_in_blocked_period
+                && $incidence->approved_at !== null
+            ) {
+                self::syncApprovedBalances($incidence);
+            }
         });
+    }
+
+    public static function syncApprovedBalances(Model $incidence): void
+    {
+        if ((int) $incidence->incidence_id === 23) {
+            TxT::syncIncidenceDiscount(
+                $incidence,
+                $incidence->approved_at,
+                (int) $incidence->approved_by
+            );
+        }
+
+        if ((int) $incidence->incidence_id === 3) {
+            EmployeeDayVacation::syncIncidenceDiscount($incidence);
+        }
     }
 
     public static function getIncidences($branchOfficeId, $weeknumber, $weekyear, $employeeId, $incidenceId, $eliminated){
@@ -214,171 +235,43 @@ class EmployeeIncidences extends Model
 
     public static function getLastWeekNumber($branch_office_id)
     {
-        $sql = "SELECT MIN(week) AS week, MAX(year) AS year from employee_incidences_week_blocked WHERE branch_office_id = $branch_office_id AND estatus = 1";
-        return DB::select($sql);
+        $week = DB::table('employee_incidences_week_blocked')
+            ->select('week', 'year')
+            ->where('branch_office_id', $branch_office_id)
+            ->where('estatus', 1)
+            ->whereNull('deleted_at')
+            ->orderByDesc('year')
+            ->orderBy('week')
+            ->first();
+
+        return $week ? [$week] : [];
+    }
+
+    public static function getBlockedWeeks($branchOfficeId)
+    {
+        return DB::table('employee_incidences_week_blocked')
+            ->selectRaw('week, year, MIN(start_week) AS start_week, MAX(end_week) AS end_week')
+            ->where('branch_office_id', $branchOfficeId)
+            ->whereNull('deleted_at')
+            ->groupBy('week', 'year')
+            ->havingRaw('MAX(estatus) = 0')
+            ->get();
+    }
+
+    public static function isWeekAvailable($branchOfficeId, $week, $year): bool
+    {
+        return DB::table('employee_incidences_week_blocked')
+            ->where('branch_office_id', $branchOfficeId)
+            ->where('week', $week)
+            ->where('year', $year)
+            ->where('estatus', 1)
+            ->whereNull('deleted_at')
+            ->exists();
     }
 
     public static function getVacations($id, $date){
         $vacaciones = DB::selectOne("SELECT SUM(amount) AS vacaciones_disponibles FROM `employee_day_vacations` WHERE employee_id =? AND deleted_at is null  AND employee_day_vacations.date <= '$date' " ,[$id]);
 
         return $vacaciones;
-    }
-
-    public static function validationIncidence($incidencia_id, $employee_id, $fecha_inicio, $fecha_fin){
-        if ($incidencia_id == 19 || $incidencia_id == 20) {
-
-            $sql_validacion = "
-                SELECT COUNT(id) AS contador
-                FROM employee_incidences
-                WHERE employee_id = $employee_id
-                    AND expires_at IS NULL
-                    AND (
-                        (incidence_id IN (19, 20) AND rest_date = '$fecha_fin')
-                        OR (incidence_id NOT IN (19, 20) 
-                            AND '$fecha_fin' BETWEEN validity_from AND validity_to
-                        )
-                    ) AND deleted_by IS NULL
-            ";
-
-        } else {
-        
-            $sql_validacion = "
-                SELECT COUNT(id) AS contador 
-                FROM `employee_incidences`
-                WHERE employee_id = $employee_id
-                  AND expires_at IS NULL
-                  AND (
-                      ('$fecha_inicio' BETWEEN validity_from AND validity_to)
-                      OR ('$fecha_fin' BETWEEN validity_from AND validity_to)
-                      OR (validity_from BETWEEN '$fecha_inicio' AND '$fecha_fin')
-                      OR (validity_to BETWEEN '$fecha_inicio' AND '$fecha_fin')
-                  ) AND deleted_by IS NULL
-                  AND incidence_id != 19
-            ";
-
-        }
-
-        return DB::select($sql_validacion)[0]->contador;
-    }
-
-    public static function getSchedule($employee_id){
-        $hoy = date("Y-m-d H:i:s");
-        $semana = Carbon::now()->isoWeek;
-        $anio = Carbon::now()->isoWeekYear;
-
-        $dias_mapa = [
-            'Monday'    => 'monday_data',
-            'Tuesday'   => 'tuesday_data',
-            'Wednesday' => 'wednesday_data',
-            'Thursday'  => 'thursday_data',
-            'Friday'    => 'friday_data',
-            'Saturday'  => 'saturday_data',
-            'Sunday'    => 'sunday_data'
-        ];
-        
-        $nombre_dia_ingles = date('l', strtotime($hoy));
-        $campo_objetivo = $dias_mapa[$nombre_dia_ingles];
-
-        $sql_comp_turno = "SELECT JSON_UNQUOTE(JSON_EXTRACT($campo_objetivo, '$.Horario')) AS horario 
-                               FROM weekly_assistances 
-                               WHERE employee_id = $employee_id 
-                               AND week_number = $semana AND week_year = $anio";
-
-        return DB::select($sql_comp_turno);
-    }
-
-    public static function search_employee_data($date, $employee_id) {
-        $fecha = new DateTime($date);
-        $semana = $fecha->format('W');
-        $anio = $fecha->format('o');
-        $numDia = (int)$fecha->format('N') - 1; // ISO-8601: 1 (lunes) a 7 (domingo). Restamos 1 para el índice 0-6.
-
-        $days_columns = [
-            0 => 'monday_data', 
-            1 => 'tuesday_data', 
-            2 => 'wednesday_data', 
-            3 => 'thursday_data', 
-            4 => 'friday_data', 
-            5 => 'saturday_data', 
-            6 => 'sunday_data'
-        ];
-        
-        $columna = $days_columns[$numDia];
-
-        // 2. Construir la consulta SQL con los nuevos requerimientos y alias antiguos
-        $sql = "SELECT 
-                    -- HORARIOS TEÓRICOS (Extraídos del JSON)
-                    JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')) AS entradaTeorica,
-                    JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Salida')) AS salidaTeorica,
-                    JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Horario')) AS turno,
-                    a.schedule_id AS schedule_id,
-
-                    -- ENTRADA REAL: El primer marcaje en la ventana de tiempo
-                    (
-                    SELECT
-                        CASE
-                            WHEN JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Horario')) = 'Descanso'
-                            THEN (
-                                -- Si es descanso, trae la primera checada sin filtro
-                                SELECT jt.access_time
-                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
-                                WHERE jt.access_date = '{$date}'
-                                ORDER BY jt.access_time ASC
-                                LIMIT 1
-                            )
-                            WHEN JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')) IS NOT NULL
-                            THEN (
-                                -- Si tiene turno, filtra por rango
-                                SELECT jt.access_time
-                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
-                                WHERE jt.access_date = '{$date}'
-                                AND jt.access_time BETWEEN
-                                    SUBTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '08:00:00')
-                                    AND ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '03:00:00')
-                                ORDER BY jt.access_time ASC
-                                LIMIT 1
-                            )
-                            ELSE NULL
-                        END
-                ) AS entradaReal,
-
-                    -- SALIDA REAL: El último marcaje considerando turnos nocturnos
-                    (
-                    SELECT
-                        CASE
-                            WHEN JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Horario')) = 'Descanso'
-                            THEN (
-                                -- Si es descanso, trae la última checada sin filtro
-                                SELECT jt.access_time
-                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
-                                WHERE jt.access_date = '{$date}'
-                                ORDER BY jt.access_time DESC
-                                LIMIT 1
-                            )
-                            ELSE (
-                                -- Si tiene turno, aplica lógica de nocturnos
-                                SELECT jt.access_time
-                                FROM JSON_TABLE(wa.{$columna}, '$.Checadas[*]' COLUMNS (access_date DATE PATH '$.access_date', access_time TIME PATH '$.access_time')) AS jt
-                                WHERE (
-                                    -- Marcaje el día siguiente (nocturno)
-                                    (jt.access_date = DATE_ADD('{$date}', INTERVAL 1 DAY) AND jt.access_time <= ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Salida')), '08:00:00'))
-                                    OR
-                                    -- Marcaje el mismo día tarde
-                                    (jt.access_date = '{$date}' AND jt.access_time > ADDTIME(JSON_UNQUOTE(JSON_EXTRACT(wa.{$columna}, '$.Entrada')), '04:00:00'))
-                                )
-                                ORDER BY jt.access_date DESC, jt.access_time DESC
-                                LIMIT 1
-                            )
-                        END
-                ) AS salidaReal
-
-                FROM weekly_assistances wa
-                INNER JOIN assistances a ON a.employee_id = wa.employee_id
-                AND a.date = '{$date}'
-                WHERE wa.employee_id = {$employee_id} 
-                AND wa.week_year = {$anio} 
-                AND wa.week_number = {$semana}";
-
-        return DB::select($sql);
     }
 }
