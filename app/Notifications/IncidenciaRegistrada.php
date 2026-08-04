@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Employee;
+use App\Models\Incidence;
 use App\Notifications\Channels\CustomDatabaseChannel;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -18,7 +19,12 @@ class IncidenciaRegistrada extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct(public string $idIncidence, public string $employeeId, public Employee $employee)
+    public function __construct(
+        public string|int $idIncidence,
+        public string|int $employeeId,
+        public Employee $employee,
+        public ?object $incidenceRecord = null
+    )
     {
         //
     }
@@ -58,9 +64,13 @@ class IncidenciaRegistrada extends Notification
 
     public function toDatabase(object $notifiable): array
     {
+        $incidenceName = $this->incidenceName();
+        $startDate = $this->formatDate($this->incidenceRecord?->validity_from);
+        $endDate = $this->formatDate($this->incidenceRecord?->validity_to);
+
         return [
             'titulo'        => "Incidencia Registrada",
-            'descripcion' => "El empleado \"{$this->employeeId}\" ha registrado la incidencia \"{$this->idIncidence}\"",
+            'descripcion' => "El empleado ({$this->employeeId}) - ({$this->employee->full_name}) registró la incidencia ({$incidenceName}) con fecha de inicio ({$startDate}) y fecha de fin ({$endDate})",
             'notifiable_type' => 'App\Models\User',
             'employee_id'    => $this->employee->id,
             'branch_office_id' => $this->employee->branch_office_id,
@@ -70,6 +80,24 @@ class IncidenciaRegistrada extends Notification
             'notification_date' => Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s'),
             'relationship_id' => $this->idIncidence
         ];
+    }
+
+    private function incidenceName(): string
+    {
+        if (! $this->incidenceRecord) {
+            return 'Incidencia';
+        }
+
+        return Incidence::find($this->incidenceRecord->incidence_id)?->name ?? 'Incidencia';
+    }
+
+    private function formatDate($date): string
+    {
+        if (empty($date)) {
+            return 'sin fecha';
+        }
+
+        return Carbon::parse($date)->format('d/m/Y');
     }
 
     
