@@ -14,6 +14,7 @@ use App\Models\Logs;
 use App\Models\Schedules;
 use App\Models\TxT;
 use App\Models\User;
+use App\Models\UserNomina;
 use App\Notifications\RegistroEditado;
 use App\Notifications\RegistroEliminado;
 use App\Notifications\RegistroGuardado;
@@ -887,7 +888,7 @@ class EmployeeIncidencesController
             }
 
             $parent = Employee::find($parentId);
-            $user = $parent?->user_id ? User::find($parent->user_id) : null;
+            $user = $parent?->user_id ? UserNomina::find($parent->user_id) : null;
 
             if ($user) {
                 $user->notify(new IncidenciaRegistrada($incidence->id, $employee->id, $employee, $incidence));
