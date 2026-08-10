@@ -96,6 +96,7 @@ class EmployeeIncidences extends Model
                     ei.schedule_id,
                     ei.before_date,
                     ei.rest_date,
+                    ei.rejection_reason,
                     i.name as incidence_name,
                     i.color,
                     e.full_name,

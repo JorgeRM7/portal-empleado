@@ -144,6 +144,10 @@ const initFilters = () => {
             operator: FilterOperator.AND,
             constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
         },
+        rejection_reason: {
+            operator: FilterOperator.AND,
+            constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }],
+        },
     };
 };
 
@@ -209,6 +213,7 @@ const exportColumns = ref({
     observaciones: true,
     fecha_rechazado: true,
     rechazado_por: true,
+    motivo_rechazo: true,
 });
 
 const showColumns = ref({
@@ -233,6 +238,7 @@ const showColumns = ref({
     observaciones: false,
     fecha_rechazado: true,
     rechazado_por: true,
+    motivo_rechazo: true,
 });
 
 const frozenColumns = ref({
@@ -256,6 +262,7 @@ const frozenColumns = ref({
     observaciones: false,
     fecha_rechazado: false,
     rechazado_por: false,
+    motivo_rechazo: true,
 });
 
 const otherFilters = ref([
@@ -1437,6 +1444,32 @@ onMounted(() => {
                             v-model="filterModel.value"
                             type="text"
                             placeholder="Buscar por Rechazado por"
+                        />
+                    </template>
+                </Column>
+                <Column
+                    field="rejection_reason"
+                    sortable
+                    header="Motivo del rechazo"
+                    :filter="true"
+                    columnKey="rejection_reason"
+                    :frozen="frozenColumns.motivo_rechazo"
+                    :style="{
+                        minWidth: '18rem',
+                        display: showColumns.motivo_rechazo ? '' : 'none',
+                    }"
+                >
+                    <template #body="{ data }">
+                        <Skeleton v-if="loading"></Skeleton>
+                        <span v-else class="whitespace-pre-wrap">
+                            {{ data.rejection_reason }}
+                        </span>
+                    </template>
+                    <template #filter="{ filterModel }">
+                        <InputText
+                            v-model="filterModel.value"
+                            type="text"
+                            placeholder="Buscar por motivo del rechazo"
                         />
                     </template>
                 </Column>
