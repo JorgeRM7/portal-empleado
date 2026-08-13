@@ -22,7 +22,7 @@ const rawMenu = ref([
         to: "/payroll/payroll-invoices",
     },
     {
-        label: "Tikets",
+        label: "Tickets",
         icon: "pi pi-ticket",
         to: "/complaints",
     },
