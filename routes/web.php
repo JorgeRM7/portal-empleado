@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EmployeePasswordResetController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
@@ -167,6 +168,53 @@ Route::middleware([
     Route::put('/password', [PasswordController::class, 'update'])
         ->name('password.update-user-employee');
 
+});
+
+
+Route::middleware('guest')->group(function () {
+
+    Route::get(
+        '/recuperar-contrasena',
+        [
+            EmployeePasswordResetController::class,
+            'index'
+        ]
+    )->name(
+        'employee-password.request'
+    );
+
+
+    Route::post(
+        '/recuperar-contrasena/enviar-codigo',
+        [
+            EmployeePasswordResetController::class,
+            'sendCode'
+        ]
+    )->name(
+        'employee-password.send-code'
+    );
+
+
+    Route::post(
+        '/recuperar-contrasena/verificar-codigo',
+        [
+            EmployeePasswordResetController::class,
+            'verifyCode'
+        ]
+    )->name(
+        'employee-password.verify-code'
+    );
+
+
+    Route::post(
+        '/recuperar-contrasena/cambiar',
+        [
+            EmployeePasswordResetController::class,
+            'resetPassword'
+        ]
+    )->name(
+        'employee-password.reset'
+    );
 });
 
 Route::get('/ver-archivo/{path}', function ($path) {
