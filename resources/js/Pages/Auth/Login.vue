@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, Head } from "@inertiajs/vue3";
+import { useForm, Head, Link } from "@inertiajs/vue3";
 
 // PrimeVue
 import Card from "primevue/card";
@@ -313,6 +313,15 @@ onBeforeUnmount(() => {
                             <small v-if="form.errors.password" class="p-error">
                                 {{ form.errors.password }}
                             </small>
+                        </div>
+                        <div class="flex justify-end -mt-2">
+                            <Link
+                                :href="route('employee-password.request')"
+                                class="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                            >
+                                ¿Olvidó su contraseña?
+                            </Link>
+
                         </div>
 
                         <Message

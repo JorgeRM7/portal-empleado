@@ -96,8 +96,7 @@ const sendCode = async () => {
         const response = await axios.post(
             route("employee-password.send-code"),
             {
-                employee_code:
-                    employeeForm.employee_code,
+                employee_code: employeeForm.employee_code,
             }
         );
 
@@ -105,24 +104,11 @@ const sendCode = async () => {
             return;
         }
 
-        employeeId.value =
-            response.data.reset_employee_id;
+        employeeId.value = response.data.reset_employee_id;
 
-        maskedEmail.value =
-            response.data.reset_email;
+        maskedEmail.value = response.data.reset_email;
 
-        currentStep.value =
-            "code";
-
-        console.log(
-            "Empleado:",
-            employeeId.value
-        );
-
-        console.log(
-            "Correo:",
-            maskedEmail.value
-        );
+        currentStep.value = "code";
 
         startTimer();
 
@@ -130,14 +116,9 @@ const sendCode = async () => {
 
         console.error(error);
 
-        const message =
-            error.response?.data?.message ||
-            "No se pudo enviar el código.";
+        const message = error.response?.data?.message || "No se pudo enviar el código.";
 
-        employeeForm.setError(
-            "employee_code",
-            message
-        );
+        employeeForm.setError(  "employee_code",message);
 
     } finally {
 
@@ -157,30 +138,73 @@ const codeForm = useForm({
     code: "",
 });
 
+const verifyingCode = ref(false);
+const verifyCode = async () => {
 
-const verifyCode = () => {
+    if (!codeForm.code) {
+        codeForm.setError(
+            "code",
+            "Ingrese el código de verificación."
+        );
 
-    codeForm.employee_id =
-        employeeId.value;
+        return;
+    }
 
-    codeForm.post(
-        route(
-            "employee-password.verify-code"
-        ),
-        {
-            preserveScroll: true,
+    if (codeForm.code.length !== 6) {
+        codeForm.setError(
+            "code",
+            "El código debe contener 6 dígitos."
+        );
 
-            onSuccess: () => {
+        return;
+    }
 
-                currentStep.value =
-                    "password";
+    verifyingCode.value = true;
 
-                stopTimer();
-            },
+    codeForm.clearErrors();
+
+    try {
+
+        const response = await axios.post(
+            route("employee-password.verify-code"),
+            {
+                employee_id: employeeId.value,
+                code: codeForm.code,
+            }
+        );
+
+        if (!response.data.success) {
+            return;
         }
-    );
-};
 
+        employeeId.value = response.data.reset_employee_id;
+
+        currentStep.value = "password";
+        stopTimer();
+        console.log(
+            "Código verificado:",
+            response.data
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        const message =
+            error.response?.data?.message ||
+            error.response?.data?.errors?.code?.[0] ||
+            "No se pudo verificar el código.";
+
+        codeForm.setError(
+            "code",
+            message
+        );
+
+    } finally {
+
+        verifyingCode.value = false;
+    }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -195,19 +219,121 @@ const passwordForm = useForm({
 });
 
 
-const resetPassword = () => {
+const resettingPassword = ref(false);
+const resetPassword = async () => {
 
-    passwordForm.employee_id =
-        employeeId.value;
+    passwordForm.clearErrors();
 
-    passwordForm.post(
-        route(
-            "employee-password.reset"
-        )
-    );
+    if (!passwordForm.password) {
+        passwordForm.setError(
+            "password",
+            "Ingrese una nueva contraseña."
+        );
+
+        return;
+    }
+
+    if (passwordForm.password.length < 8) {
+        passwordForm.setError(
+            "password",
+            "La contraseña debe tener al menos 8 caracteres."
+        );
+
+        return;
+    }
+
+    if (
+        passwordForm.password !==
+        passwordForm.password_confirmation
+    ) {
+        passwordForm.setError(
+            "password_confirmation",
+            "Las contraseñas no coinciden."
+        );
+
+        return;
+    }
+
+    resettingPassword.value = true;
+
+    try {
+
+        const response = await axios.post(
+            route("employee-password.reset"),
+            {
+                employee_id: employeeId.value,
+                password: passwordForm.password,
+                password_confirmation:
+                    passwordForm.password_confirmation,
+            }
+        );
+
+        if (!response.data.success) {
+            return;
+        }
+
+        console.log(response.data);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ir al login
+        |--------------------------------------------------------------------------
+        */
+
+        window.location.href = route("login");
+
+    } catch (error) {
+
+        console.error(error);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Errores de validación Laravel
+        |--------------------------------------------------------------------------
+        */
+
+        if (error.response?.data?.errors) {
+
+            const errors =
+                error.response.data.errors;
+
+            if (errors.password) {
+                passwordForm.setError(
+                    "password",
+                    errors.password[0]
+                );
+            }
+
+            if (errors.password_confirmation) {
+                passwordForm.setError(
+                    "password_confirmation",
+                    errors.password_confirmation[0]
+                );
+            }
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Errores controlados
+        |--------------------------------------------------------------------------
+        */
+
+        const message =
+            error.response?.data?.message ||
+            "No se pudo cambiar la contraseña.";
+
+        passwordForm.setError(
+            "password",
+            message
+        );
+
+    } finally {
+
+        resettingPassword.value = false;
+    }
 };
-
-
 /*
 |--------------------------------------------------------------------------
 | Temporizador
@@ -789,6 +915,9 @@ onBeforeUnmount(() => {
                             />
 
                         </div>
+                        <small v-if="passwordForm.errors.password_confirmation" class="p-error">
+                            {{ passwordForm.errors.password_confirmation }}
+                        </small>
 
 
                         <Button
@@ -797,12 +926,8 @@ onBeforeUnmount(() => {
                             icon="pi pi-lock"
                             severity="success"
                             class="w-full"
-                            :loading="passwordForm.processing"
-                            :disabled="
-                                passwordForm.processing ||
-                                !passwordForm.password ||
-                                !passwordForm.password_confirmation
-                            "
+                            :loading="resettingPassword"
+                            :disabled="resettingPassword || !passwordForm.password || !passwordForm.password_confirmation"
                         />
 
                     </form>

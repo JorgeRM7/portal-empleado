@@ -77,10 +77,7 @@ class EmployeePasswordResetController
 
         UserEmployeePasswordResetCode::create([
             'employee_id' => $Employee->id,
-
-            // Si user_id representa el registro de user_employees
             'user_id' => $UserEmployee->id,
-
             'email' => $email,
             'code' => Hash::make($code),
             'expires_at' => Carbon::now('America/Mexico_City')->addMinutes(15),
@@ -110,122 +107,64 @@ class EmployeePasswordResetController
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Verificar código
-    |--------------------------------------------------------------------------
-    */
-
+   
     public function verifyCode(Request $request)
     {
         $request->validate([
-            'employee_id' => [
-                'required',
-                'integer',
-            ],
-
-            'code' => [
-                'required',
-                'digits:6',
-            ],
+            'employee_id' => ['required', 'integer'],
+            'code' => ['required', 'digits:6'],
         ]);
 
-
-        $reset = UserEmployeePasswordResetCode::where(
-                'employee_id',
-                $request->employee_id
-            )
+        $reset = UserEmployeePasswordResetCode::where('employee_id',$request->employee_id)
             ->latest('id')
             ->first();
 
-
         if (!$reset) {
-
-            return back()->withErrors([
-                'code' =>
-                    'No existe una solicitud de recuperación.',
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No existe una solicitud de recuperación.',
+            ], 404);
         }
 
+        $now = Carbon::now('America/Mexico_City');
 
-        /*
-        |--------------------------------------------------------------------------
-        | Validar vencimiento
-        |--------------------------------------------------------------------------
-        */
+        $expiresAt = Carbon::createFromFormat(
+            'Y-m-d H:i:s',
+            $reset->getRawOriginal('expires_at'),
+            'America/Mexico_City'
+        );
 
-        if (
-            Carbon::now(
-                'America/Mexico_City'
-            )->greaterThan(
-                $reset->expires_at
-            )
-        ) {
-
-            return back()->withErrors([
-                'code' =>
-                    'El código ha expirado. Solicite uno nuevo.',
-            ]);
+        if ($now->greaterThanOrEqualTo($expiresAt)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El código ha expirado. Solicite uno nuevo.',
+            ], 422);
         }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Validar código
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !Hash::check(
-                $request->code,
-                $reset->code
-            )
-        ) {
-
-            return back()->withErrors([
-                'code' =>
-                    'El código ingresado no es correcto.',
-            ]);
+        if (!Hash::check( $request->code, $reset->code) ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El código ingresado no es correcto.',
+            ], 422);
         }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Marcar código como verificado
-        |--------------------------------------------------------------------------
-        */
 
         $reset->update([
-            'verified_at' =>
-                Carbon::now(
-                    'America/Mexico_City'
-                ),
+            'verified_at' => Carbon::now('America/Mexico_City'),
         ]);
 
-
-        return back()->with([
-            'reset_step' =>
-                'password',
-
-            'reset_employee_id' =>
-                $reset->employee_id,
+        return response()->json([
+            'success' => true,
+            'message' => 'Código verificado correctamente.',
+            'reset_employee_id' => $reset->employee_id,
+            'reset_step' => 'password',
         ]);
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Cambiar contraseña
-    |--------------------------------------------------------------------------
-    */
 
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'employee_id' => [
-                'required',
-                'integer',
-            ],
+            'employee_id' => ['required', 'integer'],
 
             'password' => [
                 'required',
@@ -234,119 +173,58 @@ class EmployeePasswordResetController
             ],
         ]);
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Buscar código previamente verificado
-        |--------------------------------------------------------------------------
-        */
-
-        $reset = UserEmployeePasswordResetCode::where(
-                'employee_id',
-                $request->employee_id
-            )
-            ->whereNotNull(
-                'verified_at'
-            )
+        $reset = UserEmployeePasswordResetCode::where('employee_id', $request->employee_id)
+            ->whereNotNull('verified_at')
             ->latest('id')
             ->first();
 
-
         if (!$reset) {
-
-            return back()->withErrors([
-                'password' =>
-                    'Primero debe verificar el código enviado a su correo.',
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Primero debe verificar el código enviado a su correo.',
+            ], 422);
         }
 
+        $now = Carbon::now('America/Mexico_City');
 
-        /*
-        |--------------------------------------------------------------------------
-        | Revisar que tampoco haya expirado
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            Carbon::now(
-                'America/Mexico_City'
-            )->greaterThan(
-                $reset->expires_at
-            )
-        ) {
-
-            return back()->withErrors([
-                'password' =>
-                    'La solicitud ha expirado. Inicie nuevamente el proceso.',
-            ]);
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Obtener usuario
-        |--------------------------------------------------------------------------
-        */
-
-        $user = User::find(
-            $reset->user_id
+        $expiresAt = Carbon::createFromFormat(
+            'Y-m-d H:i:s',
+            $reset->getRawOriginal('expires_at'),
+            'America/Mexico_City'
         );
 
-        if (!$user) {
-
-            return back()->withErrors([
-                'password' =>
-                    'No se encontró el usuario.',
-            ]);
+        if ($now->greaterThanOrEqualTo($expiresAt)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La solicitud ha expirado. Inicie nuevamente el proceso.',
+            ], 422);
         }
 
+        $user = UserEmployee::where('employee_id', $request->employee_id)
+            ->whereNull('deleted_at')
+            ->first();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Actualizar contraseña
-        |--------------------------------------------------------------------------
-        */
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró el usuario.',
+            ], 404);
+        }
 
         $user->update([
-            'password' =>
-                Hash::make(
-                    $request->password
-                ),
+            'password' => Hash::make($request->password),
         ]);
 
+        UserEmployeePasswordResetCode::where('employee_id', $reset->employee_id)
+            ->delete();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Eliminar todos los códigos
-        |--------------------------------------------------------------------------
-        */
-
-        UserEmployeePasswordResetCode::where(
-            'employee_id',
-            $reset->employee_id
-        )->delete();
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Regresar al login
-        |--------------------------------------------------------------------------
-        */
-
-        return redirect()
-            ->route('login')
-            ->with(
-                'status',
-                'Contraseña actualizada correctamente. Ya puede iniciar sesión.'
-            );
+        return response()->json([
+            'success' => true,
+            'message' => 'Contraseña actualizada correctamente.',
+        ]);
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Ocultar parte del correo
-    |--------------------------------------------------------------------------
-    */
 
     private function maskEmail(string $email): string
     {
