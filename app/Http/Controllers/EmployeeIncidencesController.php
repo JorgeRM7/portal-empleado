@@ -15,6 +15,7 @@ use App\Models\Schedules;
 use App\Models\TxT;
 use App\Models\User;
 use App\Models\UserNomina;
+use App\Services\IncidenceDocumentMerger;
 use App\Notifications\RegistroEditado;
 use App\Notifications\RegistroEliminado;
 use App\Notifications\RegistroGuardado;
@@ -719,7 +720,12 @@ class EmployeeIncidencesController
             'advance_date' => [$configuration->requires_date ? 'required' : 'nullable', 'nullable', 'date'],
             'rest_date' => [$configuration->requires_rest_date ? 'required' : 'nullable', 'nullable', 'date'],
             'schedule' => [$configuration->requires_schedule ? 'required' : 'nullable', 'nullable', 'exists:schedules,id'],
-            'document' => [$documentIsRequired ? 'required' : 'nullable', 'nullable', 'file'],
+            'documents' => array_filter([
+                $documentIsRequired ? 'required' : 'nullable',
+                'array',
+                'max:5',
+            ]),
+            'documents.*' => ['required', 'file', 'mimetypes:application/pdf,image/jpeg,image/png', 'max:10240'],
             'document_number' => $documentNumberRules,
         ], [
             'document_number.required' => 'El folio es requerido.',
@@ -745,8 +751,20 @@ class EmployeeIncidencesController
             ? $employeeIncidence?->file_path
             : null;
 
-        if ($configuration->requires_document && $request->hasFile('document')) {
-            $filePath = $this->uploadIncidenceDocument($request);
+        if ($configuration->requires_document && $request->hasFile('documents')) {
+            $files = $request->file('documents');
+            $totalSize = array_sum(array_map(
+                fn ($file) => $file->getSize(),
+                $files
+            ));
+
+            if ($totalSize > 20 * 1024 * 1024) {
+                throw ValidationException::withMessages([
+                    'documents' => 'Los documentos no pueden superar 20 MB en total.',
+                ]);
+            }
+
+            $filePath = $this->uploadIncidenceDocuments($files);
         }
 
         $data = [
@@ -838,16 +856,28 @@ class EmployeeIncidencesController
         ];
     }
 
-    private function uploadIncidenceDocument(Request $request): string
+    private function uploadIncidenceDocuments(array $files): string
     {
         $disk = Storage::disk('remote_sftp');
         $directory = 'incidences/' . date('Y/m');
         $disk->makeDirectory($directory);
 
-        $file = $request->file('document');
-        $filename = uniqid('inc_', true) . '.' . $file->getClientOriginalExtension();
+        try {
+            $contents = app(IncidenceDocumentMerger::class)->merge($files);
+        } catch (\RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'documents' => $exception->getMessage(),
+            ]);
+        }
+
+        $filename = uniqid('inc_', true) . '.pdf';
         $remotePath = $directory . '/' . $filename;
-        $disk->put($remotePath, file_get_contents($file->getRealPath()));
+
+        if (! $disk->put($remotePath, $contents)) {
+            throw ValidationException::withMessages([
+                'documents' => 'No se pudo guardar el documento combinado.',
+            ]);
+        }
 
         return $remotePath;
     }

@@ -149,7 +149,7 @@ const emptyForm = (lastWeekNumber = null) => ({
     advance_date: null,
     rest_date: null,
     schedule: null,
-    document: null,
+    documents: [],
     document_number: "",
     employee_id: props.employeeId,
     days_available: null,
@@ -260,7 +260,7 @@ const canSave = computed(() => {
         (!fields.includes("advance_date") || !!form.value.advance_date) &&
         (!fields.includes("rest_date") || !!form.value.rest_date) &&
         (!fields.includes("schedule") || !!form.value.schedule) &&
-        (!fields.includes("document") || !!form.value.document) &&
+        (!fields.includes("document") || form.value.documents.length > 0) &&
         (!fields.includes("document_number") || folioIsValid)
     );
 });
@@ -270,6 +270,11 @@ function typeLabel(type) {
 }
 
 const errors = ref({});
+
+function formatFileSize(bytes) {
+    if (!bytes) return "0 KB";
+    return `${(bytes / 1024).toFixed(bytes < 1024 * 100 ? 1 : 0)} KB`;
+}
 
 function resetIncidenceForm() {
     const lastWeekNumber = form.value.lastWeekNumber;
@@ -330,6 +335,7 @@ function saveIncidence() {
         route("incidences-employee.store"),
         form.value,
         {
+            forceFormData: true,
             onSuccess: () => {
                 sending.value = false;
                 showSuccess();
@@ -1027,19 +1033,82 @@ watch(employeeId, () => {
                                         >Documento comprobante</label
                                     >
                                     <FileUpload
-                                        mode="basic"
-                                        name="document"
-                                        chooseLabel="Adjuntar"
+                                        :key="documentInputKey"
+                                        mode="advanced"
+                                        name="documents[]"
+                                        chooseLabel="Adjuntar archivos"
+                                        cancelLabel="Quitar todos"
+                                        accept="application/pdf,image/jpeg,image/png"
+                                        :multiple="true"
+                                        :fileLimit="5"
+                                        :maxFileSize="10485760"
+                                        :showUploadButton="false"
                                         :auto="false"
                                         customUpload
                                         @select="
                                             (e) =>
-                                                (form.document =
-                                                    e.files?.[0] ?? null)
+                                                (form.documents = e.files ?? [])
                                         "
-                                    />
+                                        @clear="form.documents = []"
+                                        @remove="form.documents = $event.files ?? []"
+                                    >
+                                        <template
+                                            #content="{
+                                                files,
+                                                removeFileCallback,
+                                                messages,
+                                            }"
+                                        >
+                                            <div
+                                                v-for="message in messages"
+                                                :key="message"
+                                                class="mb-2 rounded bg-red-50 p-2 text-sm text-red-700"
+                                            >
+                                                {{ message }}
+                                            </div>
+                                            <div class="flex flex-col gap-2">
+                                                <div
+                                                    v-for="(file, index) in files"
+                                                    :key="`${file.name}-${file.size}`"
+                                                    class="flex items-center gap-3 rounded border border-gray-200 p-3"
+                                                >
+                                                    <img
+                                                        v-if="file.type.startsWith('image/')"
+                                                        :src="file.objectURL"
+                                                        :alt="file.name"
+                                                        class="h-12 w-12 rounded object-cover"
+                                                    />
+                                                    <i
+                                                        v-else
+                                                        class="pi pi-file-pdf text-3xl text-red-600"
+                                                    ></i>
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="truncate text-sm font-medium">
+                                                            {{ file.name }}
+                                                        </div>
+                                                        <div class="text-xs text-gray-500">
+                                                            {{ formatFileSize(file.size) }}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-full p-2 text-red-600 hover:bg-red-50"
+                                                        title="Quitar archivo"
+                                                        @click="removeFileCallback(index)"
+                                                    >
+                                                        <i class="pi pi-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template #empty>
+                                            <div class="text-center text-gray-500 py-4">
+                                                Selecciona o arrastra aquí los comprobantes.
+                                            </div>
+                                        </template>
+                                    </FileUpload>
                                     <small class="text-gray-500"
-                                        >PDF o imagen según aplique.</small
+                                        >Hasta 5 archivos PDF, JPG o PNG; máximo 10 MB por archivo y 20 MB en total. Se unirán en un solo PDF.</small
                                     >
                                 </div>
 
