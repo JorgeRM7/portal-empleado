@@ -31,15 +31,15 @@ class PostController
                     'created_at' => $post->created_at->locale('es')->diffForHumans(),
                     'likers'      => $post->likes->map(function($like) {
                         return [
-                            'name' => $like->employee->full_name ?? 'Usuario',
+                            'name' => $like->employee?->full_name ?? 'Usuario',
                             'id'   => $like->user_id
                         ];
                     }),
                     'user' => [
-                        'id'     => $post->user->id,
-                        'employee_id' => $post->user->employee->id ?? null,
-                        'name'   => $post->user->employee->full_name ?? 'Sin nombre',
-                        'position' => $post->user->employee->position->name ?? 'Sin puesto',
+                        'id'     => $post->user?->id,
+                        'employee_id' => $post->user->employee?->id ?? null,
+                        'name'   => $post->user->employee?->full_name ?? 'Sin nombre',
+                        'position' => $post->user->employee?->position->name ?? 'Sin puesto',
                     ],
 
                 ];  
