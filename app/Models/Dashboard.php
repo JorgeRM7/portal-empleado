@@ -33,7 +33,7 @@ class Dashboard extends Model
             FROM employees
             INNER JOIN genders ON genders.id = employees.gender_id
             INNER JOIN branch_offices ON branch_offices.id = employees.branch_office_id
-            INNER JOIN users ON users.id = employees.user_id
+            LEFT JOIN users ON users.id = employees.user_id
             INNER JOIN positions ON positions.id = employees.position_id
             INNER JOIN departments ON departments.id = employees.department_id
             WHERE employees.id = ?
