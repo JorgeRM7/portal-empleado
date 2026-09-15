@@ -11,41 +11,92 @@ use Inertia\Inertia;
 
 class PostController
 {
+    // public function index()
+    // {
+    //     $branch_office_id = Employee::select('branch_office_id')->where('id', Auth::id());
+    //     $employee = Employee::find(Auth::id());
+    //     $posts = Post::with(['user.employee.position', 'likes.employee'])
+    //         ->withCount('likes')
+    //         ->latest()
+    //         ->where('branch_office_id', $branch_office_id)
+    //         ->get()
+    //         ->map(function ($post) {
+    //             return [
+    //                 'id'          => $post->id,
+    //                 'anonymous'   => $post->anonymous,
+    //                 'title'       => $post->title,
+    //                 'description' => $post->description,
+    //                 'path'        => $post->path,
+    //                 'likes_count' => (int) $post->likes()->count(),
+    //                 'user_liked'  => (bool) $post->likes()->where('user_id', Auth::id())->exists(),
+    //                 'created_at' => $post->created_at->locale('es')->diffForHumans(),
+    //                 'likers'      => $post->likes->map(function($like) {
+    //                     return [
+    //                         'name' => $like->employee?->full_name ?? 'Usuario',
+    //                         'id'   => $like->user_id
+    //                     ];
+    //                 }),
+    //                 'user' => [
+    //                     'id'     => $post->user?->id,
+    //                     'employee_id' => $post->user->employee?->id ?? null,
+    //                     'name'   => $post->user->employee?->full_name ?? 'Sin nombre',
+    //                     'position' => $post->user->employee?->position->name ?? 'Sin puesto',
+    //                 ],
+
+    //             ];  
+    //         });
+
+    //     return Inertia::render('Social/Index', ['posts' => $posts]);
+    // }
+
+
     public function index()
     {
-        $branch_office_id = Employee::select('branch_office_id')->where('id', Auth::id());
+        $employee = Employee::find(Auth::id());
+
+        if (!$employee) {
+            return Inertia::render('Social/Index', [
+                'posts' => [],
+            ]);
+        }
+
         $posts = Post::with(['user.employee.position', 'likes.employee'])
             ->withCount('likes')
+            ->where('branch_office_id', $employee->branch_office_id)
+            ->where(function ($query) use ($employee) {
+                $query->whereNull('department_id')
+                    ->orWhere('department_id', $employee->department_id);
+            })
             ->latest()
-            ->where('branch_office_id', $branch_office_id)
             ->get()
             ->map(function ($post) {
                 return [
-                    'id'          => $post->id,
-                    'anonymous'   => $post->anonymous,
-                    'title'       => $post->title,
+                    'id' => $post->id,
+                    'anonymous' => $post->anonymous,
+                    'title' => $post->title,
                     'description' => $post->description,
-                    'path'        => $post->path,
-                    'likes_count' => (int) $post->likes()->count(),
-                    'user_liked'  => (bool) $post->likes()->where('user_id', Auth::id())->exists(),
+                    'path' => $post->path,
+                    'likes_count' => (int) $post->likes_count,
+                    'user_liked' => (bool) $post->likes()->where('user_id', Auth::id())->exists(),
                     'created_at' => $post->created_at->locale('es')->diffForHumans(),
-                    'likers'      => $post->likes->map(function($like) {
+                    'likers' => $post->likes->map(function ($like) {
                         return [
                             'name' => $like->employee?->full_name ?? 'Usuario',
-                            'id'   => $like->user_id
+                            'id' => $like->user_id,
                         ];
                     }),
                     'user' => [
-                        'id'     => $post->user?->id,
+                        'id' => $post->user?->id,
                         'employee_id' => $post->user->employee?->id ?? null,
-                        'name'   => $post->user->employee?->full_name ?? 'Sin nombre',
-                        'position' => $post->user->employee?->position->name ?? 'Sin puesto',
+                        'name' => $post->user->employee?->full_name ?? 'Sin nombre',
+                        'position' => $post->user->employee?->position?->name ?? 'Sin puesto',
                     ],
-
-                ];  
+                ];
             });
 
-        return Inertia::render('Social/Index', ['posts' => $posts]);
+        return Inertia::render('Social/Index', [
+            'posts' => $posts,
+        ]);
     }
 
     public function showImg($path)
