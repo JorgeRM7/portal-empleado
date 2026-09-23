@@ -393,7 +393,9 @@ onMounted(() => {
         <Dialog
             v-model:visible="expandModalVisible"
             modal
-            :header="`Publicación de ${selectedPost?.user?.name}`"
+            :header="selectedPost?.anonymous == 0
+            ? `Publicación de ${selectedPost?.user?.name ?? ''}`
+            : 'Publicación'"
             :style="{ width: '90vw', maxWidth: '900px' }"
             @hide="selectedPost = null"
             class="expand-dialog"
@@ -437,15 +439,29 @@ onMounted(() => {
                             <Avatar
                                 :image="`https://nominas.grupo-ortiz.site/Librerias/img/Fotos/${selectedPost.user?.employee_id}.jpg`"
                                 shape="circle"
-                                size="large"
+                                class="author-avatar"
+                                v-if="selectedPost.anonymous == 0"
                             />
-                            <div class="author-info-expanded">
+                            <Avatar
+                                icon="pi pi-user"
+                                shape="circle"
+                                class="author-avatar"
+                                v-else
+                            />
+                           <div class="author-info-expanded">
+
                                 <div class="author-name">
-                                    {{ selectedPost.user?.name }}
+                                    {{
+                                        selectedPost.anonymous == 0
+                                            ? selectedPost.user?.name
+                                            : "Anónimo"
+                                    }}
                                 </div>
+
                                 <div class="post-time">
                                     {{ selectedPost.created_at }}
                                 </div>
+
                             </div>
                         </div>
                     </div>
